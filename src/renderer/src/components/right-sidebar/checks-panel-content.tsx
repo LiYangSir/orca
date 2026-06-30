@@ -64,6 +64,7 @@ import {
 } from '@/lib/pr-comment-audience'
 import {
   getPRCommentGroupId,
+  getPRCommentGroupComments,
   getPRCommentGroupRoot,
   groupPRComments,
   type PRCommentGroup
@@ -98,17 +99,37 @@ import { usePRCommentsListSelection } from './pr-comments-list-selection'
 import { translate } from '@/i18n/i18n'
 import { useActiveWorktree } from '@/store/selectors'
 import { useAppStore } from '@/store'
+import { detectLanguage } from '@/lib/language-detect'
+import { joinPath } from '@/lib/path'
 
 export const PullRequestIcon = GitPullRequest
 
 type PRCommentsListDisplayMode = 'triage' | 'timeline'
+type PRCommentsListResolutionFilter = 'all' | 'unresolved' | 'resolved'
 
 const PR_COMMENT_LIST_DISPLAY_MODES: PRCommentsListDisplayMode[] = ['triage', 'timeline']
+const PR_COMMENT_LIST_RESOLUTION_FILTERS: PRCommentsListResolutionFilter[] = [
+  'all',
+  'unresolved',
+  'resolved'
+]
 
 function getPRCommentsListDisplayModeLabel(mode: PRCommentsListDisplayMode): string {
   return mode === 'triage'
     ? translate('auto.components.right.sidebar.checks.panel.content.8a621a2c4f', 'Grouped')
     : translate('auto.components.right.sidebar.checks.panel.content.b13f85d75c', 'Timeline')
+}
+
+function getPRCommentsListResolutionFilterLabel(
+  filter: PRCommentsListResolutionFilter
+): string {
+  if (filter === 'resolved') {
+    return translate('auto.components.right.sidebar.checks.panel.content.8987d5a3dd', 'Resolved')
+  }
+  if (filter === 'unresolved') {
+    return translate('auto.components.right.sidebar.checks.panel.content.7c1f0a2b11', 'Open')
+  }
+  return translate('auto.components.right.sidebar.checks.panel.content.a2508c19f2', 'All')
 }
 
 export const CHECK_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -1654,14 +1675,42 @@ function PRCommentOutdatedBadge({
 
 function PRCommentLocationBadge({
   comment,
-  presentation
+  presentation,
+  onOpenCommentContext
 }: {
   comment: PRComment
   presentation: PRCommentPresentationClasses
+  onOpenCommentContext?: (comment: PRComment) => void
 }): React.JSX.Element | null {
   const location = formatPRCommentCodeLocation(comment)
   if (!location) {
     return null
+  }
+  if (onOpenCommentContext) {
+    return (
+      <button
+        type="button"
+        className={cn(
+          presentation.pathBadge,
+          'rounded-sm text-left transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50'
+        )}
+        title={location}
+        aria-label={translate(
+          'auto.components.right.sidebar.checks.panel.content.f55c4decf0',
+          'Open code context for {{value0}}',
+          { value0: location }
+        )}
+        onClick={(event) => {
+          event.stopPropagation()
+          onOpenCommentContext(comment)
+        }}
+      >
+        <span className="font-sans text-muted-foreground">
+          {translate('auto.components.right.sidebar.checks.panel.content.a25f55b6e9', 'Code')}
+        </span>{' '}
+        {location}
+      </button>
+    )
   }
   return (
     <span className={presentation.pathBadge} title={location}>
@@ -1689,6 +1738,7 @@ function CommentRow({
   onReply,
   onEditComment,
   onDeleteComment,
+  onOpenCommentContext,
   onQueueForAgent
 }: {
   comment: PRComment
@@ -1705,6 +1755,7 @@ function CommentRow({
   onReply?: (comment: PRComment) => void
   onEditComment?: (comment: PRComment, body: string) => Promise<boolean>
   onDeleteComment?: (comment: PRComment) => void | Promise<void>
+  onOpenCommentContext?: (comment: PRComment) => void
   onQueueForAgent?: () => void
 }): React.JSX.Element {
   const automated = isBotPRComment(comment)
@@ -1841,7 +1892,11 @@ function CommentRow({
             {translate('auto.components.right.sidebar.checks.panel.content.2ba0a32bdd', 'bot')}
           </span>
         ) : null}
-        <PRCommentLocationBadge comment={comment} presentation={presentation} />
+        <PRCommentLocationBadge
+          comment={comment}
+          presentation={presentation}
+          onOpenCommentContext={onOpenCommentContext}
+        />
         <PRCommentActionBadge
           actionState={actionState}
           isQueued={isQueued}
@@ -1883,7 +1938,13 @@ function CommentRow({
             {translate('auto.components.right.sidebar.checks.panel.content.2ba0a32bdd', 'bot')}
           </span>
         )}
-        {!isReply ? <PRCommentLocationBadge comment={comment} presentation={presentation} /> : null}
+        {!isReply ? (
+          <PRCommentLocationBadge
+            comment={comment}
+            presentation={presentation}
+            onOpenCommentContext={onOpenCommentContext}
+          />
+        ) : null}
         {!isReply ? (
           <PRCommentActionBadge
             actionState={actionState}
@@ -1984,6 +2045,7 @@ function PRCommentGroupView({
   onReply,
   onEditComment,
   onDeleteComment,
+  onOpenCommentContext,
   onQueueForAgent
 }: {
   group: PRCommentGroup
@@ -2000,6 +2062,7 @@ function PRCommentGroupView({
   onReply?: (comment: PRComment, body: string) => Promise<RightPanelCommentSubmitResult>
   onEditComment?: (comment: PRComment, body: string) => Promise<boolean>
   onDeleteComment?: (comment: PRComment) => void | Promise<void>
+  onOpenCommentContext?: (comment: PRComment) => void
   onQueueForAgent?: () => void
 }): React.JSX.Element {
   const groupId = getPRCommentGroupId(group)
@@ -2036,6 +2099,7 @@ function PRCommentGroupView({
     onResolve,
     onEditComment,
     onDeleteComment,
+    onOpenCommentContext,
     onQueueForAgent
   }
 
@@ -2114,7 +2178,8 @@ function ResolvedCommentGroupsSection({
   onCancelReply,
   onReply,
   onEditComment,
-  onDeleteComment
+  onDeleteComment,
+  onOpenCommentContext
 }: {
   groups: PRCommentGroup[]
   replyingGroupId: string | null
@@ -2127,6 +2192,7 @@ function ResolvedCommentGroupsSection({
   onReply?: (comment: PRComment, body: string) => Promise<RightPanelCommentSubmitResult>
   onEditComment?: (comment: PRComment, body: string) => Promise<boolean>
   onDeleteComment?: (comment: PRComment) => void | Promise<void>
+  onOpenCommentContext?: (comment: PRComment) => void
 }): React.JSX.Element | null {
   if (groups.length === 0) {
     return null
@@ -2161,6 +2227,7 @@ function ResolvedCommentGroupsSection({
                 onReply={onReply}
                 onEditComment={onEditComment}
                 onDeleteComment={onDeleteComment}
+                onOpenCommentContext={onOpenCommentContext}
               />
             ))}
           </AccordionContent>
@@ -2244,7 +2311,11 @@ export function PRCommentsList({
   onDeleteComment?: (comment: PRComment) => void | Promise<void>
 }): React.JSX.Element {
   const presentation = React.useMemo(() => getPRCommentPresentationClasses(), [])
+  const activeWorktree = useActiveWorktree()
+  const openFile = useAppStore((s) => s.openFile)
   const [commentFilter, setCommentFilter] = useState<PRCommentAudienceFilter>('all')
+  const [resolutionFilter, setResolutionFilter] =
+    useState<PRCommentsListResolutionFilter>('all')
   const [displayMode, setDisplayMode] = useState<PRCommentsListDisplayMode>('triage')
   const [replyingGroupId, setReplyingGroupId] = useState<string | null>(null)
   const [isAddingComment, setIsAddingComment] = useState(false)
@@ -2261,18 +2332,82 @@ export function PRCommentsList({
     clearSelection,
     toggleGroupSelection
   } = usePRCommentsListSelection(comments, selectionContextKey)
-  const visibleComments = React.useMemo(
+  const audienceFilteredComments = React.useMemo(
     () => filterPRCommentsByAudience(comments, commentFilter),
     [commentFilter, comments]
   )
-  const groups = React.useMemo(() => groupPRComments(visibleComments), [visibleComments])
-  const triageGroups = React.useMemo(() => partitionPRCommentGroupsForTriage(groups), [groups])
+  const audienceGroups = React.useMemo(
+    () => groupPRComments(audienceFilteredComments),
+    [audienceFilteredComments]
+  )
+  const visibleGroups = React.useMemo(
+    () =>
+      audienceGroups.filter((group) => {
+        if (resolutionFilter === 'all') {
+          return true
+        }
+        const state = getPRCommentGroupActionState(group)
+        return resolutionFilter === 'resolved' ? state === 'resolved' : state !== 'resolved'
+      }),
+    [audienceGroups, resolutionFilter]
+  )
+  const visibleComments = React.useMemo(
+    () => visibleGroups.flatMap(getPRCommentGroupComments),
+    [visibleGroups]
+  )
+  const resolutionCounts = React.useMemo(() => {
+    let resolved = 0
+    let unresolved = 0
+    for (const group of audienceGroups) {
+      if (getPRCommentGroupActionState(group) === 'resolved') {
+        resolved += 1
+      } else {
+        unresolved += 1
+      }
+    }
+    return { all: audienceGroups.length, unresolved, resolved }
+  }, [audienceGroups])
+  const visibleSelectableGroups = React.useMemo(
+    () => visibleGroups.filter((group) => selectableGroupsById.has(getPRCommentGroupId(group))),
+    [selectableGroupsById, visibleGroups]
+  )
+  const triageGroups = React.useMemo(
+    () => partitionPRCommentGroupsForTriage(visibleGroups),
+    [visibleGroups]
+  )
   // Why: triage mode prioritizes actionability; timeline restores the host discussion history.
-  const timelineGroups = React.useMemo(() => sortPRCommentGroupsForTimeline(groups), [groups])
+  const timelineGroups = React.useMemo(
+    () => sortPRCommentGroupsForTimeline(visibleGroups),
+    [visibleGroups]
+  )
   const canShowResolveWithAI = Boolean(
     onResolveSelectedCommentsWithAI && selectableGroups.length > 0
   )
   const selectedCommentQueueCount = selectedGroups.length
+  const openCommentContext = useCallback(
+    (comment: PRComment): void => {
+      if (!activeWorktree?.path || !comment.path) {
+        return
+      }
+      openFile(
+        {
+          filePath: joinPath(activeWorktree.path, comment.path),
+          relativePath: comment.path,
+          worktreeId: activeWorktree.id,
+          language: detectLanguage(comment.path),
+          mode: 'edit'
+        },
+        { preview: true }
+      )
+    },
+    [activeWorktree?.id, activeWorktree?.path, openFile]
+  )
+  const selectVisibleCommentsForAI = useCallback((): void => {
+    clearSelection()
+    for (const group of visibleSelectableGroups) {
+      toggleGroupSelection(getPRCommentGroupId(group), true)
+    }
+  }, [clearSelection, toggleGroupSelection, visibleSelectableGroups])
 
   useEffect(() => {
     if (!isAddingComment || !shouldScrollAddCommentRef.current) {
@@ -2357,6 +2492,7 @@ export function PRCommentsList({
         onReply={onReply}
         onEditComment={onEditComment}
         onDeleteComment={onDeleteComment}
+        onOpenCommentContext={activeWorktree?.path ? openCommentContext : undefined}
         onQueueForAgent={canQueue ? () => addGroupToSelection(groupId) : undefined}
       />
     )
@@ -2413,6 +2549,30 @@ export function PRCommentsList({
           <div className="-mr-1 ml-auto flex items-center gap-0.5">
             {canShowResolveWithAI && (
               <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label={translate(
+                        'auto.components.right.sidebar.checks.panel.content.8b665c395e',
+                        'Select visible unresolved comments'
+                      )}
+                      disabled={commentsLoading || visibleSelectableGroups.length === 0}
+                      onClick={selectVisibleCommentsForAI}
+                    >
+                      <Check className="size-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" sideOffset={4}>
+                    {translate(
+                      'auto.components.right.sidebar.checks.panel.content.8b665c395e',
+                      'Select visible unresolved comments'
+                    )}
+                  </TooltipContent>
+                </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -2595,25 +2755,47 @@ export function PRCommentsList({
           </div>
         </div>
         {comments.length > 0 && (
-          <div className={presentation.audienceTabs}>
-            {getPrCommentAudienceFilters().map((filter) => {
-              const isActive = commentFilter === filter.value
-              return (
-                <button
-                  key={filter.value}
-                  type="button"
-                  className={cn(
-                    presentation.audienceTab,
-                    isActive && presentation.audienceTabActive
-                  )}
-                  aria-pressed={isActive}
-                  onClick={() => setCommentFilter(filter.value)}
-                >
-                  <span>{filter.label}</span>
-                  <span className="tabular-nums">{commentCounts[filter.value]}</span>
-                </button>
-              )
-            })}
+          <div className="flex flex-col gap-1.5">
+            <div className={presentation.audienceTabs}>
+              {getPrCommentAudienceFilters().map((filter) => {
+                const isActive = commentFilter === filter.value
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    className={cn(
+                      presentation.audienceTab,
+                      isActive && presentation.audienceTabActive
+                    )}
+                    aria-pressed={isActive}
+                    onClick={() => setCommentFilter(filter.value)}
+                  >
+                    <span>{filter.label}</span>
+                    <span className="tabular-nums">{commentCounts[filter.value]}</span>
+                  </button>
+                )
+              })}
+            </div>
+            <div className={presentation.audienceTabs}>
+              {PR_COMMENT_LIST_RESOLUTION_FILTERS.map((filter) => {
+                const isActive = resolutionFilter === filter
+                return (
+                  <button
+                    key={filter}
+                    type="button"
+                    className={cn(
+                      presentation.audienceTab,
+                      isActive && presentation.audienceTabActive
+                    )}
+                    aria-pressed={isActive}
+                    onClick={() => setResolutionFilter(filter)}
+                  >
+                    <span>{getPRCommentsListResolutionFilterLabel(filter)}</span>
+                    <span className="tabular-nums">{resolutionCounts[filter]}</span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         )}
         {comments.length >= 100 && (
@@ -2644,7 +2826,13 @@ export function PRCommentsList({
         )
       ) : visibleComments.length === 0 ? (
         <div className="flex items-center justify-center py-5 text-[11px] text-muted-foreground">
-          {getPRCommentAudienceEmptyLabel(commentFilter)}
+          {resolutionFilter === 'all'
+            ? getPRCommentAudienceEmptyLabel(commentFilter)
+            : translate(
+                'auto.components.right.sidebar.checks.panel.content.60a0c9fa1b',
+                'No {{value0}} comments',
+                { value0: getPRCommentsListResolutionFilterLabel(resolutionFilter).toLowerCase() }
+              )}
         </div>
       ) : (
         <div className={presentation.list}>
@@ -2677,6 +2865,7 @@ export function PRCommentsList({
                 onReply={onReply}
                 onEditComment={onEditComment}
                 onDeleteComment={onDeleteComment}
+                onOpenCommentContext={activeWorktree?.path ? openCommentContext : undefined}
               />
             </>
           )}
