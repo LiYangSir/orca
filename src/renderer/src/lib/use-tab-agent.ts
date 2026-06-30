@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/store'
 import { recognizeAgentProcess } from '../../../shared/agent-process-recognition'
 import { isShellProcess } from '../../../shared/agent-detection'
+import { resolveForegroundAgentForLaunch } from '../../../shared/agent-title-overrides'
 import { worktreeUsesRemoteConnection } from '@/store/slices/terminals'
 import { parseRemoteRuntimePtyId } from '@/runtime/runtime-terminal-stream'
 import {
@@ -86,7 +87,7 @@ export function resolveTabAgentFromSignals(args: {
     return focusedHookAgent ?? titleAgent ?? activeLaunchAgent ?? fallbackHookAgent
   }
   if (args.foreground) {
-    return args.foreground
+    return resolveForegroundAgentForLaunch(launchAgent, args.foreground)
   }
   // Why: once a local pane has returned to a shell, a stale hook should not keep
   // painting it as an agent tab.

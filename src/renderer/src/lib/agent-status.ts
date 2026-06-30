@@ -117,6 +117,7 @@ const WELL_KNOWN_LABELS: Record<string, string> = {
   openclaude: 'OpenClaude',
   codex: 'Codex',
   gemini: 'Gemini',
+  qoder: 'Qoder',
   antigravity: 'Antigravity',
   amp: 'Amp',
   copilot: 'GitHub Copilot',

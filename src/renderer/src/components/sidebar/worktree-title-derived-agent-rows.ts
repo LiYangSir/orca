@@ -31,6 +31,7 @@ const TITLE_AGENT_LABEL_TO_TYPE: Record<string, AgentType> = {
   OpenClaude: 'openclaude',
   Codex: 'codex',
   'Gemini CLI': 'gemini',
+  Qoder: 'qoder',
   'GitHub Copilot': 'copilot',
   Grok: 'grok',
   Devin: 'devin',

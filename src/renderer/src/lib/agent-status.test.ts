@@ -389,6 +389,16 @@ describe('normalizeTerminalTitle', () => {
     expect(normalizeTerminalTitle('✋  Action Required (workspace)')).toBe('✋ Gemini CLI')
   })
 
+  it('collapses Qoder-launched Gemini-style titles to Qoder labels', () => {
+    expect(
+      normalizeTerminalTitle('✦  Typing prompt... (workspace)', { launchAgent: 'qoder' })
+    ).toBe('✦ Qoder')
+    expect(normalizeTerminalTitle('◇  Ready (workspace)', { launchAgent: 'qoder' })).toBe('◇ Qoder')
+    expect(
+      normalizeTerminalTitle('✋  Action Required (workspace)', { launchAgent: 'qoder' })
+    ).toBe('✋ Qoder')
+  })
+
   it('leaves non-Gemini titles unchanged', () => {
     expect(normalizeTerminalTitle('⠂ Claude Code')).toBe('⠂ Claude Code')
     expect(normalizeTerminalTitle('bash')).toBe('bash')
@@ -426,6 +436,7 @@ describe('getAgentLabel', () => {
 
   it('labels supported agent families consistently', () => {
     expect(getAgentLabel('✦ Gemini CLI')).toBe('Gemini CLI')
+    expect(getAgentLabel('✦ Qoder')).toBe('Qoder')
     expect(getAgentLabel('⠂ Claude Code')).toBe('Claude Code')
     expect(getAgentLabel('⠋ Codex is thinking')).toBe('Codex')
     expect(getAgentLabel('OpenClaude running')).toBe('OpenClaude')

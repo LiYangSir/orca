@@ -10,6 +10,7 @@ const TITLE_LABEL_TO_AGENT: Partial<Record<string, TuiAgent>> = {
   OpenClaude: 'openclaude',
   Codex: 'codex',
   'Gemini CLI': 'gemini',
+  Qoder: 'qoder',
   'GitHub Copilot': 'copilot',
   Grok: 'grok',
   Devin: 'devin',

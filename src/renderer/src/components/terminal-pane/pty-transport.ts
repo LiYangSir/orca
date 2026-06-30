@@ -75,7 +75,9 @@ type PtyOutputProcessorOptions = Pick<
   | 'onAgentBecameWorking'
   | 'onAgentExited'
   | 'onAgentStatus'
->
+> & {
+  getLaunchAgent?: () => IpcPtyTransportOptions['launchAgent']
+}
 
 type ProcessPtyOutputOptions = {
   replayingBufferedData?: boolean
@@ -96,7 +98,8 @@ export function createPtyOutputProcessor({
   onAgentBecameIdle,
   onAgentBecameWorking,
   onAgentExited,
-  onAgentStatus
+  onAgentStatus,
+  getLaunchAgent
 }: PtyOutputProcessorOptions): {
   processData: (
     data: string,
@@ -135,7 +138,7 @@ export function createPtyOutputProcessor({
   function countWorkingTitles(titles: string[]): number {
     let count = 0
     for (const title of titles) {
-      if (isWorkingTitle(normalizeTerminalTitle(title))) {
+      if (isWorkingTitle(normalizeTerminalTitle(title, { launchAgent: getLaunchAgent?.() }))) {
         count += 1
       }
     }
@@ -158,7 +161,7 @@ export function createPtyOutputProcessor({
     if (title.trim().toLowerCase() === 'cursor agent') {
       return
     }
-    lastEmittedTitle = normalizeTerminalTitle(title)
+    lastEmittedTitle = normalizeTerminalTitle(title, { launchAgent: getLaunchAgent?.() })
     onTitleChange?.(lastEmittedTitle, title)
     if (!suppressAgentTracker) {
       agentTracker?.handleTitle(title)
@@ -456,6 +459,7 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
   let connected = false
   let destroyed = false
   let ptyId: string | null = null
+  let activeLaunchAgent = launchAgent
   // Why: eager PTY buffers contain output produced before the pane attached —
   // often from the previous app session. We still replay that data so titles
   // and scrollback restore correctly, but it must not produce fresh bells,
@@ -474,7 +478,8 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
     },
     onAgentBecameWorking,
     onAgentExited,
-    onAgentStatus
+    onAgentStatus,
+    getLaunchAgent: () => activeLaunchAgent
   })
   let storedCallbacks: Parameters<PtyTransport['connect']>[0]['callbacks'] = {}
 
@@ -673,6 +678,7 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
   return {
     async connect(options) {
       storedCallbacks = options.callbacks
+      activeLaunchAgent = options.launchAgent ?? launchAgent
       ensurePtyDispatcher()
 
       if (destroyed) {

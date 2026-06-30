@@ -14,10 +14,12 @@ import {
   titleHasAgentName,
   titleHasAnyLegacyAgentName
 } from './agent-name-token-match'
+import { getGeminiStyleTitleLabel } from './agent-title-overrides'
 import {
   getPiCompatibleSyntheticAgentLabel,
   getPiCompatibleSyntheticAgentStatus
 } from './pi-compatible-synthetic-title'
+import type { TuiAgent } from './types'
 
 // Re-export so existing `agent-detection` importers keep working.
 export { AGENT_NAMES, titleHasAgentName } from './agent-name-token-match'
@@ -226,21 +228,25 @@ export function createAgentStatusTracker(
  * them in app state. Gemini CLI can emit per-keystroke title updates, which
  * otherwise causes broad rerenders and visible flashing.
  */
-export function normalizeTerminalTitle(title: string): string {
+export function normalizeTerminalTitle(
+  title: string,
+  context?: { launchAgent?: TuiAgent | null }
+): string {
   if (!title) {
     return title
   }
 
   if (isGeminiTerminalTitle(title)) {
     const status = detectAgentStatusFromTitle(title)
+    const label = getGeminiStyleTitleLabel(context?.launchAgent)
     if (status === 'permission') {
-      return `${GEMINI_PERMISSION} Gemini CLI`
+      return `${GEMINI_PERMISSION} ${label}`
     }
     if (status === 'working') {
-      return `${GEMINI_WORKING} Gemini CLI`
+      return `${GEMINI_WORKING} ${label}`
     }
     if (status === 'idle') {
-      return `${GEMINI_IDLE} Gemini CLI`
+      return `${GEMINI_IDLE} ${label}`
     }
   }
 
@@ -319,6 +325,9 @@ export function getAgentLabel(title: string): string | null {
     title.startsWith('* ')
   ) {
     return 'Claude Code'
+  }
+  if (titleHasAgentName(title, 'qoder')) {
+    return 'Qoder'
   }
   if (isGeminiTerminalTitle(title)) {
     return 'Gemini CLI'
