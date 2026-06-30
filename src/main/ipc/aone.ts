@@ -53,11 +53,17 @@ function asMergeRequestFilter(value: unknown): AoneMergeRequestListFilter {
   if (raw.mine === 'created' || raw.mine === 'review') {
     filter.mine = raw.mine
   }
-  if (raw.state === 'opened' || raw.state === 'closed' || raw.state === 'merged') {
+  if (raw.state === 'opened' || raw.state === 'accepted' || raw.state === 'merged') {
     filter.state = raw.state
   }
-  if (typeof raw.pageSize === 'number' && raw.pageSize > 0) {
-    filter.pageSize = raw.pageSize
+  if (typeof raw.source === 'string' && raw.source.trim()) {
+    filter.source = raw.source.trim()
+  }
+  if (typeof raw.target === 'string' && raw.target.trim()) {
+    filter.target = raw.target.trim()
+  }
+  if (typeof raw.page === 'number' && raw.page > 0) {
+    filter.page = raw.page
   }
   return filter
 }
@@ -117,10 +123,13 @@ export function registerAoneHandlers(): void {
 
   ipcMain.handle(
     'aone:getMergeRequest',
-    async (_event, args: { iid: number }): Promise<AoneIpcResult<A1MergeRequest | null>> => {
+    async (
+      _event,
+      args: { id?: number; iid?: number }
+    ): Promise<AoneIpcResult<A1MergeRequest | null>> => {
       try {
-        const iid = Number(args?.iid)
-        const data = await getMergeRequest(iid)
+        const mrId = Number(args?.id ?? args?.iid)
+        const data = await getMergeRequest(mrId)
         return { ok: true, data }
       } catch (error) {
         return toFailure(error)

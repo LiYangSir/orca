@@ -79,6 +79,7 @@ export const WorktreeCreate = z
     linkedBitbucketPR: TriStateLinkedIssue,
     linkedAzureDevOpsPR: TriStateLinkedIssue,
     linkedGiteaPR: TriStateLinkedIssue,
+    linkedCodeMR: TriStateLinkedIssue,
     comment: OptionalString,
     displayName: OptionalString,
     telemetrySource: z
@@ -189,6 +190,7 @@ export const WorktreeSet = WorktreeSelector.extend({
   linkedBitbucketPR: TriStateLinkedIssue,
   linkedAzureDevOpsPR: TriStateLinkedIssue,
   linkedGiteaPR: TriStateLinkedIssue,
+  linkedCodeMR: TriStateLinkedIssue,
   isArchived: OptionalBoolean,
   isUnread: OptionalBoolean,
   isPinned: OptionalBoolean,

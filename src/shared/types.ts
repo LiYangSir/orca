@@ -471,6 +471,7 @@ export type Worktree = {
   linkedBitbucketPR?: number | null
   linkedAzureDevOpsPR?: number | null
   linkedGiteaPR?: number | null
+  linkedCodeMR?: number | null
   isArchived: boolean
   isUnread: boolean
   isPinned: boolean
@@ -580,6 +581,8 @@ export type WorktreeMeta = {
   linkedAzureDevOpsPR?: number | null
   /** Optional for backward compatibility — see Worktree.linkedGiteaPR. */
   linkedGiteaPR?: number | null
+  /** Optional for backward compatibility — see Worktree.linkedCodeMR. */
+  linkedCodeMR?: number | null
   isArchived: boolean
   isUnread: boolean
   isPinned: boolean
@@ -2035,6 +2038,7 @@ export type CreateWorktreeArgs = {
   linkedBitbucketPR?: number | null
   linkedAzureDevOpsPR?: number | null
   linkedGiteaPR?: number | null
+  linkedCodeMR?: number | null
   pushTarget?: GitPushTarget
   workspaceStatus?: WorkspaceStatus
   manualOrder?: number

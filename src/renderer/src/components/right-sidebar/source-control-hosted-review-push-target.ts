@@ -32,6 +32,7 @@ export function hasPositiveHostedReviewNumberLink(args: {
   linkedBitbucketPR?: number | null
   linkedAzureDevOpsPR?: number | null
   linkedGiteaPR?: number | null
+  linkedCodeMR?: number | null
 }): boolean {
   return (
     isResolvableHostedReviewNumber(args.linkedGitHubPR) ||
@@ -39,7 +40,8 @@ export function hasPositiveHostedReviewNumberLink(args: {
     isResolvableHostedReviewNumber(args.linkedGitLabMR) ||
     isResolvableHostedReviewNumber(args.linkedBitbucketPR) ||
     isResolvableHostedReviewNumber(args.linkedAzureDevOpsPR) ||
-    isResolvableHostedReviewNumber(args.linkedGiteaPR)
+    isResolvableHostedReviewNumber(args.linkedGiteaPR) ||
+    isResolvableHostedReviewNumber(args.linkedCodeMR)
   )
 }
 

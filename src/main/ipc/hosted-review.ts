@@ -90,6 +90,7 @@ export function registerHostedReviewHandlers(store: Store, stats: StatsCollector
       linkedAzureDevOpsPR: args.linkedAzureDevOpsPR ?? null,
       linkedGiteaPR: args.linkedGiteaPR ?? null,
       currentHeadOid: args.currentHeadOid ?? null,
+      linkedCodeMR: args.linkedCodeMR ?? null,
       ...(Object.keys(localGitOptions).length > 0 ? { localGitExecOptions: localGitOptions } : {})
     })
     if (review?.provider === 'github' && !stats.hasCountedPR(review.url)) {

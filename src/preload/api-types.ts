@@ -1668,7 +1668,7 @@ export type PreloadApi = {
     listWorkItems: (args?: unknown) => Promise<unknown>
     getWorkItem: (args: { identifier: string }) => Promise<unknown>
     listMergeRequests: (args?: unknown) => Promise<unknown>
-    getMergeRequest: (args: { iid: number }) => Promise<unknown>
+    getMergeRequest: (args: { id: number } | { iid: number }) => Promise<unknown>
     getMergeRequestForBranch: (args: {
       branch: string
       repoPath?: string | null

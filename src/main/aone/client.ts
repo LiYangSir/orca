@@ -16,8 +16,10 @@ export type AoneWorkItemListFilter = {
 
 export type AoneMergeRequestListFilter = {
   mine?: 'created' | 'review'
-  state?: 'opened' | 'closed' | 'merged'
-  pageSize?: number
+  state?: 'opened' | 'accepted' | 'merged'
+  source?: string
+  target?: string
+  page?: number
 }
 
 function pushArg(args: string[], flag: string, value: string | number | undefined): void {
@@ -90,7 +92,9 @@ export async function listMergeRequests(
     args.push('--mine', filter.mine)
   }
   pushArg(args, '--state', filter.state)
-  pushArg(args, '--page-size', filter.pageSize)
+  pushArg(args, '--source', filter.source)
+  pushArg(args, '--target', filter.target)
+  pushArg(args, '--page', filter.page)
   try {
     return await a1ExecJson<A1MergeRequest[]>(args, options)
   } catch (error) {
@@ -102,14 +106,14 @@ export async function listMergeRequests(
 }
 
 export async function getMergeRequest(
-  iid: number,
+  mrId: number,
   options: A1ExecOptions = {}
 ): Promise<A1MergeRequest | null> {
-  if (!Number.isFinite(iid) || iid <= 0) {
+  if (!Number.isFinite(mrId) || mrId <= 0) {
     return null
   }
   try {
-    return await a1ExecJson<A1MergeRequest>(['repo', 'mr', 'view', String(iid)], options)
+    return await a1ExecJson<A1MergeRequest>(['repo', 'mr', 'view', String(mrId)], options)
   } catch (error) {
     if (error instanceof A1Error && error.code === 'invalid_output') {
       return null
@@ -129,21 +133,40 @@ export async function getMergeRequestForBranch(
   if (!trimmed) {
     return null
   }
-  const mrs = await listMergeRequests({ state: 'opened', pageSize: 50 }, options)
+  const mrs = await listMergeRequests({ state: 'opened', source: trimmed }, options)
   return mrs.find((mr) => mr.sourceBranch === trimmed) ?? null
 }
 
-// `code` review host detection: project-bound code.alibaba-inc.com URLs are
-// the canonical Aone Code remote. We expose two complementary checks:
+// `code` review host detection: Alibaba-hosted code remotes can sit behind
+// multiple internal host prefixes (Code, GitLab, future aliases). We expose
+// two complementary checks:
 //   * URL-based: cheap, no CLI roundtrip — used as the fast path
 //   * a1 link status — slower but authoritative for non-standard hosts
-const CODE_HOST_RE = /code\.alibaba-inc\.com/i
+const ALIBABA_INC_HOST = 'alibaba-inc.com'
+
+function remoteUrlHost(remoteUrl: string): string | null {
+  const trimmed = remoteUrl.trim()
+  if (!trimmed) {
+    return null
+  }
+  try {
+    return new URL(trimmed).hostname.toLowerCase()
+  } catch {
+    // Support scp-style git remotes such as git@gitlab.alibaba-inc.com:group/repo.git.
+    const scpLike = /^(?:[^@\s]+@)?([^:\s/]+):/.exec(trimmed)
+    if (scpLike?.[1]) {
+      return scpLike[1].toLowerCase()
+    }
+    return null
+  }
+}
 
 export function isAoneCodeRemoteUrl(remoteUrl: string | null | undefined): boolean {
   if (!remoteUrl) {
     return false
   }
-  return CODE_HOST_RE.test(remoteUrl)
+  const host = remoteUrlHost(remoteUrl)
+  return host === ALIBABA_INC_HOST || host?.endsWith(`.${ALIBABA_INC_HOST}`) === true
 }
 
 export async function resolveAoneCodeRepoSlug(

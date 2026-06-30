@@ -108,8 +108,12 @@ import type {
 import { appStarSourceSchema } from '../../shared/gh-star-source'
 import { track } from '../telemetry/client'
 import { getCohortAtEmit } from '../telemetry/cohort-classifier'
-import { routeByCodeProvider } from './code-provider-bridge'
-import { aoneMergePR, aonePRComments, aonePRForBranch, aoneUpdatePRState } from '../aone/gh-adapter'
+import {
+  routeMergePRByCodeProvider,
+  routePRCommentsByCodeProvider,
+  routePRForBranchByCodeProvider,
+  routeUpdatePRStateByCodeProvider
+} from './code-provider-bridge'
 
 const prRefreshVisibilityCleanupRegistered = new Set<number>()
 
@@ -297,8 +301,8 @@ export function registerGitHubHandlers(store: Store, stats: StatsCollector): voi
       const lookupOptionArgs: [] | [GitHubPRBranchLookupOptions] = lookupOptions
         ? [lookupOptions]
         : []
-      const pr = await routeByCodeProvider(
-        repo.path,
+      const pr = await routePRForBranchByCodeProvider(
+        { repoPath: repo.path, branch: args.branch, linkedPRNumber: args.linkedPRNumber ?? null },
         () =>
           getPRForBranch(
             repo.path,
@@ -307,8 +311,7 @@ export function registerGitHubHandlers(store: Store, stats: StatsCollector): voi
             repoConnectionId(repo),
             args.linkedPRNumber == null ? (args.fallbackPRNumber ?? null) : null,
             ...lookupOptionArgs
-          ),
-        () => aonePRForBranch(repo.path, args.branch, args.linkedPRNumber ?? null)
+          )
       )
       // Emit pr_created when a PR is first detected for a branch.
       // Why here: the renderer polls gh:prForBranch to check PR status per worktree.
@@ -661,17 +664,14 @@ export function registerGitHubHandlers(store: Store, stats: StatsCollector): voi
       }
     ) => {
       const repo = assertRegisteredRepo(args, store)
-      return routeByCodeProvider(
-        repo.path,
-        () =>
-          getPRComments(
-            repo.path,
-            args.prNumber,
-            { noCache: args.noCache, prRepo: args.prRepo ?? null },
-            repoConnectionId(repo),
-            ...localGitOptionArgs(store, repo)
-          ),
-        () => aonePRComments(repo.path, args.prNumber)
+      return routePRCommentsByCodeProvider({ repoPath: repo.path, prNumber: args.prNumber }, () =>
+        getPRComments(
+          repo.path,
+          args.prNumber,
+          { noCache: args.noCache, prRepo: args.prRepo ?? null },
+          repoConnectionId(repo),
+          ...localGitOptionArgs(store, repo)
+        )
       )
     }
   )
@@ -906,8 +906,8 @@ export function registerGitHubHandlers(store: Store, stats: StatsCollector): voi
       }
     ) => {
       const repo = assertRegisteredRepo(args, store)
-      const result = await routeByCodeProvider(
-        repo.path,
+      const result = await routeMergePRByCodeProvider(
+        { repoPath: repo.path, prNumber: args.prNumber, method: args.method },
         () =>
           mergePR(
             repo.path,
@@ -916,8 +916,7 @@ export function registerGitHubHandlers(store: Store, stats: StatsCollector): voi
             repoConnectionId(repo),
             args.prRepo ?? null,
             ...localGitOptionArgs(store, repo)
-          ),
-        () => aoneMergePR(repo.path, args.prNumber, args.method)
+          )
       )
       if (result.ok) {
         broadcastWorkItemMutated(
@@ -977,8 +976,8 @@ export function registerGitHubHandlers(store: Store, stats: StatsCollector): voi
       ) {
         return { ok: false, error: 'Invalid pull request number' }
       }
-      const result = await routeByCodeProvider(
-        repo.path,
+      const result = await routeUpdatePRStateByCodeProvider(
+        { repoPath: repo.path, prNumber: args.prNumber, updates: args.updates },
         () =>
           updatePRState(
             repo.path,
@@ -986,8 +985,7 @@ export function registerGitHubHandlers(store: Store, stats: StatsCollector): voi
             args.updates,
             repoConnectionId(repo),
             ...localGitOptionArgs(store, repo)
-          ),
-        () => aoneUpdatePRState(repo.path, args.prNumber, args.updates)
+          )
       )
       if (result.ok) {
         broadcastWorkItemMutated(

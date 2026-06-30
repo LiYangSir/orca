@@ -546,6 +546,7 @@ export default function ChecksPanel(): React.JSX.Element {
     linkedBitbucketPR: activeWorktree?.linkedBitbucketPR ?? null,
     linkedAzureDevOpsPR: activeWorktree?.linkedAzureDevOpsPR ?? null,
     linkedGiteaPR: activeWorktree?.linkedGiteaPR ?? null,
+    linkedCodeMR: activeWorktree?.linkedCodeMR ?? null,
     runtimeEnvironmentId,
     repoConnectionId,
     pushTarget: activeWorktreePushTarget
@@ -660,13 +661,15 @@ export default function ChecksPanel(): React.JSX.Element {
   const linkedBitbucketPR = activeWorktree?.linkedBitbucketPR ?? null
   const linkedAzureDevOpsPR = activeWorktree?.linkedAzureDevOpsPR ?? null
   const linkedGiteaPR = activeWorktree?.linkedGiteaPR ?? null
+  const linkedCodeMR = activeWorktree?.linkedCodeMR ?? null
   const activeReview: ChecksPanelReview | null = selectChecksPanelReview({
     hostedReview,
     pr,
     linkedGitLabMR,
     linkedBitbucketPR,
     linkedAzureDevOpsPR,
-    linkedGiteaPR
+    linkedGiteaPR,
+    linkedCodeMR
   })
   const activeGitLabReview = isGitLabChecksPanelReview(activeReview) ? activeReview : null
   const isGitLabReviewContext = Boolean(activeGitLabReview || linkedGitLabMR !== null)
@@ -796,7 +799,8 @@ export default function ChecksPanel(): React.JSX.Element {
           linkedGitLabMR,
           linkedBitbucketPR,
           linkedAzureDevOpsPR,
-          linkedGiteaPR
+          linkedGiteaPR,
+          linkedCodeMR
         })
       : ''
   const gitStatusInputs = readChecksPanelGitStatusSnapshot(gitStatusSnapshot, panelContextKey)
@@ -1209,6 +1213,7 @@ export default function ChecksPanel(): React.JSX.Element {
         linkedBitbucketPR,
         linkedAzureDevOpsPR,
         linkedGiteaPR,
+        linkedCodeMR,
         staleWhileRevalidate: true
       })
       if (activeWorktreeId && !isGitLabReviewContext) {
@@ -1228,6 +1233,7 @@ export default function ChecksPanel(): React.JSX.Element {
     linkedAzureDevOpsPR,
     linkedBitbucketPR,
     linkedGiteaPR,
+    linkedCodeMR,
     linkedGitLabMR,
     linkedPR,
     repo
@@ -1441,7 +1447,8 @@ export default function ChecksPanel(): React.JSX.Element {
       linkedGitLabMR,
       linkedBitbucketPR,
       linkedAzureDevOpsPR,
-      linkedGiteaPR
+      linkedGiteaPR,
+      linkedCodeMR
     })
       .then((result) => {
         if (!stale) {
@@ -1478,6 +1485,7 @@ export default function ChecksPanel(): React.JSX.Element {
     linkedBitbucketPR,
     linkedAzureDevOpsPR,
     linkedGiteaPR,
+    linkedCodeMR,
     remoteStatus?.ahead,
     remoteStatus?.behind,
     remoteStatus?.hasUpstream,
@@ -1986,7 +1994,8 @@ export default function ChecksPanel(): React.JSX.Element {
           linkedGitLabMR,
           linkedBitbucketPR,
           linkedAzureDevOpsPR,
-          linkedGiteaPR
+          linkedGiteaPR,
+          linkedCodeMR
         })
         if (!isCurrentRequest()) {
           return
@@ -2040,7 +2049,8 @@ export default function ChecksPanel(): React.JSX.Element {
         linkedGitLabMR,
         linkedBitbucketPR,
         linkedAzureDevOpsPR,
-        linkedGiteaPR
+        linkedGiteaPR,
+        linkedCodeMR
       })
       if (!isCurrentRequest()) {
         return
@@ -2175,6 +2185,7 @@ export default function ChecksPanel(): React.JSX.Element {
     linkedAzureDevOpsPR,
     linkedBitbucketPR,
     linkedGiteaPR,
+    linkedCodeMR,
     linkedGitLabMR,
     isFolder,
     isGitLabReviewContext,
@@ -2209,7 +2220,8 @@ export default function ChecksPanel(): React.JSX.Element {
           linkedGitLabMR,
           linkedBitbucketPR,
           linkedAzureDevOpsPR,
-          linkedGiteaPR
+          linkedGiteaPR,
+          linkedCodeMR
         })
         if (activeGitLabReview) {
           void fetchGitLabDetails()
@@ -2239,6 +2251,7 @@ export default function ChecksPanel(): React.JSX.Element {
       linkedAzureDevOpsPR,
       linkedBitbucketPR,
       linkedGiteaPR,
+      linkedCodeMR,
       linkedGitLabMR,
       linkedPR,
       repo
@@ -2307,7 +2320,8 @@ export default function ChecksPanel(): React.JSX.Element {
         linkedGitLabMR,
         linkedBitbucketPR,
         linkedAzureDevOpsPR,
-        linkedGiteaPR
+        linkedGiteaPR,
+        linkedCodeMR
       })
       const refreshedGitLabReview =
         refreshedReview?.provider === 'gitlab' ? refreshedReview : activeGitLabReview
@@ -2336,7 +2350,8 @@ export default function ChecksPanel(): React.JSX.Element {
       linkedGitLabMR,
       linkedBitbucketPR,
       linkedAzureDevOpsPR,
-      linkedGiteaPR
+      linkedGiteaPR,
+      linkedCodeMR
     })
   }, [
     activeGitLabReview,
@@ -2350,6 +2365,7 @@ export default function ChecksPanel(): React.JSX.Element {
     linkedAzureDevOpsPR,
     linkedBitbucketPR,
     linkedGiteaPR,
+    linkedCodeMR,
     linkedGitLabMR,
     linkedPR,
     repo
@@ -2986,7 +3002,8 @@ export default function ChecksPanel(): React.JSX.Element {
           linkedGitLabMR,
           linkedBitbucketPR,
           linkedAzureDevOpsPR,
-          linkedGiteaPR
+          linkedGiteaPR,
+          linkedCodeMR
         })
         if (!isCurrentRequestContext()) {
           return
@@ -3093,6 +3110,7 @@ export default function ChecksPanel(): React.JSX.Element {
       linkedAzureDevOpsPR,
       linkedBitbucketPR,
       linkedGiteaPR,
+      linkedCodeMR,
       linkedGitLabMR,
       panelContextKey,
       prCacheKey,
@@ -3244,6 +3262,9 @@ export default function ChecksPanel(): React.JSX.Element {
         if (activeWorktreeId && result.provider === 'gitea') {
           await updateWorktreeMeta(activeWorktreeId, { linkedGiteaPR: result.number })
         }
+        if (activeWorktreeId && result.provider === 'code') {
+          await updateWorktreeMeta(activeWorktreeId, { linkedCodeMR: result.number })
+        }
         const linkedReviewNumbers = {
           linkedGitHubPR: result.provider === 'github' ? result.number : linkedPR,
           fallbackGitHubPR: fallbackGitHubPRNumber,
@@ -3251,7 +3272,8 @@ export default function ChecksPanel(): React.JSX.Element {
           linkedBitbucketPR,
           linkedAzureDevOpsPR:
             result.provider === 'azure-devops' ? result.number : linkedAzureDevOpsPR,
-          linkedGiteaPR: result.provider === 'gitea' ? result.number : linkedGiteaPR
+          linkedGiteaPR: result.provider === 'gitea' ? result.number : linkedGiteaPR,
+          linkedCodeMR: result.provider === 'code' ? result.number : linkedCodeMR
         }
         if (result.provider === 'gitlab') {
           const refreshedReview = await refreshHostedReviewCard(fetchHostedReviewForBranch, {
@@ -3291,6 +3313,7 @@ export default function ChecksPanel(): React.JSX.Element {
       linkedAzureDevOpsPR,
       linkedBitbucketPR,
       linkedGiteaPR,
+      linkedCodeMR,
       linkedGitLabMR,
       linkedPR,
       refreshLinkedGitHubPullRequest,

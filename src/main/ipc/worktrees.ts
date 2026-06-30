@@ -760,6 +760,7 @@ function mergeFolderWorkspace(repo: Repo, worktreeId: string, meta: WorktreeMeta
     linkedBitbucketPR: meta.linkedBitbucketPR ?? null,
     linkedAzureDevOpsPR: meta.linkedAzureDevOpsPR ?? null,
     linkedGiteaPR: meta.linkedGiteaPR ?? null,
+    linkedCodeMR: meta.linkedCodeMR ?? null,
     isArchived: meta.isArchived ?? false,
     isUnread: meta.isUnread ?? false,
     isPinned: meta.isPinned ?? false,
@@ -879,7 +880,8 @@ function createFolderWorkspace(
     ...(args.linkedAzureDevOpsPR !== undefined
       ? { linkedAzureDevOpsPR: args.linkedAzureDevOpsPR }
       : {}),
-    ...(args.linkedGiteaPR !== undefined ? { linkedGiteaPR: args.linkedGiteaPR } : {})
+    ...(args.linkedGiteaPR !== undefined ? { linkedGiteaPR: args.linkedGiteaPR } : {}),
+    ...(args.linkedCodeMR !== undefined ? { linkedCodeMR: args.linkedCodeMR } : {})
   })
   return { worktree: mergeFolderWorkspace(repo, worktreeId, meta) }
 }

@@ -11,6 +11,7 @@ export type ChecksPanelReviewSelectionInput = {
   linkedBitbucketPR: number | null
   linkedAzureDevOpsPR: number | null
   linkedGiteaPR: number | null
+  linkedCodeMR?: number | null
 }
 
 export function gitHubPRToChecksPanelReview(pr: PRInfo): ChecksPanelReview {
@@ -25,17 +26,19 @@ export function selectChecksPanelReview({
   linkedGitLabMR,
   linkedBitbucketPR,
   linkedAzureDevOpsPR,
-  linkedGiteaPR
+  linkedGiteaPR,
+  linkedCodeMR
 }: ChecksPanelReviewSelectionInput): ChecksPanelReview | null {
   const gitLabHostedReview = hostedReview?.provider === 'gitlab' ? hostedReview : null
   if (gitLabHostedReview) {
     return gitLabHostedReview
   }
   const hasNonGitHubLinkedReview =
-    linkedGitLabMR !== null ||
-    linkedBitbucketPR !== null ||
-    linkedAzureDevOpsPR !== null ||
-    linkedGiteaPR !== null
+    linkedGitLabMR != null ||
+    linkedBitbucketPR != null ||
+    linkedAzureDevOpsPR != null ||
+    linkedGiteaPR != null ||
+    linkedCodeMR != null
   if (hasNonGitHubLinkedReview) {
     return null
   }

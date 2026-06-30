@@ -186,6 +186,7 @@ function getAttachedWorktreePrDisplay({
         worktree.linkedBitbucketPR ?? null,
         worktree.linkedAzureDevOpsPR ?? null,
         worktree.linkedGiteaPR ?? null,
+        worktree.linkedCodeMR ?? null,
         { reviewHintKey: hostedReviewEntry.linkedReviewHintKey }
       )
     : null
@@ -215,7 +216,8 @@ function getLinkedReviewDisplay(worktree: Worktree): WorktreeCardPrDisplay | nul
     worktree.linkedGitLabMR ?? null,
     worktree.linkedBitbucketPR ?? null,
     worktree.linkedAzureDevOpsPR ?? null,
-    worktree.linkedGiteaPR ?? null
+    worktree.linkedGiteaPR ?? null,
+    worktree.linkedCodeMR ?? null
   )
 }
 

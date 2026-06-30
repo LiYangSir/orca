@@ -761,6 +761,7 @@ type SelectedReviewBranchInput = Pick<
   | 'linkedBitbucketPR'
   | 'linkedAzureDevOpsPR'
   | 'linkedGiteaPR'
+  | 'linkedCodeMR'
   | 'pushTarget'
 >
 
@@ -784,6 +785,9 @@ function getSelectedReviewBranch(args: SelectedReviewBranchInput): SelectedRevie
   }
   if (typeof args.linkedGiteaPR === 'number') {
     return { provider: 'gitea', number: args.linkedGiteaPR }
+  }
+  if (typeof args.linkedCodeMR === 'number') {
+    return { provider: 'code', number: args.linkedCodeMR }
   }
   return null
 }
@@ -832,13 +836,15 @@ function getSelectedReviewLookupHints(args: SelectedReviewBranchInput): {
   linkedBitbucketPR?: number | null
   linkedAzureDevOpsPR?: number | null
   linkedGiteaPR?: number | null
+  linkedCodeMR?: number | null
 } {
   return {
     linkedGitHubPR: args.linkedPR ?? null,
     linkedGitLabMR: args.linkedGitLabMR ?? null,
     linkedBitbucketPR: args.linkedBitbucketPR ?? null,
     linkedAzureDevOpsPR: args.linkedAzureDevOpsPR ?? null,
-    linkedGiteaPR: args.linkedGiteaPR ?? null
+    linkedGiteaPR: args.linkedGiteaPR ?? null,
+    linkedCodeMR: args.linkedCodeMR ?? null
   }
 }
 
@@ -1783,6 +1789,7 @@ export async function createRemoteWorktree(
       ? { linkedAzureDevOpsPR: args.linkedAzureDevOpsPR }
       : {}),
     ...(args.linkedGiteaPR !== undefined ? { linkedGiteaPR: args.linkedGiteaPR } : {}),
+    ...(args.linkedCodeMR !== undefined ? { linkedCodeMR: args.linkedCodeMR } : {}),
     ...(args.workspaceStatus !== undefined ? { workspaceStatus: args.workspaceStatus } : {})
   }
   const { worktree } = timing.timeSync('persist_metadata', () => {
@@ -2360,6 +2367,7 @@ export async function createLocalWorktree(
       ? { linkedAzureDevOpsPR: args.linkedAzureDevOpsPR }
       : {}),
     ...(args.linkedGiteaPR !== undefined ? { linkedGiteaPR: args.linkedGiteaPR } : {}),
+    ...(args.linkedCodeMR !== undefined ? { linkedCodeMR: args.linkedCodeMR } : {}),
     ...(args.workspaceStatus !== undefined ? { workspaceStatus: args.workspaceStatus } : {})
   }
   const { worktree } = timing.timeSync('persist_metadata', () => {

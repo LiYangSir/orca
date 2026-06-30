@@ -65,7 +65,8 @@ function mapWebUrl(mr: A1MergeRequest): string {
 export function mapA1MergeRequestToPRInfo(mr: A1MergeRequest): PRInfo {
   const state = mr.workInProgress === true ? 'draft' : mapA1State(mr.state)
   return {
-    number: mr.iid,
+    // a1 MR commands take the unique MR `id`; `iid` is deprecated on Aone Code.
+    number: mr.id,
     title: mr.title,
     state,
     url: mapWebUrl(mr),

@@ -8,6 +8,7 @@ type LinkedReviewNumbers = {
   linkedBitbucketPR: number | null
   linkedAzureDevOpsPR: number | null
   linkedGiteaPR: number | null
+  linkedCodeMR: number | null
 }
 
 export type WorktreeCardPrDisplay =
@@ -41,7 +42,7 @@ function getLinkedReviewNumber(
     case 'gitea':
       return links.linkedGiteaPR
     case 'code':
-      return null
+      return links.linkedCodeMR
   }
 }
 
@@ -50,7 +51,7 @@ function makeLinkedReviewFallback(
   number: number,
   review: HostedReviewInfo | null | undefined
 ): WorktreeCardPrDisplay {
-  const label = provider === 'gitlab' ? 'MR' : 'PR'
+  const label = provider === 'gitlab' || provider === 'code' ? 'MR' : 'PR'
   return {
     provider,
     number,
@@ -67,6 +68,7 @@ export function getWorktreeCardPrDisplay(
   linkedBitbucketPR: number | null = null,
   linkedAzureDevOpsPR: number | null = null,
   linkedGiteaPR: number | null = null,
+  linkedCodeMR: number | null = null,
   options: WorktreeCardPrDisplayOptions = {}
 ): WorktreeCardPrDisplay | null {
   const links = {
@@ -74,7 +76,8 @@ export function getWorktreeCardPrDisplay(
     linkedGitLabMR,
     linkedBitbucketPR,
     linkedAzureDevOpsPR,
-    linkedGiteaPR
+    linkedGiteaPR,
+    linkedCodeMR
   }
   if (review) {
     if (review.provider === 'unsupported') {
@@ -82,10 +85,14 @@ export function getWorktreeCardPrDisplay(
     }
     const linkedReviewNumber = getLinkedReviewNumber(review.provider, links)
     if (linkedReviewNumber === null) {
-      if (review.provider !== 'github' && review.provider !== 'gitlab') {
+      if (
+        review.provider !== 'github' &&
+        review.provider !== 'gitlab' &&
+        review.provider !== 'code'
+      ) {
         return review
       }
-      // Why: GitHub/GitLab linked lookups can outlive the worktree metadata
+      // Why: linked lookups can outlive the worktree metadata
       // that requested them. A neutral branch lookup is safe to show unlinked.
       return options.reviewHintKey === '' ? review : null
     }
@@ -113,6 +120,10 @@ export function getWorktreeCardPrDisplay(
 
   if (linkedGiteaPR !== null) {
     return makeLinkedReviewFallback('gitea', linkedGiteaPR, review)
+  }
+
+  if (linkedCodeMR !== null) {
+    return makeLinkedReviewFallback('code', linkedCodeMR, review)
   }
 
   return null

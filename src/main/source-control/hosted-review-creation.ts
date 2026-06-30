@@ -396,6 +396,7 @@ export async function getHostedReviewCreationEligibility(
       linkedBitbucketPR: args.linkedBitbucketPR ?? null,
       linkedAzureDevOpsPR: args.linkedAzureDevOpsPR ?? null,
       linkedGiteaPR: args.linkedGiteaPR ?? null,
+      linkedCodeMR: args.linkedCodeMR ?? null,
       connectionId: args.connectionId ?? null,
       ...hostedReviewExecutionContext(args)
     })

@@ -5856,6 +5856,7 @@ function getDefaultWorktreeMeta(): WorktreeMeta {
     linkedBitbucketPR: null,
     linkedAzureDevOpsPR: null,
     linkedGiteaPR: null,
+    linkedCodeMR: null,
     isArchived: false,
     isUnread: false,
     isPinned: false,

@@ -19,6 +19,7 @@ export function folderWorkspaceToWorktree(folderWorkspace: FolderWorkspace): Wor
     linkedBitbucketPR: null,
     linkedAzureDevOpsPR: null,
     linkedGiteaPR: null,
+    linkedCodeMR: null,
     isArchived: folderWorkspace.isArchived,
     isUnread: folderWorkspace.isUnread,
     isPinned: folderWorkspace.isPinned,

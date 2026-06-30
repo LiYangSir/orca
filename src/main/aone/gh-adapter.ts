@@ -14,7 +14,9 @@ import {
 } from './task-client'
 import { A1Error } from './a1-runner'
 import { mapA1CommentsToPRComments, mapA1MergeRequestToPRInfo } from './gh-shape-mappers'
+import { isAoneCodeRemoteUrl } from './client'
 import type { GitHubPullRequestStateUpdate, PRComment, PRInfo } from '../../shared/types'
+import type { CodeReviewProviderAdapter } from '../ipc/code-provider-bridge'
 
 const GH_TO_A1_METHOD: Record<'merge' | 'squash' | 'rebase', A1MergeMethod> = {
   merge: 'no-ff',
@@ -74,3 +76,13 @@ export async function aoneUpdatePRState(
       : await reopenMergeRequest(prNumber, { cwd: repoPath })
   return result.ok ? { ok: true } : { ok: false, error: result.error }
 }
+
+export const aoneCodeReviewProviderAdapter = {
+  id: 'code',
+  matchesRemoteUrl: isAoneCodeRemoteUrl,
+  prForBranch: ({ repoPath, branch, linkedPRNumber }) =>
+    aonePRForBranch(repoPath, branch, linkedPRNumber),
+  prComments: ({ repoPath, prNumber }) => aonePRComments(repoPath, prNumber),
+  mergePR: ({ repoPath, prNumber, method }) => aoneMergePR(repoPath, prNumber, method),
+  updatePRState: ({ repoPath, prNumber, updates }) => aoneUpdatePRState(repoPath, prNumber, updates)
+} satisfies CodeReviewProviderAdapter

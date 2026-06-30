@@ -10,6 +10,7 @@ export type ChecksPanelGitStatusContextInput = {
   linkedBitbucketPR?: number | null
   linkedAzureDevOpsPR?: number | null
   linkedGiteaPR?: number | null
+  linkedCodeMR?: number | null
   runtimeEnvironmentId: string | null
   repoConnectionId: string | null
   pushTarget: GitPushTarget | null | undefined
@@ -58,6 +59,7 @@ export function buildChecksPanelGitStatusContextKey(
     linkedBitbucketPR: input.linkedBitbucketPR ?? null,
     linkedAzureDevOpsPR: input.linkedAzureDevOpsPR ?? null,
     linkedGiteaPR: input.linkedGiteaPR ?? null,
+    linkedCodeMR: input.linkedCodeMR ?? null,
     runtimeEnvironmentId: input.runtimeEnvironmentId ?? '',
     repoConnectionId: input.repoConnectionId ?? '',
     pushTarget: input.pushTarget

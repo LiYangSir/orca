@@ -1356,6 +1356,7 @@ function mergeRuntimeFolderWorkspace(repo: Repo, worktreeId: string, meta: Workt
     linkedBitbucketPR: meta.linkedBitbucketPR ?? null,
     linkedAzureDevOpsPR: meta.linkedAzureDevOpsPR ?? null,
     linkedGiteaPR: meta.linkedGiteaPR ?? null,
+    linkedCodeMR: meta.linkedCodeMR ?? null,
     isArchived: meta.isArchived ?? false,
     isUnread: meta.isUnread ?? false,
     isPinned: meta.isPinned ?? false,
@@ -1535,6 +1536,7 @@ type SelectedReviewBranchInput = {
   linkedBitbucketPR?: number | null
   linkedAzureDevOpsPR?: number | null
   linkedGiteaPR?: number | null
+  linkedCodeMR?: number | null
   pushTarget?: GitPushTarget
 }
 
@@ -1558,6 +1560,9 @@ function getSelectedReviewBranch(args: SelectedReviewBranchInput): SelectedRevie
   }
   if (typeof args.linkedGiteaPR === 'number') {
     return { provider: 'gitea', number: args.linkedGiteaPR }
+  }
+  if (typeof args.linkedCodeMR === 'number') {
+    return { provider: 'code', number: args.linkedCodeMR }
   }
   return null
 }
@@ -1606,13 +1611,15 @@ function getSelectedReviewLookupHints(args: SelectedReviewBranchInput): {
   linkedBitbucketPR?: number | null
   linkedAzureDevOpsPR?: number | null
   linkedGiteaPR?: number | null
+  linkedCodeMR?: number | null
 } {
   return {
     linkedGitHubPR: args.linkedPR ?? null,
     linkedGitLabMR: args.linkedGitLabMR ?? null,
     linkedBitbucketPR: args.linkedBitbucketPR ?? null,
     linkedAzureDevOpsPR: args.linkedAzureDevOpsPR ?? null,
-    linkedGiteaPR: args.linkedGiteaPR ?? null
+    linkedGiteaPR: args.linkedGiteaPR ?? null,
+    linkedCodeMR: args.linkedCodeMR ?? null
   }
 }
 
@@ -10515,6 +10522,7 @@ export class OrcaRuntimeService {
     linkedBitbucketPR?: number | null
     linkedAzureDevOpsPR?: number | null
     linkedGiteaPR?: number | null
+    linkedCodeMR?: number | null
   }): Promise<HostedReviewInfo | null> {
     const repo = await this.resolveRepoSelector(args.repoSelector)
     const executionOptions = this.getHostedReviewExecutionOptions(repo)
@@ -10529,6 +10537,7 @@ export class OrcaRuntimeService {
       linkedBitbucketPR: args.linkedBitbucketPR ?? null,
       linkedAzureDevOpsPR: args.linkedAzureDevOpsPR ?? null,
       linkedGiteaPR: args.linkedGiteaPR ?? null,
+      linkedCodeMR: args.linkedCodeMR ?? null,
       ...executionOptions
     })
     if (review?.provider === 'github' && this.stats && !this.stats.hasCountedPR(review.url)) {
@@ -10565,6 +10574,7 @@ export class OrcaRuntimeService {
       linkedBitbucketPR: args.linkedBitbucketPR ?? null,
       linkedAzureDevOpsPR: args.linkedAzureDevOpsPR ?? null,
       linkedGiteaPR: args.linkedGiteaPR ?? null,
+      linkedCodeMR: args.linkedCodeMR ?? null,
       ...executionOptions
     })
   }
@@ -12408,6 +12418,7 @@ export class OrcaRuntimeService {
     linkedBitbucketPR?: number | null
     linkedAzureDevOpsPR?: number | null
     linkedGiteaPR?: number | null
+    linkedCodeMR?: number | null
     comment?: string
     displayName?: string
     telemetrySource?: WorkspaceCreateTelemetrySource
@@ -12505,6 +12516,7 @@ export class OrcaRuntimeService {
           ? { linkedAzureDevOpsPR: args.linkedAzureDevOpsPR }
           : {}),
         ...(args.linkedGiteaPR !== undefined ? { linkedGiteaPR: args.linkedGiteaPR } : {}),
+        ...(args.linkedCodeMR !== undefined ? { linkedCodeMR: args.linkedCodeMR } : {}),
         ...(effectiveCreatedWithAgent ? { createdWithAgent: effectiveCreatedWithAgent } : {}),
         ...(args.comment !== undefined ? { comment: args.comment } : {}),
         ...(args.manualOrder !== undefined ? { manualOrder: args.manualOrder } : {}),
@@ -13017,6 +13029,7 @@ export class OrcaRuntimeService {
         ? { linkedAzureDevOpsPR: args.linkedAzureDevOpsPR }
         : {}),
       ...(args.linkedGiteaPR !== undefined ? { linkedGiteaPR: args.linkedGiteaPR } : {}),
+      ...(args.linkedCodeMR !== undefined ? { linkedCodeMR: args.linkedCodeMR } : {}),
       ...(effectiveCreatedWithAgent ? { createdWithAgent: effectiveCreatedWithAgent } : {}),
       ...(args.pendingFirstAgentMessageRename === true && effectiveCreatedWithAgent
         ? { pendingFirstAgentMessageRename: true }
@@ -13338,6 +13351,7 @@ export class OrcaRuntimeService {
       linkedBitbucketPR?: number | null
       linkedAzureDevOpsPR?: number | null
       linkedGiteaPR?: number | null
+      linkedCodeMR?: number | null
       comment?: string
       displayName?: string
       workspaceStatus?: string
@@ -13394,6 +13408,7 @@ export class OrcaRuntimeService {
           ? { linkedAzureDevOpsPR: args.linkedAzureDevOpsPR }
           : {}),
         ...(args.linkedGiteaPR != null ? { linkedGiteaPR: args.linkedGiteaPR } : {}),
+        ...(args.linkedCodeMR != null ? { linkedCodeMR: args.linkedCodeMR } : {}),
         ...(args.pushTarget ? { pushTarget: args.pushTarget } : {}),
         ...(args.workspaceStatus ? { workspaceStatus: args.workspaceStatus as never } : {}),
         ...(args.manualOrder !== undefined ? { manualOrder: args.manualOrder } : {}),

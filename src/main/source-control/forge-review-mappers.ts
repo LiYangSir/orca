@@ -107,7 +107,8 @@ function mapCodeMergeable(mr: A1MergeRequest): PRMergeableState {
 export function mapCodeReview(mr: A1MergeRequest): HostedReviewInfo {
   return {
     provider: 'code',
-    number: mr.iid,
+    // a1 MR commands take the unique MR `id`; keep hosted review links executable.
+    number: mr.id,
     title: mr.title,
     state: mapCodeReviewState(mr.state),
     url: mr.webUrl || mr.detailUrl || '',

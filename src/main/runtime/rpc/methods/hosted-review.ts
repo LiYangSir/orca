@@ -11,7 +11,8 @@ const HostedReviewForBranch = z.object({
   linkedGitLabMR: z.number().int().positive().nullable().optional(),
   linkedBitbucketPR: z.number().int().positive().nullable().optional(),
   linkedAzureDevOpsPR: z.number().int().positive().nullable().optional(),
-  linkedGiteaPR: z.number().int().positive().nullable().optional()
+  linkedGiteaPR: z.number().int().positive().nullable().optional(),
+  linkedCodeMR: z.number().int().positive().nullable().optional()
 })
 
 const HostedReviewCreationEligibility = z.object({
@@ -28,7 +29,8 @@ const HostedReviewCreationEligibility = z.object({
   linkedGitLabMR: z.number().int().positive().nullable().optional(),
   linkedBitbucketPR: z.number().int().positive().nullable().optional(),
   linkedAzureDevOpsPR: z.number().int().positive().nullable().optional(),
-  linkedGiteaPR: z.number().int().positive().nullable().optional()
+  linkedGiteaPR: z.number().int().positive().nullable().optional(),
+  linkedCodeMR: z.number().int().positive().nullable().optional()
 })
 
 const HostedReviewCreate = z.object({
@@ -59,7 +61,8 @@ export const HOSTED_REVIEW_METHODS: RpcMethod[] = [
         linkedGitLabMR: params.linkedGitLabMR ?? null,
         linkedBitbucketPR: params.linkedBitbucketPR ?? null,
         linkedAzureDevOpsPR: params.linkedAzureDevOpsPR ?? null,
-        linkedGiteaPR: params.linkedGiteaPR ?? null
+        linkedGiteaPR: params.linkedGiteaPR ?? null,
+        linkedCodeMR: params.linkedCodeMR ?? null
       })
     }
   }),
@@ -83,7 +86,8 @@ export const HOSTED_REVIEW_METHODS: RpcMethod[] = [
         linkedGitLabMR: params.linkedGitLabMR ?? null,
         linkedBitbucketPR: params.linkedBitbucketPR ?? null,
         linkedAzureDevOpsPR: params.linkedAzureDevOpsPR ?? null,
-        linkedGiteaPR: params.linkedGiteaPR ?? null
+        linkedGiteaPR: params.linkedGiteaPR ?? null,
+        linkedCodeMR: params.linkedCodeMR ?? null
       })
     }
   }),

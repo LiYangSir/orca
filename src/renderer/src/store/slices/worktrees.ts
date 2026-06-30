@@ -219,6 +219,7 @@ function areWorktreesEqual(current: Worktree[] | undefined, next: Worktree[]): b
       worktree.linkedBitbucketPR === candidate.linkedBitbucketPR &&
       worktree.linkedAzureDevOpsPR === candidate.linkedAzureDevOpsPR &&
       worktree.linkedGiteaPR === candidate.linkedGiteaPR &&
+      worktree.linkedCodeMR === candidate.linkedCodeMR &&
       worktree.isArchived === candidate.isArchived &&
       worktree.isUnread === candidate.isUnread &&
       worktree.isPinned === candidate.isPinned &&
@@ -1241,13 +1242,15 @@ type HostedReviewLinkKey =
   | 'linkedBitbucketPR'
   | 'linkedAzureDevOpsPR'
   | 'linkedGiteaPR'
+  | 'linkedCodeMR'
 
 const HOSTED_REVIEW_LINK_KEYS: readonly HostedReviewLinkKey[] = [
   'linkedPR',
   'linkedGitLabMR',
   'linkedBitbucketPR',
   'linkedAzureDevOpsPR',
-  'linkedGiteaPR'
+  'linkedGiteaPR',
+  'linkedCodeMR'
 ]
 
 const CLEARED_HOSTED_REVIEW_LINK_UPDATES: Pick<WorktreeMeta, HostedReviewLinkKey | 'pushTarget'> = {
@@ -2606,7 +2609,8 @@ export const createWorktreeSlice: StateCreator<AppState, [], [], WorktreeSlice> 
     linkedAzureDevOpsPR,
     linkedGiteaPR,
     compareBaseRef,
-    options
+    options,
+    linkedCodeMR
   ) => {
     const automationProvenanceRequest = options?.automationProvenanceRequest
     const retryableConflictPatterns = [
@@ -2667,6 +2671,7 @@ export const createWorktreeSlice: StateCreator<AppState, [], [], WorktreeSlice> 
             ...(linkedBitbucketPR !== undefined ? { linkedBitbucketPR } : {}),
             ...(linkedAzureDevOpsPR !== undefined ? { linkedAzureDevOpsPR } : {}),
             ...(linkedGiteaPR !== undefined ? { linkedGiteaPR } : {}),
+            ...(linkedCodeMR !== undefined ? { linkedCodeMR } : {}),
             ...(startup ? { startup } : {}),
             ...(creationId ? { creationId } : {}),
             ...(automationProvenanceRequest ? { automationProvenanceRequest } : {})
@@ -2712,6 +2717,7 @@ export const createWorktreeSlice: StateCreator<AppState, [], [], WorktreeSlice> 
                     ...(linkedBitbucketPR !== undefined ? { linkedBitbucketPR } : {}),
                     ...(linkedAzureDevOpsPR !== undefined ? { linkedAzureDevOpsPR } : {}),
                     ...(linkedGiteaPR !== undefined ? { linkedGiteaPR } : {}),
+                    ...(linkedCodeMR !== undefined ? { linkedCodeMR } : {}),
                     ...(automationProvenanceRequest ? { automationProvenanceRequest } : {}),
                     ...(startup
                       ? {
@@ -3324,7 +3330,9 @@ export const createWorktreeSlice: StateCreator<AppState, [], [], WorktreeSlice> 
       (normalizedUpdates.linkedAzureDevOpsPR === null &&
         (worktreeForUpdate?.linkedAzureDevOpsPR ?? null) !== null) ||
       (normalizedUpdates.linkedGiteaPR === null &&
-        (worktreeForUpdate?.linkedGiteaPR ?? null) !== null)
+        (worktreeForUpdate?.linkedGiteaPR ?? null) !== null) ||
+      (normalizedUpdates.linkedCodeMR === null &&
+        (worktreeForUpdate?.linkedCodeMR ?? null) !== null)
     const reviewRepo = shouldRefreshHostedReview
       ? get().repos.find((repo) => repo.id === worktreeForUpdate?.repoId)
       : undefined
@@ -3476,6 +3484,11 @@ export const createWorktreeSlice: StateCreator<AppState, [], [], WorktreeSlice> 
             targetEnriched,
             worktreeForUpdate,
             'linkedGiteaPR'
+          ),
+          linkedCodeMR: getHostedReviewLinkForMetaRefresh(
+            targetEnriched,
+            worktreeForUpdate,
+            'linkedCodeMR'
           ),
           force: true
         })
@@ -3712,7 +3725,8 @@ export const createWorktreeSlice: StateCreator<AppState, [], [], WorktreeSlice> 
         branch,
         linkedGitHubPR: alreadyLinked ? link.number : null,
         fallbackGitHubPR: null,
-        linkedGitLabMR: worktree.linkedGitLabMR ?? null
+        linkedGitLabMR: worktree.linkedGitLabMR ?? null,
+        linkedCodeMR: worktree.linkedCodeMR ?? null
       })
     }
   },

@@ -1387,7 +1387,7 @@ const api = {
       ipcRenderer.invoke('aone:getWorkItem', args),
     listMergeRequests: (args?: unknown): Promise<unknown> =>
       ipcRenderer.invoke('aone:listMergeRequests', args),
-    getMergeRequest: (args: { iid: number }): Promise<unknown> =>
+    getMergeRequest: (args: { id: number } | { iid: number }): Promise<unknown> =>
       ipcRenderer.invoke('aone:getMergeRequest', args),
     getMergeRequestForBranch: (args: {
       branch: string
