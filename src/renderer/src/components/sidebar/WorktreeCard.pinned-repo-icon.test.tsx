@@ -130,6 +130,8 @@ describe('WorktreeCard pinned repo icon', () => {
 
       expect(markup).toContain('🦊')
       expect(markup).toContain('Project orca')
+      expect(markup).toContain('data-worktree-project-identity-label=""')
+      expect(markup).toContain('>orca</span>')
     },
     WORKTREE_CARD_IMPORT_TIMEOUT_MS
   )
@@ -149,6 +151,7 @@ describe('WorktreeCard pinned repo icon', () => {
 
       expect(markup).not.toContain('🦊')
       expect(markup).not.toContain('Project orca')
+      expect(markup).not.toContain('data-worktree-project-identity-label=""')
     },
     WORKTREE_CARD_IMPORT_TIMEOUT_MS
   )
@@ -170,7 +173,31 @@ describe('WorktreeCard pinned repo icon', () => {
 
       expect(markup).toContain('🦊')
       expect(markup).toContain('Project orca')
+      expect(markup).toContain('data-worktree-project-identity-label=""')
+      expect(markup).toContain('>orca</span>')
       expect(markup).not.toContain('data-worktree-card-meta-row=""')
+    },
+    WORKTREE_CARD_IMPORT_TIMEOUT_MS
+  )
+
+  it(
+    'hides the inline project name for natural rows inside project grouping',
+    async () => {
+      settings = { compactWorktreeCards: false, experimentalNewWorktreeCardStyle: true }
+      worktreeCardProperties = ['status']
+      const { default: WorktreeCard } = await import('./WorktreeCard')
+
+      const markup = renderToStaticMarkup(
+        <WorktreeCard
+          worktree={makeWorktree({ isPinned: false })}
+          repo={makeRepo()}
+          isActive={false}
+          hideRepoBadge
+        />
+      )
+
+      expect(markup).not.toContain('Project orca')
+      expect(markup).not.toContain('data-worktree-project-identity-label=""')
     },
     WORKTREE_CARD_IMPORT_TIMEOUT_MS
   )

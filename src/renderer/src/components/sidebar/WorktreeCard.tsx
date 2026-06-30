@@ -177,23 +177,43 @@ function getDirectoryName(folderPath: string): string {
 // keep the box + tooltip identical so both repo cues read as the same affordance.
 function RepoIdentityChip({
   repo,
-  children
+  children,
+  showLabel = false
 }: {
   repo: Repo
   children: React.ReactNode
+  showLabel?: boolean
 }): React.JSX.Element {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span
-          className="inline-flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-worktree-sidebar-border bg-worktree-sidebar-accent/55"
+          className={cn(
+            'inline-flex shrink-0 items-center rounded-[4px] border border-worktree-sidebar-border bg-worktree-sidebar-accent/55',
+            showLabel ? 'h-4 max-w-[6.5rem] gap-1 px-1' : 'size-4 justify-center'
+          )}
           aria-label={translate(
             'auto.components.sidebar.WorktreeCard.35ccfe2475',
             'Project {{value0}}',
             { value0: repo.displayName }
           )}
         >
-          {children}
+          <span
+            className={cn(
+              'flex shrink-0 items-center justify-center',
+              showLabel ? 'size-3.5' : 'size-full'
+            )}
+          >
+            {children}
+          </span>
+          {showLabel ? (
+            <span
+              className="min-w-0 truncate text-[10px] font-semibold leading-none text-muted-foreground"
+              data-worktree-project-identity-label=""
+            >
+              {repo.displayName}
+            </span>
+          ) : null}
         </span>
       </TooltipTrigger>
       <TooltipContent side="right" sideOffset={8}>
@@ -1416,7 +1436,7 @@ const WorktreeCard = React.memo(function WorktreeCard({
         <div className="flex min-w-0 items-center justify-between gap-2">
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
             {showPinnedRepoIcon && (
-              <RepoIdentityChip repo={repo}>
+              <RepoIdentityChip repo={repo} showLabel>
                 <RepoIconGlyph
                   repoIcon={repo.repoIcon}
                   color={resolveRepoHeaderColor(repo.badgeColor)}
@@ -1478,7 +1498,7 @@ const WorktreeCard = React.memo(function WorktreeCard({
               )}
 
             {showInlineRepoBadge && (
-              <RepoIdentityChip repo={repo}>
+              <RepoIdentityChip repo={repo} showLabel>
                 <RepoIconGlyph
                   repoIcon={repo.repoIcon}
                   color={resolveRepoHeaderColor(repo.badgeColor)}
