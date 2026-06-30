@@ -1462,6 +1462,15 @@ function formatLineRange(comment: PRComment): string | null {
   return `L${comment.line}`
 }
 
+/** Build the visible code location shown on inline review comments. */
+export function formatPRCommentCodeLocation(comment: PRComment): string | null {
+  if (!comment.path) {
+    return null
+  }
+  const lineRange = formatLineRange(comment)
+  return lineRange ? `${comment.path}:${lineRange}` : comment.path
+}
+
 /** True for top-level PR conversation comments the viewer can edit or delete. */
 export function isMutablePRConversationComment(comment: PRComment): boolean {
   if (comment.threadId || comment.path) {
@@ -1624,6 +1633,44 @@ function PRCommentActionBadge({
     )
   }
   return null
+}
+
+function PRCommentOutdatedBadge({
+  comment,
+  presentation
+}: {
+  comment: PRComment
+  presentation: PRCommentPresentationClasses
+}): React.JSX.Element | null {
+  if (comment.isOutdated !== true) {
+    return null
+  }
+  return (
+    <span className={presentation.statusBadgeResolved}>
+      {translate('auto.components.right.sidebar.checks.panel.content.7c38bd20cb', 'Outdated')}
+    </span>
+  )
+}
+
+function PRCommentLocationBadge({
+  comment,
+  presentation
+}: {
+  comment: PRComment
+  presentation: PRCommentPresentationClasses
+}): React.JSX.Element | null {
+  const location = formatPRCommentCodeLocation(comment)
+  if (!location) {
+    return null
+  }
+  return (
+    <span className={presentation.pathBadge} title={location}>
+      <span className="font-sans text-muted-foreground">
+        {translate('auto.components.right.sidebar.checks.panel.content.a25f55b6e9', 'Code')}
+      </span>{' '}
+      {location}
+    </span>
+  )
 }
 
 /** A single comment row — used for both root and reply comments. */
@@ -1794,17 +1841,13 @@ function CommentRow({
             {translate('auto.components.right.sidebar.checks.panel.content.2ba0a32bdd', 'bot')}
           </span>
         ) : null}
-        {comment.path ? (
-          <span className={presentation.pathBadge} title={comment.path}>
-            {comment.path.split('/').pop()}
-            {formatLineRange(comment) && `:${formatLineRange(comment)}`}
-          </span>
-        ) : null}
+        <PRCommentLocationBadge comment={comment} presentation={presentation} />
         <PRCommentActionBadge
           actionState={actionState}
           isQueued={isQueued}
           presentation={presentation}
         />
+        <PRCommentOutdatedBadge comment={comment} presentation={presentation} />
         {onQueueForAgent ? (
           <QueueForAgentButton
             className="ml-auto can-hover:opacity-0 group-hover/comment:opacity-100 group-focus-within/comment:opacity-100"
@@ -1840,18 +1883,16 @@ function CommentRow({
             {translate('auto.components.right.sidebar.checks.panel.content.2ba0a32bdd', 'bot')}
           </span>
         )}
-        {!isReply && comment.path && (
-          <span className={presentation.pathBadge}>
-            {comment.path.split('/').pop()}
-            {formatLineRange(comment) && `:${formatLineRange(comment)}`}
-          </span>
-        )}
+        {!isReply ? <PRCommentLocationBadge comment={comment} presentation={presentation} /> : null}
         {!isReply ? (
           <PRCommentActionBadge
             actionState={actionState}
             isQueued={isQueued}
             presentation={presentation}
           />
+        ) : null}
+        {!isReply ? (
+          <PRCommentOutdatedBadge comment={comment} presentation={presentation} />
         ) : null}
         <div className="flex-1" />
         {commentActions}

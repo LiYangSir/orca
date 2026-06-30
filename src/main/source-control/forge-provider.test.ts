@@ -5,9 +5,13 @@ const {
   createGitLabMergeRequestMock,
   createAzureDevOpsPullRequestMock,
   createGiteaPullRequestMock,
+  createAoneMergeRequestMock,
+  getAoneMergeRequestForBranchMock,
   getAzureDevOpsRepoSlugMock,
   getBitbucketRepoSlugMock,
   getGiteaRepoSlugMock,
+  getRemoteUrlMock,
+  resolveAoneCodeRepoSlugMock,
   getMergeRequestForBranchMock,
   getProjectSlugMock,
   getPRForBranchOutcomeMock,
@@ -17,9 +21,13 @@ const {
   createGitLabMergeRequestMock: vi.fn(),
   createAzureDevOpsPullRequestMock: vi.fn(),
   createGiteaPullRequestMock: vi.fn(),
+  createAoneMergeRequestMock: vi.fn(),
+  getAoneMergeRequestForBranchMock: vi.fn(),
   getAzureDevOpsRepoSlugMock: vi.fn(),
   getBitbucketRepoSlugMock: vi.fn(),
   getGiteaRepoSlugMock: vi.fn(),
+  getRemoteUrlMock: vi.fn(),
+  resolveAoneCodeRepoSlugMock: vi.fn(),
   getMergeRequestForBranchMock: vi.fn(),
   getProjectSlugMock: vi.fn(),
   getPRForBranchOutcomeMock: vi.fn(),
@@ -68,6 +76,24 @@ vi.mock('../gitea/pull-request-creation', () => ({
   createGiteaPullRequest: createGiteaPullRequestMock
 }))
 
+vi.mock('../aone/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../aone/client')>()
+  return {
+    ...actual,
+    getMergeRequestForBranch: getAoneMergeRequestForBranchMock,
+    getMergeRequest: vi.fn(),
+    resolveAoneCodeRepoSlug: resolveAoneCodeRepoSlugMock
+  }
+})
+
+vi.mock('../aone/merge-request-creation', () => ({
+  createAoneMergeRequest: createAoneMergeRequestMock
+}))
+
+vi.mock('../git/repo', () => ({
+  getRemoteUrl: getRemoteUrlMock
+}))
+
 import {
   FORGE_PROVIDERS,
   detectHostedReviewProvider,
@@ -81,9 +107,15 @@ describe('forge provider interface', () => {
     createGitLabMergeRequestMock.mockReset()
     createAzureDevOpsPullRequestMock.mockReset()
     createGiteaPullRequestMock.mockReset()
+    createAoneMergeRequestMock.mockReset()
+    getAoneMergeRequestForBranchMock.mockReset()
     getAzureDevOpsRepoSlugMock.mockReset()
     getBitbucketRepoSlugMock.mockReset()
     getGiteaRepoSlugMock.mockReset()
+    getRemoteUrlMock.mockReset()
+    getRemoteUrlMock.mockReturnValue('git@github.com:team/orca.git')
+    resolveAoneCodeRepoSlugMock.mockReset()
+    resolveAoneCodeRepoSlugMock.mockResolvedValue(null)
     getMergeRequestForBranchMock.mockReset()
     getProjectSlugMock.mockReset()
     getPRForBranchOutcomeMock.mockReset()
@@ -105,6 +137,7 @@ describe('forge provider interface', () => {
     expect(
       FORGE_PROVIDERS.map((provider) => [provider.id, provider.supportsReviewCreation])
     ).toEqual([
+      ['code', true],
       ['gitlab', true],
       ['github', true],
       ['bitbucket', false],
@@ -136,6 +169,57 @@ describe('forge provider interface', () => {
       head: 'feature/provider-interface',
       title: 'Add provider interface'
     })
+  })
+
+  it('prefers Aone Code over generic self-hosted Gitea parsing for Alibaba remotes', async () => {
+    getRemoteUrlMock.mockReturnValue('git@gitlab.alibaba-inc.com:team/orca.git')
+    getGiteaRepoSlugMock.mockResolvedValue({
+      owner: 'team',
+      repo: 'orca',
+      host: 'gitlab.alibaba-inc.com'
+    })
+
+    await expect(detectHostedReviewProvider({ repoPath: '/repo' })).resolves.toBe('code')
+    await expect(getForgeProviderForRepository({ repoPath: '/repo' })).resolves.toMatchObject({
+      id: 'code'
+    })
+    expect(getGiteaRepoSlugMock).not.toHaveBeenCalled()
+  })
+
+  it('routes Aone Code review creation through the shared provider contract', async () => {
+    createAoneMergeRequestMock.mockResolvedValue({
+      ok: true,
+      number: 99,
+      url: 'https://gitlab.alibaba-inc.com/team/orca/codereview/99'
+    })
+
+    const provider = getForgeProviderById('code')
+    await expect(
+      provider.createReview?.(
+        '/repo',
+        {
+          provider: 'code',
+          base: 'master',
+          head: 'feature/provider-interface',
+          title: 'Add provider interface'
+        },
+        null
+      )
+    ).resolves.toEqual({
+      ok: true,
+      number: 99,
+      url: 'https://gitlab.alibaba-inc.com/team/orca/codereview/99'
+    })
+    expect(createAoneMergeRequestMock).toHaveBeenCalledWith(
+      '/repo',
+      {
+        provider: 'code',
+        base: 'master',
+        head: 'feature/provider-interface',
+        title: 'Add provider interface'
+      },
+      null
+    )
   })
 
   it('routes GitLab review creation through the shared provider contract', async () => {

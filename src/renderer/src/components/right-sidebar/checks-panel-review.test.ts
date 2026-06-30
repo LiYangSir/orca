@@ -77,6 +77,27 @@ describe('selectChecksPanelReview', () => {
     ).toBe(review)
   })
 
+  it('uses Aone Code hosted review metadata ahead of GitHub PR cache', () => {
+    const review = makeGitLabReview({
+      provider: 'code',
+      number: 28280121,
+      title: 'Aone Code MR',
+      url: 'https://code.alibaba-inc.com/quguai.ly/bruno/codereview/28280121'
+    })
+
+    expect(
+      selectChecksPanelReview({
+        hostedReview: review,
+        pr: makePR({ number: 12 }),
+        linkedGitLabMR: null,
+        linkedBitbucketPR: null,
+        linkedAzureDevOpsPR: null,
+        linkedGiteaPR: null,
+        linkedCodeMR: 28280121
+      })
+    ).toBe(review)
+  })
+
   it('uses GitHub PR cache when no non-GitHub review is linked', () => {
     const selected = selectChecksPanelReview({
       hostedReview: null,
@@ -94,7 +115,8 @@ describe('selectChecksPanelReview', () => {
     { provider: 'GitLab', linkedGitLabMR: 7 },
     { provider: 'Bitbucket', linkedBitbucketPR: 8 },
     { provider: 'Azure DevOps', linkedAzureDevOpsPR: 9 },
-    { provider: 'Gitea', linkedGiteaPR: 10 }
+    { provider: 'Gitea', linkedGiteaPR: 10 },
+    { provider: 'Aone Code', linkedCodeMR: 11 }
   ])('does not surface GitHub PR cache when a $provider review is linked', (links) => {
     expect(
       selectChecksPanelReview({
@@ -103,7 +125,8 @@ describe('selectChecksPanelReview', () => {
         linkedGitLabMR: links.linkedGitLabMR ?? null,
         linkedBitbucketPR: links.linkedBitbucketPR ?? null,
         linkedAzureDevOpsPR: links.linkedAzureDevOpsPR ?? null,
-        linkedGiteaPR: links.linkedGiteaPR ?? null
+        linkedGiteaPR: links.linkedGiteaPR ?? null,
+        linkedCodeMR: links.linkedCodeMR ?? null
       })
     ).toBeNull()
   })

@@ -3,8 +3,14 @@
 // either the parsed JSON or null/[] on missing data, and throws A1Error for
 // auth/binary/parse failures so the IPC layer can map errors uniformly.
 
-import { A1Error, a1ExecJson, isA1Installed, type A1ExecOptions } from './a1-runner'
-import type { A1LinkStatus, A1MergeRequest, A1WorkItem } from './types'
+import {
+  A1Error,
+  a1ExecFileAsync,
+  a1ExecJson,
+  isA1Installed,
+  type A1ExecOptions
+} from './a1-runner'
+import type { A1LinkStatus, A1MergeRequest, A1MergeRequestViewPayload, A1WorkItem } from './types'
 
 export type AoneWorkItemListFilter = {
   scope?: 'personal' | 'project' | 'team' | 'all' | 'collect' | 'associate' | 'child'
@@ -36,6 +42,10 @@ function pushCsv(args: string[], flag: string, values: readonly string[] | undef
   args.push(flag, values.join(','))
 }
 
+function mergeRequestFromPayload(payload: A1MergeRequestViewPayload): A1MergeRequest | null {
+  return 'mergeRequest' in payload ? (payload.mergeRequest ?? null) : payload
+}
+
 export async function getA1LinkStatus(options: A1ExecOptions = {}): Promise<A1LinkStatus> {
   // a1 link status -f json returns {} when nothing is linked.
   return a1ExecJson<A1LinkStatus>(['link', 'status'], options)
@@ -43,6 +53,15 @@ export async function getA1LinkStatus(options: A1ExecOptions = {}): Promise<A1Li
 
 export async function isAoneAvailable(): Promise<boolean> {
   return isA1Installed()
+}
+
+export async function isA1Authenticated(options: A1ExecOptions = {}): Promise<boolean> {
+  try {
+    await a1ExecFileAsync(['auth', 'whoami'], options)
+    return true
+  } catch {
+    return false
+  }
 }
 
 export async function listWorkItems(
@@ -113,7 +132,9 @@ export async function getMergeRequest(
     return null
   }
   try {
-    return await a1ExecJson<A1MergeRequest>(['repo', 'mr', 'view', String(mrId)], options)
+    return mergeRequestFromPayload(
+      await a1ExecJson<A1MergeRequestViewPayload>(['repo', 'mr', 'view', String(mrId)], options)
+    )
   } catch (error) {
     if (error instanceof A1Error && error.code === 'invalid_output') {
       return null
@@ -134,7 +155,13 @@ export async function getMergeRequestForBranch(
     return null
   }
   const mrs = await listMergeRequests({ state: 'opened', source: trimmed }, options)
-  return mrs.find((mr) => mr.sourceBranch === trimmed) ?? null
+  const listed = mrs.find((mr) => mr.sourceBranch === trimmed) ?? null
+  if (!listed) {
+    return null
+  }
+  // Why: a1's list payload omits detailUrl/webUrl for some Code hosts; view
+  // returns the canonical /codereview/<id> URL used by browser links.
+  return (await getMergeRequest(listed.id, options)) ?? listed
 }
 
 // `code` review host detection: Alibaba-hosted code remotes can sit behind

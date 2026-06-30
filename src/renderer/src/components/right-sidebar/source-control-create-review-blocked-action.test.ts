@@ -55,6 +55,20 @@ describe('source-control-create-review-blocked-action', () => {
     )
   })
 
+  it('returns Aone Code auth guidance for blocked direct clicks', () => {
+    expect(
+      resolveBlockedCreateReviewNoticeMessage(
+        eligibility({
+          provider: 'code',
+          blockedReason: 'auth_required',
+          nextAction: 'authenticate'
+        })
+      )
+    ).toBe(
+      'Create MR failed: Aone Code is not authenticated. Next step: Run a1 auth login --buc in this environment.'
+    )
+  })
+
   it('returns a push-first notice for supported needs-push clicks', () => {
     expect(resolveBlockedCreateReviewNoticeMessage(eligibility())).toBe(
       'Create PR failed: push this branch before creating a pull request.'

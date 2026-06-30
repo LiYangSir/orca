@@ -117,16 +117,21 @@ function mapA1Author(author: A1MergeRequestComment['author']): string {
 }
 
 export function mapA1CommentToPRComment(comment: A1MergeRequestComment): PRComment {
+  const body = comment.body ?? comment.note ?? ''
+  const path = comment.filePath ?? comment.path ?? undefined
+  const isResolved =
+    comment.resolved === true || comment.closed === true || comment.closed === 1 ? true : undefined
   return {
     id: comment.id,
     author: mapA1Author(comment.author),
     authorAvatarUrl: '',
-    body: comment.body ?? '',
+    body,
     createdAt: comment.createdAt ?? comment.updatedAt ?? new Date().toISOString(),
     url: '',
-    path: comment.filePath ?? undefined,
+    path,
     line: typeof comment.line === 'number' ? comment.line : undefined,
-    isResolved: comment.resolved === true ? true : undefined
+    isResolved,
+    isOutdated: comment.outdated === true ? true : undefined
   }
 }
 

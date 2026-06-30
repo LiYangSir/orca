@@ -154,4 +154,24 @@ describe('HostedReviewHeaderLink', () => {
     expect(markup).toContain('target="_blank"')
     expect(markup).toContain('PR #31')
   })
+
+  it('opens Aone Code MRs as external hosted-review links', () => {
+    const markup = renderToStaticMarkup(
+      <HostedReviewHeaderLink
+        review={makeReview({
+          provider: 'code',
+          number: 28280121,
+          url: 'https://code.alibaba-inc.com/quguai.ly/bruno/codereview/28280121'
+        })}
+        onOpenHostedReviewInChecks={vi.fn()}
+      />
+    )
+
+    expect(markup).toContain('<a')
+    expect(markup).toContain(
+      'href="https://code.alibaba-inc.com/quguai.ly/bruno/codereview/28280121"'
+    )
+    expect(markup).toContain('target="_blank"')
+    expect(markup).toContain('MR #28280121')
+  })
 })

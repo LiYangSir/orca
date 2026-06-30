@@ -54,6 +54,8 @@ export type A1MergeRequest = {
   approveCheckResult?: A1MergeRequestCheckResult | null
 }
 
+export type A1MergeRequestViewPayload = A1MergeRequest | { mergeRequest: A1MergeRequest | null }
+
 export type A1LinkStatus = {
   repo?: { path?: string | null; webUrl?: string | null } | null
   app?: { name?: string | null; id?: string | null } | null
@@ -62,13 +64,17 @@ export type A1LinkStatus = {
 
 export type A1MergeRequestComment = {
   id: number
-  body: string
+  body?: string | null
+  note?: string | null
   author?: A1MergeRequestUser | null
   createdAt?: string | null
   updatedAt?: string | null
   resolved?: boolean | null
+  closed?: boolean | number | null
   filePath?: string | null
+  path?: string | null
   line?: number | null
+  outdated?: boolean | null
   parentId?: number | null
   type?: 'inline' | 'global' | 'reply' | string | null
 }

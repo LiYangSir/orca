@@ -17,6 +17,10 @@ function hostedReviewStateClass(review: HostedReviewInfo): string {
   return 'text-muted-foreground/50'
 }
 
+function isMergeRequestProvider(review: HostedReviewInfo): boolean {
+  return review.provider === 'gitlab' || review.provider === 'code'
+}
+
 export function HostedReviewIcon({
   review,
   className
@@ -24,12 +28,12 @@ export function HostedReviewIcon({
   review: HostedReviewInfo
   className?: string
 }): React.JSX.Element {
-  const Icon = review.provider === 'gitlab' ? GitMerge : PullRequestIcon
+  const Icon = isMergeRequestProvider(review) ? GitMerge : PullRequestIcon
   return <Icon className={cn(className, hostedReviewStateClass(review))} />
 }
 
 function hostedReviewLabel(review: HostedReviewInfo): string {
-  return `${review.provider === 'gitlab' ? 'MR' : 'PR'} #${review.number}`
+  return `${isMergeRequestProvider(review) ? 'MR' : 'PR'} #${review.number}`
 }
 
 export function HostedReviewHeaderLink({
@@ -58,6 +62,10 @@ export function HostedReviewHeaderLink({
         {label}
       </button>
     )
+  }
+
+  if (!review.url.trim()) {
+    return <span className={className}>{label}</span>
   }
 
   return (

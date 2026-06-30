@@ -16,6 +16,7 @@ import {
   supportsHostedReviewCreation,
   type HostedReviewCreationProvider
 } from '../../shared/hosted-review-creation-providers'
+import { isA1Authenticated } from '../aone/client'
 import { isAzureDevOpsReviewCreationAuthenticated } from '../azure-devops/pull-request-creation'
 import { isGiteaReviewCreationAuthenticated } from '../gitea/pull-request-creation'
 import { acquire, ghExecFileAsync, gitExecFileAsync, release } from '../github/gh-utils'
@@ -218,6 +219,14 @@ function reviewCopy(provider: HostedReviewProvider): {
       authInstruction: 'Set ORCA_GITEA_TOKEN'
     }
   }
+  if (provider === 'code') {
+    return {
+      shortLabel: 'MR',
+      reviewLabel: 'merge request',
+      providerName: 'Aone Code',
+      authInstruction: 'Run a1 auth login --buc'
+    }
+  }
   return {
     shortLabel: 'PR',
     reviewLabel: 'pull request',
@@ -240,6 +249,9 @@ async function isProviderAuthenticated(
   }
   if (provider === 'gitea') {
     return isGiteaReviewCreationAuthenticated()
+  }
+  if (provider === 'code') {
+    return isA1Authenticated({ cwd: repoPath })
   }
   return isGitHubAuthenticated(repoPath, connectionId, options)
 }

@@ -48,10 +48,12 @@ export function hasPositiveHostedReviewNumberLink(args: {
 export function hasResolvableHostedReviewPushTargetLink(args: {
   linkedGitHubPR?: number | null
   linkedGitLabMR?: number | null
+  linkedCodeMR?: number | null
 }): boolean {
   return (
     isResolvableHostedReviewNumber(args.linkedGitHubPR) ||
-    isResolvableHostedReviewNumber(args.linkedGitLabMR)
+    isResolvableHostedReviewNumber(args.linkedGitLabMR) ||
+    isResolvableHostedReviewNumber(args.linkedCodeMR)
   )
 }
 

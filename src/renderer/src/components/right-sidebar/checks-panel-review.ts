@@ -29,9 +29,10 @@ export function selectChecksPanelReview({
   linkedGiteaPR,
   linkedCodeMR
 }: ChecksPanelReviewSelectionInput): ChecksPanelReview | null {
-  const gitLabHostedReview = hostedReview?.provider === 'gitlab' ? hostedReview : null
-  if (gitLabHostedReview) {
-    return gitLabHostedReview
+  const mergeRequestHostedReview =
+    hostedReview?.provider === 'gitlab' || hostedReview?.provider === 'code' ? hostedReview : null
+  if (mergeRequestHostedReview) {
+    return mergeRequestHostedReview
   }
   const hasNonGitHubLinkedReview =
     linkedGitLabMR != null ||

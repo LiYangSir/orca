@@ -1427,6 +1427,9 @@ function SourceControlInner(): React.JSX.Element {
     if (!hostedReviewCacheKey) {
       return null
     }
+    if (hostedReviewEntryData && hostedReviewEntryData.provider !== 'github') {
+      return hostedReviewEntryData
+    }
     if (activePrFromQueue) {
       return { provider: 'github', ...activePrFromQueue, status: activePrFromQueue.checksStatus }
     }
@@ -1596,7 +1599,8 @@ function SourceControlInner(): React.JSX.Element {
     !activeRepo?.connectionId && hasHostedReviewLink && hostedReviewEntry === undefined
   const hasResolvableReviewPushTargetLink = hasResolvableHostedReviewPushTargetLink({
     linkedGitHubPR,
-    linkedGitLabMR
+    linkedGitLabMR,
+    linkedCodeMR
   })
   useEffect(() => {
     // Why: resolving review heads can hit provider/SSH APIs, so keep it tied
@@ -1616,7 +1620,8 @@ function SourceControlInner(): React.JSX.Element {
     isBranchVisible,
     isFolder,
     linkedGitHubPR,
-    linkedGitLabMR
+    linkedGitLabMR,
+    linkedCodeMR
   ])
   const canUseHostedReviewPushTarget = hasUsableHostedReviewPushTarget({
     pushTarget: activeWorktree?.pushTarget,

@@ -54,11 +54,13 @@ export function getChecksPanelEmptyStateCopy(
     return {
       title: translate(
         'auto.components.right.sidebar.checks.panel.empty.state.3322603418',
-        'Pull request status unavailable'
+        '{{value0}} status unavailable',
+        { value0: reviewShortLabel }
       ),
       description: translate(
         'auto.components.right.sidebar.checks.panel.empty.state.b597440265',
-        'Refresh GitHub status for this branch to load checks and review.'
+        'Refresh {{value0}} status for this branch to load checks and review.',
+        { value0: reviewShortLabel }
       )
     }
   }
@@ -104,44 +106,52 @@ export function getChecksPanelEmptyStateCopy(
       return {
         title: translate(
           'auto.components.right.sidebar.checks.panel.empty.state.5f478ab3d3',
-          'Could not refresh pull request'
+          'Could not refresh {{value0}}',
+          { value0: reviewLabel }
         ),
         description: translate(
           'auto.components.right.sidebar.checks.panel.empty.state.2bdd7aaf2d',
-          'GitHub status could not be refreshed. Existing cached data was preserved.'
+          '{{value0}} status could not be refreshed. Existing cached data was preserved.',
+          { value0: reviewShortLabel }
         )
       }
     case 'queued':
       return {
         title: translate(
           'auto.components.right.sidebar.checks.panel.empty.state.938b5606a6',
-          'Checking for pull request'
+          'Checking for {{value0}}',
+          { value0: reviewLabel }
         ),
         description: translate(
           'auto.components.right.sidebar.checks.panel.empty.state.6ba2440770',
-          'Waiting to refresh GitHub status for this branch'
+          'Waiting to refresh {{value0}} status for this branch',
+          { value0: reviewShortLabel }
         )
       }
     case 'in-flight':
       return {
         title: translate(
           'auto.components.right.sidebar.checks.panel.empty.state.938b5606a6',
-          'Checking for pull request'
+          'Checking for {{value0}}',
+          { value0: reviewLabel }
         ),
         description: translate(
           'auto.components.right.sidebar.checks.panel.empty.state.3d4af82ff4',
-          'Refreshing GitHub status for this branch'
+          'Refreshing {{value0}} status for this branch',
+          { value0: reviewShortLabel }
         )
       }
     case 'paused':
       return {
         title: translate(
           'auto.components.right.sidebar.checks.panel.empty.state.7c299df37b',
-          'No pull request found'
+          'No {{value0}} found',
+          { value0: reviewLabel }
         ),
         description: translate(
           'auto.components.right.sidebar.checks.panel.empty.state.d372072df1',
-          'GitHub refresh is paused by the current rate-limit budget'
+          '{{value0}} refresh is paused by the current rate-limit budget',
+          { value0: reviewShortLabel }
         )
       }
     case 'skipped':

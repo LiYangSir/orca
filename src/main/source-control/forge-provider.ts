@@ -10,6 +10,7 @@ import {
   isAoneCodeRemoteUrl,
   resolveAoneCodeRepoSlug
 } from '../aone/client'
+import { createAoneMergeRequest } from '../aone/merge-request-creation'
 import {
   getAzureDevOpsPullRequest,
   getAzureDevOpsPullRequestForBranch,
@@ -258,7 +259,7 @@ const giteaForgeProvider = {
 
 const codeForgeProvider = {
   id: 'code',
-  supportsReviewCreation: false,
+  supportsReviewCreation: true,
   async resolveRepository(context) {
     const remoteUrl = getRemoteUrl(context.repoPath)
     if (isAoneCodeRemoteUrl(remoteUrl)) {
@@ -280,18 +281,19 @@ const codeForgeProvider = {
   async getReviewByNumber(input) {
     const mr = await getAoneMergeRequest(input.number, { cwd: input.repoPath })
     return mr ? mapCodeReview(mr) : null
-  }
+  },
+  createReview: createAoneMergeRequest
 } satisfies ForgeProvider
 
-// Why: provider order preserves existing branch-status behavior when remotes
-// could be interpreted by more than one hosting integration.
+// Why: Alibaba-hosted GitLab/Code remotes are intentionally handled through a1
+// before generic forge parsers; Gitea accepts many self-hosted URL shapes.
 export const FORGE_PROVIDERS = [
+  codeForgeProvider,
   gitLabForgeProvider,
   gitHubForgeProvider,
   bitbucketForgeProvider,
   azureDevOpsForgeProvider,
-  giteaForgeProvider,
-  codeForgeProvider
+  giteaForgeProvider
 ] as const satisfies readonly ForgeProvider[]
 
 export function getForgeProviderById(id: ForgeProviderId): ForgeProvider {

@@ -9,6 +9,7 @@ import {
   ChecksList,
   ConflictTriageStrip,
   getFailedChecksForDetails,
+  formatPRCommentCodeLocation,
   MergeConflictNotice,
   isMutablePRConversationComment,
   PRCommentsList,
@@ -250,6 +251,52 @@ describe('isMutablePRConversationComment', () => {
 })
 
 describe('PRCommentsList', () => {
+  it('formats inline review comments with code location context', () => {
+    expect(
+      formatPRCommentCodeLocation({
+        id: 1,
+        author: 'alice',
+        authorAvatarUrl: '',
+        body: 'Needs a guard.',
+        createdAt: '2026-05-14T00:00:00Z',
+        url: '',
+        path: 'src/models/user.ts',
+        startLine: 8,
+        line: 12
+      })
+    ).toBe('src/models/user.ts:L8-L12')
+  })
+
+  it('shows inline review code context and outdated state', () => {
+    const comments: PRComment[] = [
+      {
+        id: 7,
+        author: 'alice',
+        authorAvatarUrl: '',
+        body: 'Needs a guard.',
+        createdAt: '2026-05-14T00:00:00Z',
+        url: 'https://code.alibaba-inc.com/acme/widgets/codereview/99#note_7',
+        threadId: 'note-7',
+        path: 'src/models/user.ts',
+        line: 12,
+        isResolved: false,
+        isOutdated: true
+      }
+    ]
+
+    const markup = renderWithTooltips(
+      React.createElement(PRCommentsList, {
+        comments,
+        commentsLoading: false
+      })
+    )
+
+    expect(markup).toContain('Code')
+    expect(markup).toContain('src/models/user.ts:L12')
+    expect(markup).toContain('Open')
+    expect(markup).toContain('Outdated')
+  })
+
   it('places the collapsed add-comment action in the comments header', () => {
     const comments: PRComment[] = [
       {
