@@ -108,6 +108,8 @@ import type {
 import { appStarSourceSchema } from '../../shared/gh-star-source'
 import { track } from '../telemetry/client'
 import { getCohortAtEmit } from '../telemetry/cohort-classifier'
+import { routeByCodeProvider } from './code-provider-bridge'
+import { aoneMergePR, aonePRComments, aonePRForBranch, aoneUpdatePRState } from '../aone/gh-adapter'
 
 const prRefreshVisibilityCleanupRegistered = new Set<number>()
 
@@ -295,13 +297,18 @@ export function registerGitHubHandlers(store: Store, stats: StatsCollector): voi
       const lookupOptionArgs: [] | [GitHubPRBranchLookupOptions] = lookupOptions
         ? [lookupOptions]
         : []
-      const pr = await getPRForBranch(
+      const pr = await routeByCodeProvider(
         repo.path,
-        args.branch,
-        args.linkedPRNumber ?? null,
-        repoConnectionId(repo),
-        args.linkedPRNumber == null ? (args.fallbackPRNumber ?? null) : null,
-        ...lookupOptionArgs
+        () =>
+          getPRForBranch(
+            repo.path,
+            args.branch,
+            args.linkedPRNumber ?? null,
+            repoConnectionId(repo),
+            args.linkedPRNumber == null ? (args.fallbackPRNumber ?? null) : null,
+            ...lookupOptionArgs
+          ),
+        () => aonePRForBranch(repo.path, args.branch, args.linkedPRNumber ?? null)
       )
       // Emit pr_created when a PR is first detected for a branch.
       // Why here: the renderer polls gh:prForBranch to check PR status per worktree.
@@ -642,7 +649,7 @@ export function registerGitHubHandlers(store: Store, stats: StatsCollector): voi
 
   ipcMain.handle(
     'gh:prComments',
-    (
+    async (
       _event,
       args: {
         repoPath: string
@@ -654,12 +661,17 @@ export function registerGitHubHandlers(store: Store, stats: StatsCollector): voi
       }
     ) => {
       const repo = assertRegisteredRepo(args, store)
-      return getPRComments(
+      return routeByCodeProvider(
         repo.path,
-        args.prNumber,
-        { noCache: args.noCache, prRepo: args.prRepo ?? null },
-        repoConnectionId(repo),
-        ...localGitOptionArgs(store, repo)
+        () =>
+          getPRComments(
+            repo.path,
+            args.prNumber,
+            { noCache: args.noCache, prRepo: args.prRepo ?? null },
+            repoConnectionId(repo),
+            ...localGitOptionArgs(store, repo)
+          ),
+        () => aonePRComments(repo.path, args.prNumber)
       )
     }
   )
@@ -894,13 +906,18 @@ export function registerGitHubHandlers(store: Store, stats: StatsCollector): voi
       }
     ) => {
       const repo = assertRegisteredRepo(args, store)
-      const result = await mergePR(
+      const result = await routeByCodeProvider(
         repo.path,
-        args.prNumber,
-        args.method,
-        repoConnectionId(repo),
-        args.prRepo ?? null,
-        ...localGitOptionArgs(store, repo)
+        () =>
+          mergePR(
+            repo.path,
+            args.prNumber,
+            args.method,
+            repoConnectionId(repo),
+            args.prRepo ?? null,
+            ...localGitOptionArgs(store, repo)
+          ),
+        () => aoneMergePR(repo.path, args.prNumber, args.method)
       )
       if (result.ok) {
         broadcastWorkItemMutated(
@@ -960,12 +977,17 @@ export function registerGitHubHandlers(store: Store, stats: StatsCollector): voi
       ) {
         return { ok: false, error: 'Invalid pull request number' }
       }
-      const result = await updatePRState(
+      const result = await routeByCodeProvider(
         repo.path,
-        args.prNumber,
-        args.updates,
-        repoConnectionId(repo),
-        ...localGitOptionArgs(store, repo)
+        () =>
+          updatePRState(
+            repo.path,
+            args.prNumber,
+            args.updates,
+            repoConnectionId(repo),
+            ...localGitOptionArgs(store, repo)
+          ),
+        () => aoneUpdatePRState(repo.path, args.prNumber, args.updates)
       )
       if (result.ok) {
         broadcastWorkItemMutated(

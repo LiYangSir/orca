@@ -297,7 +297,8 @@
           "0708ed89f1": "Claude",
           "fc80296033": "Devin",
           "da41abbdd4": "Ante",
-          "mimo_code_label": "MiMo Code"
+          "mimo_code_label": "MiMo Code",
+          "qoder_label": "Qoder"
         },
         "skill": {
           "cli": {
@@ -1682,7 +1683,15 @@
         "searchIssues": "Buscar issues",
         "useIssueNumber": "Usar issue #{{value0}}",
         "noMatchingIssuesLoaded": "No se cargaron issues coincidentes.",
-        "editReviewersWithCurrent": "Editar revisores: {{value0}}"
+        "editReviewersWithCurrent": "Editar revisores: {{value0}}",
+        "aone_label": "Aone",
+        "aone_list_title": "Aone work items",
+        "aone_list_empty": "No Aone work items returned.",
+        "aone_list_install": "Install the a1 CLI from https://a1.io.alibaba-inc.com/ and reopen this view.",
+        "aone_list_auth": "Run `a1 auth login --buc` in a terminal, then refresh.",
+        "aone_list_link": "Run `a1 link` inside an Aone-managed repository to bind a project, then refresh.",
+        "aone_list_error_title": "Could not load Aone work items",
+        "aone_list_unsupported": "Aone task API is not available in this build."
       },
       "Terminal": {
         "73768427cf": "Cerca",
@@ -6293,7 +6302,9 @@
           "dd67a1b6e1": "Muestre GitLab en el selector de fuente de Tareas y en los accesos directos de la barra lateral.",
           "7c5d7fdc20": "GitLab",
           "1db47236cd": "Muestre GitHub en el selector de fuente de Tareas y en los accesos directos de la barra lateral.",
-          "e14063e727": "GitHub"
+          "e14063e727": "GitHub",
+          "aone_label": "Aone",
+          "aone_description": "Show Aone work items in the Tasks source picker. Requires the local `a1` CLI."
         },
         "TerminalAppearanceSection": {
           "a14a427ae4": "Grosor de la línea divisoria del panel.",
@@ -12157,6 +12168,22 @@
           "a2c6d9e0f7": "Solicitud de fusión",
           "91b5c8d7e6": "GitLab"
         }
+      }
+    },
+    "aone": {
+      "checking": "Checking…",
+      "notInstalled": "a1 CLI not installed",
+      "installHint": "Install: curl -fsSL https://git.cn-hangzhou.oss-cdn.aliyun-inc.com/aone-cli/install.sh | sh",
+      "signedOut": "Sign-in required",
+      "signInHint": "Run `a1 auth login --buc` in a terminal to authenticate.",
+      "errorLabel": "Error",
+      "connected": "Connected",
+      "connectedDescription": "Linked: {{value0}}",
+      "taskCard": {
+        "baseDescription": "Browse Aone work items via the local a1 CLI. Run `a1 auth login --buc` and `a1 link` first."
+      },
+      "codeCard": {
+        "baseDescription": "Merge requests and review status from Aone Code via the local a1 CLI."
       }
     }
   },

@@ -6,6 +6,7 @@ import {
   GitLabIntegrationCard
 } from './source-control-integration-cards'
 import { JiraIntegrationCard, LinearIntegrationCard } from './task-tracker-integration-cards'
+import { AoneCodeIntegrationCard, AoneTaskIntegrationCard } from './aone-integration-cards'
 import { useIntegrationProviderStatusRefresh } from './use-integration-provider-status-refresh'
 import { translate } from '@/i18n/i18n'
 export { getIntegrationsPaneSearchEntries } from './integrations-search'
@@ -33,6 +34,7 @@ export function IntegrationsPane(): React.JSX.Element {
           <BitbucketIntegrationCard />
           <AzureDevOpsIntegrationCard />
           <GiteaIntegrationCard />
+          <AoneCodeIntegrationCard />
         </div>
       </section>
 
@@ -51,6 +53,7 @@ export function IntegrationsPane(): React.JSX.Element {
         <div className="space-y-3">
           <LinearIntegrationCard />
           <JiraIntegrationCard />
+          <AoneTaskIntegrationCard />
         </div>
       </section>
     </div>

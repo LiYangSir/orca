@@ -5,6 +5,12 @@ import type { ExecutionHostHealth } from '../../../shared/execution-host-registr
 import type { SshConnectionStatus } from '../../../shared/ssh-types'
 import type { TaskProvider } from '../../../shared/types'
 import type { TaskProviderIdentity, TaskSourceContext } from '../../../shared/task-source-context'
+import {
+  formatLongList,
+  formatShortList,
+  getSshStatusLabel,
+  uniqueLabels
+} from './task-source-context-formatting'
 
 export type TaskSourceContextSummary = {
   label: string
@@ -60,6 +66,13 @@ export function getTaskSourceContextSummary(args: {
     case 'jira':
       return getAccountBackedTaskSourceSummary(args.providerLabel, {
         accountLabel: args.jiraSiteName,
+        accountHostId: args.accountHostId,
+        hostLabelById: args.hostLabelById,
+        hostAvailability: args.hostAvailability
+      })
+    case 'aone':
+      return getAccountBackedTaskSourceSummary(args.providerLabel, {
+        accountLabel: args.repoContexts?.[0]?.accountLabel ?? null,
         accountHostId: args.accountHostId,
         hostLabelById: args.hostLabelById,
         hostAvailability: args.hostAvailability
@@ -198,21 +211,21 @@ function getProviderIdentityLabel(
       return identity.workspaceName ?? identity.workspaceId ?? null
     case 'jira':
       return identity.siteUrl ?? identity.siteId ?? null
+    case 'aone':
+      return identity.projectName ?? identity.projectId ?? identity.appName ?? null
   }
 }
 
-function uniqueLabels(labels: readonly (string | null | undefined)[]): string[] {
-  const seen = new Set<string>()
-  const result: string[] = []
-  for (const label of labels) {
-    const trimmed = label?.trim()
-    if (!trimmed || seen.has(trimmed)) {
-      continue
-    }
-    seen.add(trimmed)
-    result.push(trimmed)
+function getAvailabilityLabel(
+  unavailableHosts: readonly { hostLabel: string; statusLabel: string }[]
+): string | null {
+  if (unavailableHosts.length === 0) {
+    return null
   }
-  return result
+  if (unavailableHosts.length === 1) {
+    return unavailableHosts[0].statusLabel
+  }
+  return `${unavailableHosts.length} unavailable`
 }
 
 function getUnavailableHosts(
@@ -272,45 +285,4 @@ function getAvailabilityStatusLabel(availability: TaskSourceHostAvailability): s
     case 'error':
       return 'connection issue'
   }
-}
-
-function getAvailabilityLabel(
-  unavailableHosts: readonly { hostLabel: string; statusLabel: string }[]
-): string | null {
-  if (unavailableHosts.length === 0) {
-    return null
-  }
-  if (unavailableHosts.length === 1) {
-    return unavailableHosts[0].statusLabel
-  }
-  return `${unavailableHosts.length} unavailable`
-}
-
-function getSshStatusLabel(status: SshConnectionStatus): string {
-  switch (status) {
-    case 'connected':
-      return 'connected'
-    case 'connecting':
-    case 'deploying-relay':
-    case 'reconnecting':
-      return 'connecting'
-    case 'auth-failed':
-      return 'auth needed'
-    case 'reconnection-failed':
-    case 'error':
-      return 'connection issue'
-    case 'disconnected':
-      return 'disconnected'
-  }
-}
-
-function formatShortList(labels: readonly string[]): string {
-  if (labels.length <= 2) {
-    return labels.join(', ')
-  }
-  return `${labels[0]} +${labels.length - 1}`
-}
-
-function formatLongList(labels: readonly string[]): string {
-  return labels.join(', ')
 }

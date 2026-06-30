@@ -8,7 +8,7 @@ import {
 } from './execution-host'
 import type { GlobalSettings, ProjectProviderIdentity, Repo } from './types'
 
-export type TaskProvider = 'github' | 'gitlab' | 'linear' | 'jira'
+export type TaskProvider = 'github' | 'gitlab' | 'linear' | 'jira' | 'aone'
 
 export type GitHubTaskProviderIdentity = ProjectProviderIdentity & {
   provider: 'github'
@@ -37,11 +37,19 @@ export type JiraTaskProviderIdentity = {
   projectKey?: string | null
 }
 
+export type AoneTaskProviderIdentity = {
+  provider: 'aone'
+  projectId?: string | null
+  projectName?: string | null
+  appName?: string | null
+}
+
 export type TaskProviderIdentity =
   | GitHubTaskProviderIdentity
   | GitLabTaskProviderIdentity
   | LinearTaskProviderIdentity
   | JiraTaskProviderIdentity
+  | AoneTaskProviderIdentity
 
 export type TaskSourceContext = {
   kind: 'task-source'
@@ -182,6 +190,7 @@ function normalizeTaskProvider(value: string): TaskProvider | null {
     case 'gitlab':
     case 'linear':
     case 'jira':
+    case 'aone':
       return value
     default:
       return null
@@ -216,6 +225,8 @@ function providerIdentityCachePart(identity: TaskProviderIdentity | null | undef
       return [identity.workspaceId, identity.teamId ?? identity.teamKey].filter(Boolean).join('/')
     case 'jira':
       return [identity.siteId ?? identity.siteUrl, identity.projectKey].filter(Boolean).join('/')
+    case 'aone':
+      return identity.projectId ?? identity.projectName ?? ''
   }
 }
 

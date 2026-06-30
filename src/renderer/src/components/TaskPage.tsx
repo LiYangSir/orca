@@ -53,6 +53,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Input } from '@/components/ui/input'
+import { AoneTaskList } from '@/components/aone/AoneTaskList'
 import {
   Command,
   CommandEmpty,
@@ -3188,7 +3189,8 @@ export default function TaskPage(): React.JSX.Element {
         preferredVisibleTaskProviders,
         {
           gitlabInstalled: preflightStatusCurrent && preflightStatus?.glab?.installed === true,
-          linearConnected: linearConnected === true
+          linearConnected: linearConnected === true,
+          aoneInstalled: true
         },
         defaultTaskSource
       ),
@@ -8887,6 +8889,8 @@ export default function TaskPage(): React.JSX.Element {
                       </div>
                     </div>
                   </>
+                ) : taskSource === 'aone' ? (
+                  <AoneTaskList />
                 ) : null}
               </div>
             </section>

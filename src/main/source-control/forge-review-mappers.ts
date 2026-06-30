@@ -1,6 +1,7 @@
 import type { HostedReviewInfo } from '../../shared/hosted-review'
 import { hostedReviewInfoFromGitHubPRInfo } from '../../shared/hosted-review-github'
-import type { MRInfo, PRInfo } from '../../shared/types'
+import type { CheckStatus, MRInfo, PRInfo, PRMergeableState } from '../../shared/types'
+import type { A1MergeRequest } from '../aone/types'
 import type { AzureDevOpsPullRequestInfo } from '../azure-devops/pull-request-mappers'
 import type { BitbucketPullRequestInfo } from '../bitbucket/pull-request-mappers'
 import type { GiteaPullRequestInfo } from '../gitea/pull-request-mappers'
@@ -70,5 +71,49 @@ export function mapGiteaReview(pr: GiteaPullRequestInfo): HostedReviewInfo {
     updatedAt: pr.updatedAt,
     mergeable: pr.mergeable,
     ...(pr.headSha ? { headSha: pr.headSha } : {})
+  }
+}
+
+function mapCodeReviewState(state: string): HostedReviewInfo['state'] {
+  if (state === 'opened') {
+    return 'open'
+  }
+  if (state === 'merged') {
+    return 'merged'
+  }
+  return 'closed'
+}
+
+function mapCodeCheckStatus(check: string | null | undefined): CheckStatus {
+  if (check === 'satisfied') {
+    return 'success'
+  }
+  if (check === 'unsatisfied') {
+    return 'failure'
+  }
+  return 'pending'
+}
+
+function mapCodeMergeable(mr: A1MergeRequest): PRMergeableState {
+  if (mr.isConflicted) {
+    return 'CONFLICTING'
+  }
+  if (mr.mergeStatus === 'can_be_merged') {
+    return 'MERGEABLE'
+  }
+  return 'UNKNOWN'
+}
+
+export function mapCodeReview(mr: A1MergeRequest): HostedReviewInfo {
+  return {
+    provider: 'code',
+    number: mr.iid,
+    title: mr.title,
+    state: mapCodeReviewState(mr.state),
+    url: mr.webUrl || mr.detailUrl || '',
+    status: mapCodeCheckStatus(mr.approveCheckResult?.total_check_result),
+    updatedAt: mr.updatedAt ?? '',
+    mergeable: mapCodeMergeable(mr),
+    baseRefName: mr.targetBranch
   }
 }

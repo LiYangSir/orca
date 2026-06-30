@@ -1,4 +1,4 @@
-import { Check, Github, Gitlab } from 'lucide-react'
+import { Briefcase, Check, Github, Gitlab } from 'lucide-react'
 import type { GlobalSettings, TaskProvider } from '../../../../shared/types'
 import {
   TASK_PROVIDERS,
@@ -75,6 +75,19 @@ const TASK_PROVIDER_OPTIONS: readonly {
       )
     },
     Icon: ({ className }) => <JiraIcon className={className} />
+  },
+  {
+    id: 'aone',
+    get label() {
+      return translate('auto.components.settings.TasksPane.aone_label', 'Aone')
+    },
+    get description() {
+      return translate(
+        'auto.components.settings.TasksPane.aone_description',
+        'Show Aone work items in the Tasks source picker. Requires the local `a1` CLI.'
+      )
+    },
+    Icon: ({ className }) => <Briefcase className={className} />
   }
 ]
 

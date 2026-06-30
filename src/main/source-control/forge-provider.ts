@@ -5,6 +5,12 @@ import type {
   HostedReviewProvider
 } from '../../shared/hosted-review'
 import {
+  getMergeRequest as getAoneMergeRequest,
+  getMergeRequestForBranch as getAoneMergeRequestForBranch,
+  isAoneCodeRemoteUrl,
+  resolveAoneCodeRepoSlug
+} from '../aone/client'
+import {
   getAzureDevOpsPullRequest,
   getAzureDevOpsPullRequestForBranch,
   getAzureDevOpsRepoSlug
@@ -21,12 +27,14 @@ import {
   getGiteaRepoSlug
 } from '../gitea/client'
 import { createGiteaPullRequest } from '../gitea/pull-request-creation'
+import { getRemoteUrl } from '../git/repo'
 import { createGitHubPullRequest, getPRForBranchOutcome, getRepoSlug } from '../github/client'
 import { getMergeRequest, getMergeRequestForBranch, getProjectSlug } from '../gitlab/client'
 import { createGitLabMergeRequest } from '../gitlab/merge-request-creation'
 import {
   mapAzureDevOpsReview,
   mapBitbucketReview,
+  mapCodeReview,
   mapGiteaReview,
   mapGitHubReview,
   mapGitLabReview
@@ -248,6 +256,33 @@ const giteaForgeProvider = {
   createReview: createGiteaPullRequest
 } satisfies ForgeProvider
 
+const codeForgeProvider = {
+  id: 'code',
+  supportsReviewCreation: false,
+  async resolveRepository(context) {
+    const remoteUrl = getRemoteUrl(context.repoPath)
+    if (isAoneCodeRemoteUrl(remoteUrl)) {
+      return remoteUrl
+    }
+    return resolveAoneCodeRepoSlug(context.repoPath)
+  },
+  async getReviewForBranch(input) {
+    const mr = await getAoneMergeRequestForBranch(input.branch, { cwd: input.repoPath })
+    if (mr) {
+      return mapCodeReview(mr)
+    }
+    if (input.linkedReviewNumber != null) {
+      const linked = await getAoneMergeRequest(input.linkedReviewNumber, { cwd: input.repoPath })
+      return linked ? mapCodeReview(linked) : null
+    }
+    return null
+  },
+  async getReviewByNumber(input) {
+    const mr = await getAoneMergeRequest(input.number, { cwd: input.repoPath })
+    return mr ? mapCodeReview(mr) : null
+  }
+} satisfies ForgeProvider
+
 // Why: provider order preserves existing branch-status behavior when remotes
 // could be interpreted by more than one hosting integration.
 export const FORGE_PROVIDERS = [
@@ -255,7 +290,8 @@ export const FORGE_PROVIDERS = [
   gitHubForgeProvider,
   bitbucketForgeProvider,
   azureDevOpsForgeProvider,
-  giteaForgeProvider
+  giteaForgeProvider,
+  codeForgeProvider
 ] as const satisfies readonly ForgeProvider[]
 
 export function getForgeProviderById(id: ForgeProviderId): ForgeProvider {

@@ -20,6 +20,8 @@ function reviewLinkForProvider(
       return { linkedReviewNumber: input.linkedAzureDevOpsPR ?? null }
     case 'gitea':
       return { linkedReviewNumber: input.linkedGiteaPR ?? null }
+    case 'code':
+      return { linkedReviewNumber: input.linkedCodeMR ?? null }
   }
 }
 
@@ -35,6 +37,7 @@ export async function getHostedReviewForBranch(
     linkedAzureDevOpsPR?: number | null
     linkedGiteaPR?: number | null
     currentHeadOid?: string | null
+    linkedCodeMR?: number | null
   } & HostedReviewExecutionOptions
 ): Promise<HostedReviewInfo | null> {
   const branchName = input.branch.replace(/^refs\/heads\//, '')
@@ -47,7 +50,8 @@ export async function getHostedReviewForBranch(
     input.linkedGitLabMR == null &&
     input.linkedBitbucketPR == null &&
     input.linkedAzureDevOpsPR == null &&
-    input.linkedGiteaPR == null
+    input.linkedGiteaPR == null &&
+    input.linkedCodeMR == null
   ) {
     return null
   }

@@ -6,6 +6,7 @@ export type HostedReviewProvider =
   | 'bitbucket'
   | 'azure-devops'
   | 'gitea'
+  | 'code'
   | 'unsupported'
 
 export type HostedReviewState = 'open' | 'closed' | 'merged' | 'draft'
@@ -42,6 +43,7 @@ export type HostedReviewForBranchArgs = {
   linkedGiteaPR?: number | null
   // The worktree's checked-out HEAD oid (GitHub merged-at-head visibility).
   currentHeadOid?: string | null
+  linkedCodeMR?: number | null
 }
 
 export type HostedReviewSummary = {
@@ -136,6 +138,7 @@ export type HostedReviewCreationEligibilityArgs = {
   linkedBitbucketPR?: number | null
   linkedAzureDevOpsPR?: number | null
   linkedGiteaPR?: number | null
+  linkedCodeMR?: number | null
 }
 
 export type HostedReviewIdentity = {
