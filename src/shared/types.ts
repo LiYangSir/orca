@@ -40,6 +40,7 @@ import type {
   GlobalWindowsRuntimeDefault,
   LocalWindowsRuntimePreference
 } from './project-execution-runtime'
+import type { SavedSkill, SkillPreset } from './skills'
 
 // Re-exported for backward compat with renderer call sites that import
 // `WorkspaceCreateTelemetrySource` from '../../../shared/types'.
@@ -2613,6 +2614,9 @@ export type GlobalSettings = {
   /** Why: Automations can be restored from Settings or the View menu, so this
    *  only controls whether the top-level sidebar shortcut is shown. */
   showAutomationsButton?: boolean
+  /** Why: Skills remains reachable from commands/settings; this only controls
+   *  whether the top-level sidebar shortcut is shown. */
+  showSkillsButton?: boolean
   /** Why: Orca Mobile remains reachable from Settings; this only controls
    *  whether the top-level sidebar shortcut is shown. */
   showMobileButton?: boolean
@@ -3423,6 +3427,10 @@ export type PersistedState = {
   /** Sparse-checkout presets keyed by repoId. Empty record on first launch;
    *  presets are managed from the new-workspace composer and repo settings. */
   sparsePresetsByRepo: Record<string, SparsePreset[]>
+  /** Saved skill snapshots keyed by stable discovery id. */
+  savedSkillsById: Record<string, SavedSkill>
+  /** User-defined reusable groups of saved skills. */
+  skillPresets: SkillPreset[]
   worktreeMeta: Record<string, WorktreeMeta>
   worktreeLineageById: Record<string, WorktreeLineage>
   workspaceLineageByChildKey: Record<WorkspaceKey, WorkspaceLineage>

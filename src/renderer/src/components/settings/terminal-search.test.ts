@@ -174,14 +174,21 @@ describe('getTerminalPaneSearchEntries', () => {
     const automationsEntry = getSidebarEntries().find(
       (entry) => entry.title === 'Show Automations Button'
     )
+    const skillsEntry = getSidebarEntries().find((entry) => entry.title === 'Show Skills Button')
 
     expect(automationsEntry).toBeDefined()
     expect(automationsEntry?.keywords).toEqual(
       expect.arrayContaining(['automations', 'sidebar', 'hide', 'show'])
     )
+    expect(skillsEntry).toBeDefined()
+    expect(skillsEntry?.keywords).toEqual(
+      expect.arrayContaining(['skills', 'skill', 'sidebar', 'hide', 'show'])
+    )
     expect(
       getAppearancePaneSearchEntries().some((entry) => entry.title === 'Show Automations Button')
     ).toBe(true)
+    expect(getAppearancePaneSearchEntries().some((entry) => entry.title === 'Show Skills Button'))
+      .toBe(true)
   })
 
   it('includes workspace card layout guidance in the sidebar and Appearance catalogs', () => {

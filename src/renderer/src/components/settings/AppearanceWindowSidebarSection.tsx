@@ -230,11 +230,31 @@ export function AppearanceWindowSidebarSection({
 
                   <SearchableSetting
                     title={translate(
+                      'auto.components.settings.AppearancePane.7d028201fb',
+                      'Show Skills Button'
+                    )}
+                    description={sidebarEntries[2]?.description}
+                    keywords={sidebarEntries[2]?.keywords ?? ['skills', 'skill', 'sidebar']}
+                  >
+                    <SettingsSwitchRow
+                      label={translate(
+                        'auto.components.settings.AppearancePane.7d028201fb',
+                        'Show Skills Button'
+                      )}
+                      checked={settings.showSkillsButton !== false}
+                      onChange={() =>
+                        updateSettings({ showSkillsButton: !(settings.showSkillsButton !== false) })
+                      }
+                    />
+                  </SearchableSetting>
+
+                  <SearchableSetting
+                    title={translate(
                       'auto.components.settings.AppearancePane.9da1020447',
                       'Show Orca Mobile Button'
                     )}
-                    description={sidebarEntries[2]?.description}
-                    keywords={sidebarEntries[2]?.keywords ?? ['mobile', 'phone', 'sidebar']}
+                    description={sidebarEntries[3]?.description}
+                    keywords={sidebarEntries[3]?.keywords ?? ['mobile', 'phone', 'sidebar']}
                   >
                     <SettingsSwitchRow
                       label={translate(

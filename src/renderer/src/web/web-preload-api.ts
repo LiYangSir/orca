@@ -33,7 +33,12 @@ import type {
   WorkspaceSessionPatch,
   WorkspaceSessionState
 } from '../../../shared/types'
-import type { SkillDiscoveryResult } from '../../../shared/skills'
+import type {
+  DiscoveredSkill,
+  SavedSkill,
+  SkillDiscoveryResult,
+  SkillPreset
+} from '../../../shared/skills'
 import {
   getDefaultOnboardingState,
   getDefaultSettings,
@@ -2427,7 +2432,37 @@ function createSkillsApi(): NonNullable<Partial<PreloadApi>['skills']> {
         skills: [],
         sources: [],
         scannedAt: Date.now()
-      }))
+      })),
+    listSaved: () => Promise.resolve([] satisfies SavedSkill[]),
+    save: (args: { skill: DiscoveredSkill }) => {
+      const now = Date.now()
+      return Promise.resolve({
+        id: args.skill.id,
+        name: args.skill.name,
+        description: args.skill.description,
+        providers: [...args.skill.providers],
+        sourceKind: args.skill.sourceKind,
+        sourceLabel: args.skill.sourceLabel,
+        rootPath: args.skill.rootPath,
+        directoryPath: args.skill.directoryPath,
+        skillFilePath: args.skill.skillFilePath,
+        fileCount: args.skill.fileCount,
+        discoveredUpdatedAt: args.skill.updatedAt,
+        savedAt: now,
+        updatedAt: now
+      } satisfies SavedSkill)
+    },
+    remove: () => Promise.resolve(),
+    listPresets: () => Promise.resolve([] satisfies SkillPreset[]),
+    savePreset: (args: { id?: string; name: string; skillIds: string[] }) =>
+      Promise.resolve({
+        id: args.id ?? 'web-skill-preset',
+        name: args.name,
+        skillIds: [...args.skillIds],
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      } satisfies SkillPreset),
+    removePreset: () => Promise.resolve()
   }
 }
 

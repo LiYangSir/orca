@@ -3393,32 +3393,11 @@
       },
       "skills": {
         "SkillsPage": {
-          "cb142070b4": "Refrescar",
-          "984405683f": "Complemento",
-          "4d177feabd": "incluido",
-          "aa59462502": "Repositorio",
-          "571c5818c1": "Hogar",
-          "0bc1379f4c": "Todas las fuentes",
-          "38e0951c3a": "Habilidades del Agent",
-          "fb6bf60b52": "Claude",
-          "426be2aac6": "Codex",
-          "39b6998ddb": "Todos los proveedores",
-          "a68dee6a32": "Habilidades de búsqueda",
-          "e46e162e2e": "de",
-          "b088e0785d": "Beta",
-          "f43ad6edf3": "Habilidades",
-          "7e828fb2c6": "Atrás",
           "ea72d6185b": "No se pudieron escanear las habilidades locales",
           "dc4c3328ee": "Revelar archivo",
-          "9963dff6d3": "No se encontró ninguna descripción.",
           "995fde8337": "No se pudo revelar el archivo de habilidad",
-          "ab5b777350": "Se comprobaron las carpetas de habilidades locales de inicio, repositorio, paquetes y complementos.",
-          "08a321a984": "Ajusta la búsqueda o los filtros.",
-          "4acd6d68ec": "No se encontraron habilidades locales",
-          "6a62a0168c": "No hay coincidencias",
-          "cd7893fbc1": "Habilidades de escaneo",
-          "35b9a724a0": "Disponible",
-          "0c74e7ff34": "Local"
+          "3ffd35b491": "No se pudo cargar la biblioteca de habilidades",
+          "929e3eb91b": "No se pudieron actualizar las habilidades guardadas"
         }
       },
       "sidebar": {

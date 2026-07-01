@@ -29,8 +29,40 @@ import { registerSkillsHandlers } from './skills'
 describe('registerSkillsHandlers', () => {
   const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform')
   const repos = [{ id: 'repo-1', path: 'C:\\Users\\alice\\repo' }]
+  const savedSkills = [
+    {
+      id: 'skill-1',
+      name: 'review',
+      description: 'Review code',
+      providers: ['codex'],
+      sourceKind: 'home',
+      sourceLabel: 'Codex home',
+      rootPath: '/Users/alice/.codex/skills',
+      directoryPath: '/Users/alice/.codex/skills/review',
+      skillFilePath: '/Users/alice/.codex/skills/review/SKILL.md',
+      fileCount: 1,
+      discoveredUpdatedAt: 100,
+      savedAt: 200,
+      updatedAt: 300
+    }
+  ]
+  const skillPresets = [
+    {
+      id: 'preset-1',
+      name: 'Review preset',
+      skillIds: ['skill-1'],
+      createdAt: 100,
+      updatedAt: 200
+    }
+  ]
   const store = {
-    getRepos: vi.fn(() => repos)
+    getRepos: vi.fn(() => repos),
+    listSavedSkills: vi.fn(() => savedSkills),
+    saveSkill: vi.fn((skill) => skill),
+    removeSavedSkill: vi.fn(),
+    listSkillPresets: vi.fn(() => skillPresets),
+    saveSkillPreset: vi.fn((preset) => preset),
+    removeSkillPreset: vi.fn()
   }
 
   beforeEach(() => {
@@ -38,6 +70,13 @@ describe('registerSkillsHandlers', () => {
     discoverSkillsMock.mockReset()
     getDefaultWslDistroMock.mockReset()
     getWslHomeMock.mockReset()
+    store.getRepos.mockClear()
+    store.listSavedSkills.mockClear()
+    store.saveSkill.mockClear()
+    store.removeSavedSkill.mockClear()
+    store.listSkillPresets.mockClear()
+    store.saveSkillPreset.mockClear()
+    store.removeSkillPreset.mockClear()
     discoverSkillsMock.mockResolvedValue({ skills: [], sources: [], scannedAt: 1 })
     getWslHomeMock.mockReturnValue('\\\\wsl.localhost\\Ubuntu\\home\\alice')
     Object.defineProperty(process, 'platform', {
@@ -52,17 +91,17 @@ describe('registerSkillsHandlers', () => {
     }
   })
 
-  function getDiscoverHandler() {
+  function getHandler(channel: string) {
     registerSkillsHandlers(store as never)
-    const call = handleMock.mock.calls.find((entry: unknown[]) => entry[0] === 'skills:discover')
+    const call = handleMock.mock.calls.find((entry: unknown[]) => entry[0] === channel)
     if (!call) {
-      throw new Error('skills:discover handler was not registered')
+      throw new Error(`${channel} handler was not registered`)
     }
     return call[1] as (_event: unknown, target?: unknown) => Promise<unknown>
   }
 
   it('uses host skill discovery when resolved project runtime overrides stale WSL target state', async () => {
-    const handler = getDiscoverHandler()
+    const handler = getHandler('skills:discover')
 
     await handler(null, {
       runtime: 'wsl',
@@ -84,7 +123,7 @@ describe('registerSkillsHandlers', () => {
   })
 
   it('scopes host skill discovery to the active workspace cwd when provided', async () => {
-    const handler = getDiscoverHandler()
+    const handler = getHandler('skills:discover')
 
     await handler(null, { cwd: '/repo/worktree' })
 
@@ -92,7 +131,7 @@ describe('registerSkillsHandlers', () => {
   })
 
   it('uses the selected project WSL distro for skill discovery', async () => {
-    const handler = getDiscoverHandler()
+    const handler = getHandler('skills:discover')
 
     await handler(null, {
       projectRuntime: {
@@ -118,7 +157,7 @@ describe('registerSkillsHandlers', () => {
   })
 
   it('blocks skill discovery when project runtime requires repair', async () => {
-    const handler = getDiscoverHandler()
+    const handler = getHandler('skills:discover')
 
     await expect(
       handler(null, {
@@ -135,5 +174,71 @@ describe('registerSkillsHandlers', () => {
       })
     ).rejects.toThrow('Project runtime requires repair before skill discovery')
     expect(discoverSkillsMock).not.toHaveBeenCalled()
+  })
+
+  it('lists saved skills from persistence', async () => {
+    const handler = getHandler('skills:listSaved')
+
+    expect(handler(null)).toEqual(savedSkills)
+    expect(store.listSavedSkills).toHaveBeenCalled()
+  })
+
+  it('saves a discovered skill snapshot into persistence', async () => {
+    const handler = getHandler('skills:save')
+
+    const result = await handler(null, {
+      skill: {
+        id: 'skill-2',
+        name: 'planner',
+        description: 'Plan work',
+        providers: ['codex'],
+        sourceKind: 'repo',
+        sourceLabel: 'Repo orca .agents',
+        rootPath: '/repo/.agents/skills',
+        directoryPath: '/repo/.agents/skills/planner',
+        skillFilePath: '/repo/.agents/skills/planner/SKILL.md',
+        installed: true,
+        fileCount: 2,
+        updatedAt: 999
+      }
+    })
+
+    expect(store.saveSkill).toHaveBeenCalled()
+    expect(result).toMatchObject({
+      id: 'skill-2',
+      name: 'planner',
+      discoveredUpdatedAt: 999
+    })
+  })
+
+  it('rejects empty preset saves', async () => {
+    const handler = getHandler('skills:savePreset')
+
+    expect(() =>
+      handler(null, {
+        name: 'Empty preset',
+        skillIds: []
+      })
+    ).toThrow('Select at least one saved skill')
+  })
+
+  it('saves a preset with saved skill ids only', async () => {
+    const handler = getHandler('skills:savePreset')
+
+    const result = await handler(null, {
+      name: ' Review preset ',
+      skillIds: ['skill-1', 'missing-skill', 'skill-1']
+    })
+
+    expect(store.saveSkillPreset).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Review preset',
+        skillIds: ['skill-1']
+      })
+    )
+    expect(result).toMatchObject({
+      name: 'Review preset',
+      skillIds: ['skill-1']
+    })
   })
 })

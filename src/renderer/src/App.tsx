@@ -1409,11 +1409,11 @@ function App(): React.JSX.Element {
   const showTitlebarExpandButton = workspaceChromeActive && !hasTabBar && effectiveActiveTabExpanded
   // Why: Activity and Space are full-page navigation surfaces — same
   // treatment as Settings — so the worktree sidebar is removed for those views.
+  // Tasks, Automations, Skills, and Mobile keep the sidebar as navigation peers.
   const showSidebar =
     activeView !== 'settings' &&
     activeView !== 'activity' &&
-    activeView !== 'space' &&
-    activeView !== 'skills'
+    activeView !== 'space'
   // Why: Tasks/Landing keep the full titlebar only when the sidebar is
   // collapsed; with it open, mirror workspace view so titlebar-left sits flush
   // above nav. Creation layout suppresses the full-width titlebar.

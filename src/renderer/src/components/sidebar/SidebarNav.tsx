@@ -1,5 +1,5 @@
 import React from 'react'
-import { Bell, CalendarClock, Search, Smartphone } from 'lucide-react'
+import { Bell, BookOpen, CalendarClock, Search, Smartphone } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { cn } from '@/lib/utils'
 import type { GlobalSettings } from '../../../../shared/types'
@@ -33,9 +33,16 @@ export function shouldShowAutomationsButton(
   return settings?.showAutomationsButton !== false
 }
 
+export function shouldShowSkillsButton(
+  settings: Pick<GlobalSettings, 'showSkillsButton'> | null | undefined
+): boolean {
+  return settings?.showSkillsButton !== false
+}
+
 const SidebarNav = React.memo(function SidebarNav() {
   const worktreePaletteShortcutCombos = useShortcutKeyComboDetails('worktree.palette')
   const openAutomationsPage = useAppStore((s) => s.openAutomationsPage)
+  const openSkillsPage = useAppStore((s) => s.openSkillsPage)
   const openActivityPage = useAppStore((s) => s.openActivityPage)
   const openMobilePage = useAppStore((s) => s.openMobilePage)
   const openModal = useAppStore((s) => s.openModal)
@@ -43,14 +50,19 @@ const SidebarNav = React.memo(function SidebarNav() {
   const activeView = useAppStore((s) => s.activeView)
   const showAgentsButton = useAppStore((s) => shouldShowAgentsButton(s.settings))
   const showAutomationsButton = useAppStore((s) => shouldShowAutomationsButton(s.settings))
+  const showSkillsButton = useAppStore((s) => shouldShowSkillsButton(s.settings))
   const showMobileButton = useAppStore((s) => shouldShowMobileButton(s.settings))
   const automationsActive = activeView === 'automations'
+  const skillsActive = activeView === 'skills'
   const activityActive = activeView === 'activity'
   const mobileActive = activeView === 'mobile'
   const activityUnreadCount = useActivityUnreadCount(showAgentsButton, 'sidebar-badge')
   const mobileOnboardingBadge = useMobileSidebarOnboardingBadge(showMobileButton)
   const hideAutomationsButton = React.useCallback(() => {
     void updateSettings({ showAutomationsButton: false })
+  }, [updateSettings])
+  const hideSkillsButton = React.useCallback(() => {
+    void updateSettings({ showSkillsButton: false })
   }, [updateSettings])
   const hideMobileButton = React.useCallback(() => {
     void updateSettings({ showMobileButton: false })
@@ -90,6 +102,35 @@ const SidebarNav = React.memo(function SidebarNav() {
             </button>
           </ContextMenuTrigger>
           <HideSidebarMenu onHide={hideAutomationsButton} />
+        </ContextMenu>
+      ) : null}
+      {showSkillsButton ? (
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <button
+              type="button"
+              onClick={openSkillsPage}
+              aria-current={skillsActive ? 'page' : undefined}
+              className={cn(
+                'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] font-medium tracking-tight transition-colors',
+                skillsActive
+                  ? 'bg-worktree-sidebar-accent text-worktree-sidebar-accent-foreground'
+                  : 'text-worktree-sidebar-foreground/60 hover:bg-worktree-sidebar-foreground/8'
+              )}
+            >
+              <BookOpen
+                className={cn(
+                  'size-4 shrink-0',
+                  !skillsActive && 'text-worktree-sidebar-foreground/30'
+                )}
+                strokeWidth={skillsActive ? 2.25 : 1.75}
+              />
+              <span className="flex-1">
+                {translate('auto.components.sidebar.SidebarNav.0bdf53d7ce', 'Skills')}
+              </span>
+            </button>
+          </ContextMenuTrigger>
+          <HideSidebarMenu onHide={hideSkillsButton} />
         </ContextMenu>
       ) : null}
       {showAgentsButton ? (

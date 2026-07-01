@@ -67,6 +67,7 @@ import type {
   WorkspaceSessionPatch,
   WorkspaceSessionState
 } from '../shared/types'
+import type { SavedSkill, SkillPreset } from '../shared/skills'
 import {
   deriveGlobalWindowsRuntimeDefaultFromLegacySettings,
   normalizeProjectRuntimePreference
@@ -84,6 +85,14 @@ import type { SshRemotePtyLease, SshTarget } from '../shared/ssh-types'
 import { isFolderRepo } from '../shared/repo-kind'
 import { getGitUsername } from './git/repo'
 import { getRepoExecutionHostId, parseExecutionHostId } from '../shared/execution-host'
+import {
+  listSavedSkills as listPersistedSavedSkills,
+  listSkillPresets as listPersistedSkillPresets,
+  removeSavedSkill as removePersistedSavedSkill,
+  removeSkillPreset as removePersistedSkillPreset,
+  saveSkill as savePersistedSkill,
+  saveSkillPreset as savePersistedSkillPreset
+} from './skills/skill-library-persistence'
 import {
   getDefaultPersistedState,
   getDefaultNotificationSettings,
@@ -4167,6 +4176,40 @@ export class Store {
     const existing = this.state.sparsePresetsByRepo[repoId] ?? []
     this.state.sparsePresetsByRepo[repoId] = existing.filter((entry) => entry.id !== presetId)
     this.scheduleSave()
+  }
+
+  // ── Skills ─────────────────────────────────────────────────────────
+
+  listSavedSkills(): SavedSkill[] {
+    return listPersistedSavedSkills(this.state)
+  }
+
+  saveSkill(skill: SavedSkill): SavedSkill {
+    const saved = savePersistedSkill(this.state, skill)
+    this.scheduleSave()
+    return saved
+  }
+
+  removeSavedSkill(skillId: string): void {
+    if (removePersistedSavedSkill(this.state, skillId)) {
+      this.scheduleSave()
+    }
+  }
+
+  listSkillPresets(): SkillPreset[] {
+    return listPersistedSkillPresets(this.state)
+  }
+
+  saveSkillPreset(preset: SkillPreset): SkillPreset {
+    const saved = savePersistedSkillPreset(this.state, preset)
+    this.scheduleSave()
+    return saved
+  }
+
+  removeSkillPreset(presetId: string): void {
+    if (removePersistedSkillPreset(this.state, presetId)) {
+      this.scheduleSave()
+    }
   }
 
   // ── Automations ───────────────────────────────────────────────────

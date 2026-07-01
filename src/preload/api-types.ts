@@ -273,7 +273,13 @@ import type {
 import type { ResolvedSourceControlAiGenerationParams } from '../shared/source-control-ai'
 import type { SourceControlAiSettings } from '../shared/source-control-ai-types'
 import type { ShellOpenLocalPathResult } from '../shared/shell-open-types'
-import type { SkillDiscoveryResult, SkillDiscoveryTarget } from '../shared/skills'
+import type {
+  DiscoveredSkill,
+  SavedSkill,
+  SkillDiscoveryResult,
+  SkillDiscoveryTarget,
+  SkillPreset
+} from '../shared/skills'
 import type {
   CrashReportBreadcrumbData,
   CrashReportRecord,
@@ -2071,6 +2077,12 @@ export type PreloadApi = {
   }
   skills: {
     discover: (target?: SkillDiscoveryTarget) => Promise<SkillDiscoveryResult>
+    listSaved: () => Promise<SavedSkill[]>
+    save: (args: { skill: DiscoveredSkill }) => Promise<SavedSkill>
+    remove: (args: { skillId: string }) => Promise<void>
+    listPresets: () => Promise<SkillPreset[]>
+    savePreset: (args: { id?: string; name: string; skillIds: string[] }) => Promise<SkillPreset>
+    removePreset: (args: { presetId: string }) => Promise<void>
   }
   pet: {
     import: () => Promise<CustomPet | null>

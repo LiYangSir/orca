@@ -58,7 +58,13 @@ import type {
 } from '../shared/terminal-custom-themes'
 import type { GitHistoryOptions, GitHistoryResult } from '../shared/git-history'
 import type { ShellOpenLocalPathResult } from '../shared/shell-open-types'
-import type { SkillDiscoveryResult, SkillDiscoveryTarget } from '../shared/skills'
+import type {
+  DiscoveredSkill,
+  SavedSkill,
+  SkillDiscoveryResult,
+  SkillDiscoveryTarget,
+  SkillPreset
+} from '../shared/skills'
 import type {
   RuntimeBrowserDriverState,
   RuntimeMobileSessionTabMove,
@@ -2057,7 +2063,25 @@ const api = {
 
   skills: {
     discover: (target?: SkillDiscoveryTarget): Promise<SkillDiscoveryResult> =>
-      ipcRenderer.invoke('skills:discover', target)
+      ipcRenderer.invoke('skills:discover', target),
+
+    listSaved: (): Promise<SavedSkill[]> => ipcRenderer.invoke('skills:listSaved'),
+
+    save: (args: { skill: DiscoveredSkill }): Promise<SavedSkill> =>
+      ipcRenderer.invoke('skills:save', args),
+
+    remove: (args: { skillId: string }): Promise<void> => ipcRenderer.invoke('skills:remove', args),
+
+    listPresets: (): Promise<SkillPreset[]> => ipcRenderer.invoke('skills:listPresets'),
+
+    savePreset: (args: {
+      id?: string
+      name: string
+      skillIds: string[]
+    }): Promise<SkillPreset> => ipcRenderer.invoke('skills:savePreset', args),
+
+    removePreset: (args: { presetId: string }): Promise<void> =>
+      ipcRenderer.invoke('skills:removePreset', args)
   },
 
   pet: {

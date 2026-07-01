@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   state: {} as Record<string, unknown>,
   openTaskPage: vi.fn(),
   openAutomationsPage: vi.fn(),
+  openSkillsPage: vi.fn(),
   openActivityPage: vi.fn(),
   openMobilePage: vi.fn(),
   openModal: vi.fn(),
@@ -74,6 +75,7 @@ import {
   getSetupGuideSidebarEntryReady,
   shouldShowAgentsButton,
   shouldShowAutomationsButton,
+  shouldShowSkillsButton,
   shouldShowMobileButton,
   shouldShowSetupGuideEntry
 } from './SidebarNav'
@@ -114,6 +116,7 @@ function setSidebarState({
     activeView: 'worktrees',
     openTaskPage: mocks.openTaskPage,
     openAutomationsPage: mocks.openAutomationsPage,
+    openSkillsPage: mocks.openSkillsPage,
     openActivityPage: mocks.openActivityPage,
     openMobilePage: mocks.openMobilePage,
     openModal: mocks.openModal,
@@ -234,6 +237,15 @@ describe('SidebarNav', () => {
     expect(shouldShowAutomationsButton({ showAutomationsButton: false })).toBe(false)
   })
 
+  it('shows the Skills entry by default for older settings', () => {
+    expect(shouldShowSkillsButton(null)).toBe(true)
+    expect(shouldShowSkillsButton({})).toBe(true)
+  })
+
+  it('hides the Skills entry when the sidebar setting is off', () => {
+    expect(shouldShowSkillsButton({ showSkillsButton: false })).toBe(false)
+  })
+
   it('omits the Automations row when the sidebar setting is off', async () => {
     setSidebarState({
       settings: {
@@ -247,6 +259,27 @@ describe('SidebarNav', () => {
     expect(queryButtonByText(container, 'Automations')).toBeNull()
   })
 
+  it('omits the Skills row when the sidebar setting is off', async () => {
+    setSidebarState({
+      settings: {
+        ...getDefaultSettings('/tmp'),
+        showSkillsButton: false
+      }
+    })
+
+    const container = await renderSidebarNav()
+
+    expect(queryButtonByText(container, 'Skills')).toBeNull()
+  })
+
+  it('opens Skills from the sidebar', async () => {
+    const container = await renderSidebarNav()
+
+    await clickButton(getButtonByText(container, 'Skills'))
+
+    expect(mocks.openSkillsPage).toHaveBeenCalled()
+  })
+
   it('hides Automations from its sidebar context menu', async () => {
     const container = await renderSidebarNav()
 
@@ -258,6 +291,17 @@ describe('SidebarNav', () => {
     await clickButton(getHideButton(automationsMenu as HTMLElement))
 
     expect(mocks.updateSettings).toHaveBeenCalledWith({ showAutomationsButton: false })
+  })
+
+  it('hides Skills from its sidebar context menu', async () => {
+    const container = await renderSidebarNav()
+
+    const skillsMenu = getButtonByText(container, 'Skills').closest('[data-testid="context-menu"]')
+    expect(skillsMenu).not.toBeNull()
+
+    await clickButton(getHideButton(skillsMenu as HTMLElement))
+
+    expect(mocks.updateSettings).toHaveBeenCalledWith({ showSkillsButton: false })
   })
 
   it('hides Mobile from its sidebar context menu', async () => {

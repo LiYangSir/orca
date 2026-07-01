@@ -19,6 +19,32 @@ export type DiscoveredSkill = {
   updatedAt: number | null
 }
 
+/** Snapshot of a discovered skill kept in the local skill library. */
+export type SavedSkill = {
+  id: string
+  name: string
+  description: string | null
+  providers: SkillProvider[]
+  sourceKind: SkillSourceKind
+  sourceLabel: string
+  rootPath: string
+  directoryPath: string
+  skillFilePath: string
+  fileCount: number
+  discoveredUpdatedAt: number | null
+  savedAt: number
+  updatedAt: number
+}
+
+/** Reusable group of saved skills; future per-skill options can layer on here. */
+export type SkillPreset = {
+  id: string
+  name: string
+  skillIds: string[]
+  createdAt: number
+  updatedAt: number
+}
+
 export type SkillDiscoverySource = {
   id: string
   label: string

@@ -126,6 +126,24 @@ export const getSidebarEntries = createLocalizedCatalog((): SettingsSearchEntry[
   },
   {
     title: translate(
+      'auto.components.settings.appearance.search.d2ab47a58a',
+      'Show Skills Button'
+    ),
+    description: translate(
+      'auto.components.settings.appearance.search.efd9cdb4e4',
+      'Show the Skills button at the top of the left sidebar.'
+    ),
+    keywords: [
+      ...translateSearchKeyword('auto.components.settings.appearance.search.22bbec4f62', 'skills'),
+      ...translateSearchKeyword('auto.components.settings.appearance.search.97660f2a79', 'skill'),
+      ...translateSearchKeyword('auto.components.settings.appearance.search.5bff6a2ef0', 'sidebar'),
+      ...translateSearchKeyword('auto.components.settings.appearance.search.6cf5f54ce1', 'button'),
+      ...translateSearchKeyword('auto.components.settings.appearance.search.648eeada79', 'hide'),
+      ...translateSearchKeyword('auto.components.settings.appearance.search.ac79fe4a04', 'show')
+    ]
+  },
+  {
+    title: translate(
       'auto.components.settings.appearance.search.1de96ec8a6',
       'Show Orca Mobile Button'
     ),
