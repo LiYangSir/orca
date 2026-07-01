@@ -9,7 +9,9 @@ import { RateLimitService } from './service'
 import { fetchClaudeRateLimits, fetchManagedAccountUsage } from './claude-fetcher'
 import { fetchCodexRateLimits } from './codex-fetcher'
 import { fetchGeminiRateLimits } from './gemini-usage-fetcher'
+import { fetchIdealabRateLimits } from './idealab-fetcher'
 import { fetchOpenCodeGoRateLimits } from './opencode-go-usage-fetcher'
+import { fetchZaiRateLimits } from './zai-fetcher'
 
 vi.mock('./claude-fetcher', () => ({
   fetchClaudeRateLimits: vi.fn(),
@@ -24,8 +26,16 @@ vi.mock('./gemini-usage-fetcher', () => ({
   fetchGeminiRateLimits: vi.fn()
 }))
 
+vi.mock('./idealab-fetcher', () => ({
+  fetchIdealabRateLimits: vi.fn()
+}))
+
 vi.mock('./opencode-go-usage-fetcher', () => ({
   fetchOpenCodeGoRateLimits: vi.fn()
+}))
+
+vi.mock('./zai-fetcher', () => ({
+  fetchZaiRateLimits: vi.fn()
 }))
 
 type Deferred<T> = {
@@ -42,7 +52,7 @@ function deferred<T>(): Deferred<T> {
 }
 
 function okProvider(
-  provider: 'claude' | 'codex' | 'gemini' | 'opencode-go',
+  provider: 'claude' | 'codex' | 'gemini' | 'opencode-go' | 'zai' | 'idealab',
   usedPercent: number,
   updatedAt = Date.now()
 ): ProviderRateLimits {
@@ -62,7 +72,7 @@ function okProvider(
 }
 
 function errorProvider(
-  provider: 'claude' | 'codex' | 'gemini' | 'opencode-go',
+  provider: 'claude' | 'codex' | 'gemini' | 'opencode-go' | 'zai' | 'idealab',
   message: string
 ): ProviderRateLimits {
   return {
@@ -116,6 +126,8 @@ describe('RateLimitService', () => {
     vi.clearAllMocks()
     vi.mocked(fetchGeminiRateLimits).mockResolvedValue(okProvider('gemini', 0, Date.now()))
     vi.mocked(fetchOpenCodeGoRateLimits).mockResolvedValue(okProvider('opencode-go', 0, Date.now()))
+    vi.mocked(fetchZaiRateLimits).mockResolvedValue(okProvider('zai', 0, Date.now()))
+    vi.mocked(fetchIdealabRateLimits).mockResolvedValue(okProvider('idealab', 0, Date.now()))
   })
 
   it('does not refetch Claude when a Codex account switch is queued during fetchAll', async () => {

@@ -1,6 +1,7 @@
 import type { ProviderRateLimits, RateLimitWindow } from '../../../../shared/rate-limit-types'
 import { AgentIcon } from '@/lib/agent-catalog'
-import { ClaudeIcon, GeminiIcon, OpenAIIcon, OpenCodeGoIcon } from './icons'
+import { AgentLetterIcon } from '@/lib/agent-icon-glyphs'
+import { ClaudeIcon, GeminiIcon, IdealabIcon, OpenAIIcon, OpenCodeGoIcon } from './icons'
 import { translate } from '@/i18n/i18n'
 import {
   getProviderDisplayName,
@@ -93,6 +94,12 @@ export function ProviderIcon({ provider }: { provider: string }): React.JSX.Elem
   if (provider === 'kimi') {
     return <AgentIcon agent="kimi" size={13} />
   }
+  if (provider === 'zai') {
+    return <AgentLetterIcon letter="Z" size={13} />
+  }
+  if (provider === 'idealab') {
+    return <IdealabIcon size={13} />
+  }
   return <ClaudeIcon size={13} />
 }
 
@@ -138,6 +145,18 @@ function ErrorMessage({
 export function getWindowSections(
   p: ProviderRateLimits
 ): { label: string; window: RateLimitWindow | null }[] {
+  if (p.provider === 'idealab') {
+    return [
+      {
+        label: translate('settings.tooltip.idealab.monthlySpend', 'Monthly Spend'),
+        window: p.session
+      },
+      {
+        label: p.monthlyLabel ?? translate('settings.tooltip.idealab.monthlyCalls', 'Monthly Calls'),
+        window: p.monthly ?? null
+      }
+    ]
+  }
   if (p.buckets?.length) {
     const bucketSections = p.buckets.map((b) => ({ label: b.name, window: b as RateLimitWindow }))
     return [
@@ -160,7 +179,8 @@ export function getWindowSections(
   ]
   if (p.monthly !== undefined && p.monthly !== null) {
     sections.push({
-      label: translate('auto.components.status.bar.tooltip.7f7f208060', 'Monthly'),
+      label:
+        p.monthlyLabel ?? translate('auto.components.status.bar.tooltip.7f7f208060', 'Monthly'),
       window: p.monthly
     })
   }

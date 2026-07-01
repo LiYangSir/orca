@@ -263,6 +263,7 @@ function migrateStatusBarItems(items: readonly string[] | undefined): StatusBarI
 
 const DEFAULT_ON_PORTS_STATUS_BAR_ITEM: StatusBarItem = 'ports'
 const DEFAULT_ON_KIMI_STATUS_BAR_ITEM: StatusBarItem = 'kimi'
+const DEFAULT_ON_ZAI_STATUS_BAR_ITEM: StatusBarItem = 'zai'
 
 function normalizeHydratedVisibleWorkspaceHostIds(ui: PersistedUIState): VisibleWorkspaceHostIds {
   const visibleHostIds = normalizeVisibleExecutionHostIds(ui.visibleWorkspaceHostIds)
@@ -2219,15 +2220,22 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
         ui._kimiStatusBarDefaultAdded || statusBarItemsWithPorts.includes('kimi')
           ? statusBarItemsWithPorts
           : [...statusBarItemsWithPorts, DEFAULT_ON_KIMI_STATUS_BAR_ITEM]
+      const statusBarItemsWithZai =
+        ui._zaiStatusBarDefaultAdded || statusBarItems.includes('zai')
+          ? statusBarItems
+          : [...statusBarItems, DEFAULT_ON_ZAI_STATUS_BAR_ITEM]
       if (
-        (!ui._portsStatusBarDefaultAdded || !ui._kimiStatusBarDefaultAdded) &&
+        (!ui._portsStatusBarDefaultAdded ||
+          !ui._kimiStatusBarDefaultAdded ||
+          !ui._zaiStatusBarDefaultAdded) &&
         typeof window !== 'undefined'
       ) {
         window.api.ui
           .set({
-            statusBarItems,
+            statusBarItems: statusBarItemsWithZai,
             _portsStatusBarDefaultAdded: true,
-            _kimiStatusBarDefaultAdded: true
+            _kimiStatusBarDefaultAdded: true,
+            _zaiStatusBarDefaultAdded: true
           })
           .catch(console.error)
       }
@@ -2287,7 +2295,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
         workspaceBoardOpacity: clampWorkspaceBoardOpacity(ui.workspaceBoardOpacity),
         workspaceBoardColumnWidth: clampWorkspaceBoardColumnWidth(ui.workspaceBoardColumnWidth),
         syncTaskStatusFromWorkspaceBoard: ui.syncTaskStatusFromWorkspaceBoard === true,
-        statusBarItems,
+        statusBarItems: statusBarItemsWithZai,
         statusBarVisible: ui.statusBarVisible ?? true,
         // Why: absent → true so existing users see the pet the first time
         // they enable the experimental flag. Only an explicit Hide pet

@@ -62,7 +62,7 @@ describe('getWorktreeCardPrDisplay', () => {
 
   it('ignores linked-lookup PR details when the worktree is unlinked', () => {
     expect(
-      getWorktreeCardPrDisplay(pr, null, null, null, null, null, {
+      getWorktreeCardPrDisplay(pr, null, null, null, null, null, null, {
         reviewHintKey: 'github:123'
       })
     ).toBeNull()
@@ -70,7 +70,7 @@ describe('getWorktreeCardPrDisplay', () => {
 
   it('shows branch-discovered GitHub PR details when the worktree is unlinked', () => {
     expect(
-      getWorktreeCardPrDisplay(pr, null, null, null, null, null, {
+      getWorktreeCardPrDisplay(pr, null, null, null, null, null, null, {
         reviewHintKey: ''
       })
     ).toBe(pr)

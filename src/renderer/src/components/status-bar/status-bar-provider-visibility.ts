@@ -7,6 +7,7 @@ export type UsageProviderSettings = Pick<
   | 'claudeManagedAccounts'
   | 'opencodeSessionCookie'
   | 'geminiCliOAuthEnabled'
+  | 'idealabUsageEnabled'
 >
 
 type UsageProviderSnapshots = {
@@ -15,6 +16,8 @@ type UsageProviderSnapshots = {
   gemini: ProviderRateLimits | null
   opencodeGo: ProviderRateLimits | null
   kimi: ProviderRateLimits | null
+  zai: ProviderRateLimits | null
+  idealab: ProviderRateLimits | null
 }
 
 type UsageProviderId = ProviderRateLimits['provider']
@@ -57,7 +60,8 @@ export function hasUsageProviderSettings(
     (settings?.codexManagedAccounts?.length ?? 0) > 0 ||
     (settings?.claudeManagedAccounts?.length ?? 0) > 0 ||
     settings?.geminiCliOAuthEnabled === true ||
-    Boolean(settings?.opencodeSessionCookie?.trim())
+    Boolean(settings?.opencodeSessionCookie?.trim()) ||
+    settings?.idealabUsageEnabled === true
   )
 }
 
@@ -80,6 +84,9 @@ export function hasUsageProviderSettingsForProvider(
   if (providerId === 'opencode-go') {
     return Boolean(settings.opencodeSessionCookie?.trim())
   }
+  if (providerId === 'idealab') {
+    return settings.idealabUsageEnabled === true
+  }
   return false
 }
 
@@ -89,6 +96,7 @@ function createPendingProviderSnapshot(providerId: UsageProviderId): ProviderRat
     session: null,
     weekly: null,
     ...(providerId === 'opencode-go' ? { monthly: null } : {}),
+    ...(providerId === 'idealab' ? { monthly: null } : {}),
     ...(providerId === 'gemini' ? { buckets: [] } : {}),
     updatedAt: 0,
     error: null,
@@ -127,7 +135,9 @@ export function isUsageEmptyState(
     isProviderSnapshotPending(providers.codex) ||
     isProviderSnapshotPending(providers.gemini) ||
     isProviderSnapshotPending(providers.opencodeGo) ||
-    isProviderSnapshotPending(providers.kimi)
+    isProviderSnapshotPending(providers.kimi) ||
+    isProviderSnapshotPending(providers.zai) ||
+    isProviderSnapshotPending(providers.idealab)
   ) {
     return false
   }
@@ -137,6 +147,8 @@ export function isUsageEmptyState(
     !isProviderConfigured(providers.codex) &&
     !isProviderConfigured(providers.gemini) &&
     !isProviderConfigured(providers.opencodeGo) &&
-    !isProviderConfigured(providers.kimi)
+    !isProviderConfigured(providers.kimi) &&
+    !isProviderConfigured(providers.zai) &&
+    !isProviderConfigured(providers.idealab)
   )
 }

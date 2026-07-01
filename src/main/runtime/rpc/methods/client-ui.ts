@@ -40,7 +40,18 @@ const WorktreeCardProperties = z
   .array(LegacyWorktreeCardProperty)
   .transform((value) => normalizeWorktreeCardProperties(value))
 const AgentActivityDisplayMode = z.enum(['compact', 'full'])
-const StatusBarItem = z.enum(['claude', 'codex', 'gemini', 'opencode-go', 'ssh', 'resource-usage'])
+const StatusBarItem = z.enum([
+  'claude',
+  'codex',
+  'gemini',
+  'opencode-go',
+  'kimi',
+  'zai',
+  'idealab',
+  'ssh',
+  'resource-usage',
+  'ports'
+])
 const WorkspaceStatusDefinition = z.object({
   id: z.string(),
   label: z.string(),
@@ -142,6 +153,7 @@ const SettingsUpdate = z
     defaultRepoSelection: z.array(z.string()).nullable().optional(),
     defaultLinearTeamSelection: z.array(z.string()).nullable().optional(),
     compactWorktreeCards: z.boolean().optional(),
+    idealabUsageEnabled: z.boolean().optional(),
     githubProjects: GitHubProjectSettings.optional()
   })
   .strict()

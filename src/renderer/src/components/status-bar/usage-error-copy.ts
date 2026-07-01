@@ -17,6 +17,12 @@ export function getProviderDisplayName(provider: ProviderRateLimits['provider'])
   if (provider === 'kimi') {
     return 'Kimi'
   }
+  if (provider === 'zai') {
+    return 'Z.ai'
+  }
+  if (provider === 'idealab') {
+    return 'IdeaLab'
+  }
   return provider
 }
 

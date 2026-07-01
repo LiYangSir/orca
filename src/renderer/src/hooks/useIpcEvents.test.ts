@@ -486,6 +486,8 @@ describe('useIpcEvents rate-limit hydration', () => {
       gemini: null,
       opencodeGo: null,
       kimi: null,
+      zai: null,
+      idealab: null,
       claudeTarget: { runtime: 'host', wslDistro: null },
       codexTarget: { runtime: 'host', wslDistro: null },
       inactiveClaudeAccounts: [],

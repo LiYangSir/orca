@@ -1,4 +1,18 @@
 import React from 'react'
+import idealabIconUrl from '../../../../../resources/idealab.svg?url'
+
+export function IdealabIcon({ size = 14 }: { size?: number }): React.JSX.Element {
+  return (
+    <img
+      src={idealabIconUrl}
+      alt=""
+      width={size}
+      height={size}
+      className="inline-block shrink-0 object-contain"
+      draggable={false}
+    />
+  )
+}
 
 export function OpenAIIcon({ size = 14 }: { size?: number }): React.JSX.Element {
   return (

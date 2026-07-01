@@ -19,8 +19,10 @@ import {
   type NormalizedClaudeAccountSelectionTarget
 } from '../claude-accounts/runtime-selection'
 import { fetchGeminiRateLimits } from './gemini-usage-fetcher'
+import { fetchIdealabRateLimits } from './idealab-fetcher'
 import { fetchKimiRateLimits } from './kimi-fetcher'
 import { fetchOpenCodeGoRateLimits } from './opencode-go-usage-fetcher'
+import { fetchZaiRateLimits } from './zai-fetcher'
 import {
   normalizeCodexAccountSelectionTarget,
   type CodexAccountSelectionTarget,
@@ -43,6 +45,7 @@ type OpenCodeGoRateLimitConfig = {
 }
 
 type GeminiCliOAuthEnabledResolver = () => boolean
+type IdealabUsageEnabledResolver = () => boolean
 
 // Why: Claude's subscription usage endpoint has a tight request budget. Quota
 // state is informational, so prefer keeping a recent snapshot over polling it
@@ -63,6 +66,8 @@ type InternalRateLimitState = {
   gemini: ProviderRateLimits | null
   opencodeGo: ProviderRateLimits | null
   kimi: ProviderRateLimits | null
+  zai: ProviderRateLimits | null
+  idealab: ProviderRateLimits | null
 }
 
 function normalizePollingInterval(ms: number): number {
@@ -90,7 +95,9 @@ export class RateLimitService {
     codex: null,
     gemini: null,
     opencodeGo: null,
-    kimi: null
+    kimi: null,
+    zai: null,
+    idealab: null
   }
   private pollInterval: number = DEFAULT_POLL_MS
   private timer: ReturnType<typeof setInterval> | null = null
@@ -119,6 +126,7 @@ export class RateLimitService {
   }
   private openCodeGoConfigResolver: (() => OpenCodeGoRateLimitConfig) | null = null
   private geminiCliOAuthEnabledResolver: GeminiCliOAuthEnabledResolver | null = null
+  private idealabUsageEnabledResolver: IdealabUsageEnabledResolver | null = null
   private inactiveClaudeAccountsResolver: (() => InactiveClaudeAccountInfo[]) | null = null
   private inactiveCodexAccountsResolver: (() => InactiveCodexAccountInfo[]) | null = null
   private inactiveClaudeCache = new Map<string, ProviderRateLimits>()
@@ -162,6 +170,10 @@ export class RateLimitService {
 
   setGeminiCliOAuthEnabledResolver(resolver: GeminiCliOAuthEnabledResolver): void {
     this.geminiCliOAuthEnabledResolver = resolver
+  }
+
+  setIdealabUsageEnabledResolver(resolver: IdealabUsageEnabledResolver): void {
+    this.idealabUsageEnabledResolver = resolver
   }
 
   setInactiveClaudeAccountsResolver(resolver: () => InactiveClaudeAccountInfo[]): void {
@@ -820,7 +832,7 @@ export class RateLimitService {
 
   private withFetchingStatus(
     current: ProviderRateLimits | null,
-    provider: 'claude' | 'codex' | 'gemini' | 'opencode-go' | 'kimi'
+    provider: 'claude' | 'codex' | 'gemini' | 'opencode-go' | 'kimi' | 'zai' | 'idealab'
   ): ProviderRateLimits {
     if (!current) {
       return {
@@ -849,6 +861,7 @@ export class RateLimitService {
     const cookie = openCodeGoConfig?.sessionCookie ?? ''
     const workspaceIdOverride = openCodeGoConfig?.workspaceIdOverride ?? ''
     const geminiCliOAuthEnabled = this.geminiCliOAuthEnabledResolver?.() ?? false
+    const idealabUsageEnabled = this.idealabUsageEnabledResolver?.() ?? false
 
     // Detect if configuration changed — if it did, we must discard any stale
     // data because it belongs to a different session/workspace.
@@ -871,27 +884,36 @@ export class RateLimitService {
       opencodeGo: opencodeConfigChanged
         ? this.withFetchingStatus(null, 'opencode-go')
         : this.withFetchingStatus(previousState.opencodeGo, 'opencode-go'),
-      kimi: this.withFetchingStatus(previousState.kimi, 'kimi')
+      kimi: this.withFetchingStatus(previousState.kimi, 'kimi'),
+      zai: this.withFetchingStatus(previousState.zai, 'zai'),
+      idealab: this.withFetchingStatus(previousState.idealab, 'idealab')
     })
 
-    const missingWslCodexHome = codexHomePath
-      ? null
-      : this.getMissingWslCodexHomeResult(codexTarget)
-    const [claudeResult, codexResult, geminiResult, opencodeGoResult, kimiResult] =
-      await Promise.allSettled([
-        fetchClaudeRateLimits({
-          authPreparation: claudeAuthPreparation,
-          allowPtyFallback: this.shouldAllowClaudePtyFallback(claudeAuthPreparation)
+    const missingWslCodexHome = codexHomePath ? null : this.getMissingWslCodexHomeResult(codexTarget)
+    const [
+      claudeResult,
+      codexResult,
+      geminiResult,
+      opencodeGoResult,
+      kimiResult,
+      zaiResult,
+      idealabResult
+    ] = await Promise.allSettled([
+      fetchClaudeRateLimits({
+        authPreparation: claudeAuthPreparation,
+        allowPtyFallback: this.shouldAllowClaudePtyFallback(claudeAuthPreparation)
+      }),
+      missingWslCodexHome ??
+        fetchCodexRateLimits({
+          codexHomePath,
+          allowPtyFallback: this.shouldAllowCodexPtyFallback()
         }),
-        missingWslCodexHome ??
-          fetchCodexRateLimits({
-            codexHomePath,
-            allowPtyFallback: this.shouldAllowCodexPtyFallback()
-          }),
-        fetchGeminiRateLimits(geminiCliOAuthEnabled),
-        fetchOpenCodeGoRateLimits(cookie, workspaceIdOverride || undefined),
-        fetchKimiRateLimits()
-      ])
+      fetchGeminiRateLimits(geminiCliOAuthEnabled),
+      fetchOpenCodeGoRateLimits(cookie, workspaceIdOverride || undefined),
+      fetchKimiRateLimits(),
+      fetchZaiRateLimits(),
+      fetchIdealabRateLimits(idealabUsageEnabled)
+    ])
 
     const claude =
       claudeResult.status === 'fulfilled'
@@ -960,6 +982,35 @@ export class RateLimitService {
             status: 'error'
           } satisfies ProviderRateLimits)
 
+    const zai =
+      zaiResult.status === 'fulfilled'
+        ? zaiResult.value
+        : ({
+            provider: 'zai',
+            session: null,
+            weekly: null,
+            monthly: null,
+            updatedAt: Date.now(),
+            error: zaiResult.reason instanceof Error ? zaiResult.reason.message : 'Unknown error',
+            status: 'error'
+          } satisfies ProviderRateLimits)
+
+    const idealab =
+      idealabResult.status === 'fulfilled'
+        ? idealabResult.value
+        : ({
+            provider: 'idealab',
+            session: null,
+            weekly: null,
+            monthly: null,
+            updatedAt: Date.now(),
+            error:
+              idealabResult.reason instanceof Error
+                ? idealabResult.reason.message
+                : 'Unknown error',
+            status: 'error'
+          } satisfies ProviderRateLimits)
+
     const latestCodexHomePath = this.codexHomePathResolver?.(codexTarget) ?? null
     const latestClaudeAuthPreparation = await this.claudeAuthPreparationResolver?.(claudeTarget)
     const latestClaudeProvenance = latestClaudeAuthPreparation?.provenance ?? 'system'
@@ -990,7 +1041,9 @@ export class RateLimitService {
           ? opencodeGo
           : this.applyStalePolicy(opencodeGo, previousState.opencodeGo)
         : this.state.opencodeGo,
-      kimi: this.applyStalePolicy(kimi, previousState.kimi)
+      kimi: this.applyStalePolicy(kimi, previousState.kimi),
+      zai: this.applyStalePolicy(zai, previousState.zai),
+      idealab: this.applyStalePolicy(idealab, previousState.idealab)
     })
 
     this.lastFetchAt = Date.now()

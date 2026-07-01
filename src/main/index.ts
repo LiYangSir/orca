@@ -1428,6 +1428,7 @@ app.whenReady().then(async () => {
     }
   })
   rateLimits.setGeminiCliOAuthEnabledResolver(() => store!.getSettings().geminiCliOAuthEnabled)
+  rateLimits.setIdealabUsageEnabledResolver(() => store!.getSettings().idealabUsageEnabled === true)
   keybindings = new KeybindingService({
     homePath: app.getPath('home'),
     getLegacyOverrides: () => store!.getSettings().keybindings

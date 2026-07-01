@@ -162,6 +162,31 @@ export const getStatusBarToggles = createLocalizedCatalog(
       )
     },
     {
+      id: 'zai',
+      title: translate('auto.components.settings.appearance.search.zaiUsageTitle', 'Z.ai Usage'),
+      description: translate(
+        'auto.components.settings.appearance.search.zaiUsageDescription',
+        'Show Z.ai coding-plan quota usage in the status bar.'
+      ),
+      keywords: [
+        ...translateSearchKeyword(
+          'auto.components.settings.appearance.search.896eb53fd4',
+          'status bar'
+        ),
+        ...translateSearchKeyword('auto.components.settings.appearance.search.zai', 'z.ai'),
+        ...translateSearchKeyword('auto.components.settings.appearance.search.glm', 'glm'),
+        ...translateSearchKeyword('auto.components.settings.appearance.search.00a028f25f', 'usage'),
+        ...translateSearchKeyword(
+          'auto.components.settings.appearance.search.de586def95',
+          'subscription'
+        )
+      ],
+      toggleDescription: translate(
+        'settings.appearance.statusBar.zaiToggleDescription',
+        'Show Z.ai coding-plan quota usage when ZAI_API_KEY or GLM_API_KEY is available.'
+      )
+    },
+    {
       id: 'ssh',
       title: translate('auto.components.settings.appearance.search.57fb424c56', 'Remote Hosts'),
       description: translate(

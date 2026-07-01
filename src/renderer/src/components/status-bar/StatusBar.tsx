@@ -66,6 +66,7 @@ import { TOGGLE_FLOATING_TERMINAL_EVENT } from '@/lib/floating-terminal'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { FloatingTerminalIconContextMenu } from '@/components/floating-terminal/FloatingTerminalIconContextMenu'
 import { summarizeCodexRestartStatus } from './codex-restart-status-summary'
+import { useIdealabStatusBarToggle } from './idealab-status-bar-toggle'
 import {
   getWindowsTerminalCapabilityOwnerKey,
   useWindowsTerminalCapabilities
@@ -1053,7 +1054,7 @@ function ProviderSegment({
   }
 
   // Fetching with no prior data
-  if (p.status === 'fetching' && !p.session && !p.weekly) {
+  if (p.status === 'fetching' && !p.session && !p.weekly && !p.monthly) {
     return (
       <span className="inline-flex items-center gap-1 text-muted-foreground">
         <ProviderIcon provider={provider} />
@@ -1072,7 +1073,7 @@ function ProviderSegment({
   }
 
   // Error with no data
-  if (p.status === 'error' && !p.session && !p.weekly) {
+  if (p.status === 'error' && !p.session && !p.weekly && !p.monthly) {
     return (
       <span className="inline-flex items-center gap-1 text-muted-foreground">
         <ProviderIcon provider={provider} />
@@ -1104,6 +1105,9 @@ function ProviderSegment({
         {visibleBuckets.length === 0 && p.session && (
           <WindowLabel w={p.session} label={formatWindowLabel(p.session.windowMinutes)} />
         )}
+        {visibleBuckets.length === 0 && !p.session && p.monthly && (
+          <WindowLabel w={p.monthly} label={formatWindowLabel(p.monthly.windowMinutes)} />
+        )}
         {isStale && <AlertTriangle size={11} className="text-muted-foreground/80" />}
       </span>
     )
@@ -1118,6 +1122,9 @@ function ProviderSegment({
       )}
       {p.session && p.weekly && <span className="text-muted-foreground">·</span>}
       {p.weekly && <WindowLabel w={p.weekly} label={formatWindowLabel(p.weekly.windowMinutes)} />}
+      {!p.session && !p.weekly && p.monthly && (
+        <WindowLabel w={p.monthly} label={formatWindowLabel(p.monthly.windowMinutes)} />
+      )}
       {isStale && <AlertTriangle size={11} className="text-muted-foreground/80" />}
     </span>
   )
@@ -1646,15 +1653,21 @@ export function ProviderDetailsMenu({
                 className={`inline-block h-2 w-2 rounded-full ${provider.session || provider.weekly ? 'bg-muted-foreground/60' : 'bg-muted-foreground/30'}`}
               />
               <span className="text-muted-foreground">
-                {provider.provider === 'claude'
-                  ? 'C'
-                  : provider.provider === 'gemini'
-                    ? 'G'
-                    : provider.provider === 'opencode-go'
-                      ? 'O'
-                      : provider.provider === 'kimi'
-                        ? 'K'
-                        : 'X'}
+                {provider.provider === 'idealab' ? (
+                  <ProviderIcon provider="idealab" />
+                ) : provider.provider === 'claude' ? (
+                  'C'
+                ) : provider.provider === 'gemini' ? (
+                  'G'
+                ) : provider.provider === 'opencode-go' ? (
+                  'O'
+                ) : provider.provider === 'kimi' ? (
+                  'K'
+                ) : provider.provider === 'zai' ? (
+                  'Z'
+                ) : (
+                  'X'
+                )}
               </span>
             </span>
           ) : (
@@ -1735,6 +1748,7 @@ function StatusBarInner({ floatingTerminalOpen }: StatusBarProps): React.JSX.Ele
 
   const [containerWidth, setContainerWidth] = useState(900)
   const resizeObserverRef = useRef<ResizeObserver | null>(null)
+  const idealabToggle = useIdealabStatusBarToggle()
 
   useEffect(() => {
     mountedRef.current = true
@@ -1796,7 +1810,7 @@ function StatusBarInner({ floatingTerminalOpen }: StatusBarProps): React.JSX.Ele
     return null
   }
 
-  const { claude, codex, gemini, opencodeGo, kimi } = rateLimits
+  const { claude, codex, gemini, opencodeGo, kimi, zai, idealab } = rateLimits
 
   // Why: a provider earns a bar from either a usable live snapshot or durable
   // setup in Settings. The durable path keeps account switchers visible while
@@ -1807,6 +1821,8 @@ function StatusBarInner({ floatingTerminalOpen }: StatusBarProps): React.JSX.Ele
   const visibleCodex = getVisibleUsageProvider('codex', codex, settings)
   const visibleGemini = getVisibleUsageProvider('gemini', gemini, settings)
   const visibleKimi = getVisibleUsageProvider('kimi', kimi, settings)
+  const visibleZai = getVisibleUsageProvider('zai', zai, settings)
+  const visibleIdealab = getVisibleUsageProvider('idealab', idealab, settings)
   const showClaude =
     visibleClaude !== null &&
     statusBarItems.includes('claude') &&
@@ -1823,6 +1839,8 @@ function StatusBarInner({ floatingTerminalOpen }: StatusBarProps): React.JSX.Ele
     visibleKimi !== null &&
     statusBarItems.includes('kimi') &&
     isStatusBarItemAvailable('kimi', detectedAgentIds)
+  const showZai = visibleZai !== null && statusBarItems.includes('zai')
+  const showIdealab = visibleIdealab !== null && statusBarItems.includes('idealab')
   // Why: OpenCode Go is a web/cookie-auth provider, not a CLI on PATH, so
   // detection-gating doesn't apply.
   const visibleOpencodeGo = getVisibleUsageProvider('opencode-go', opencodeGo, settings)
@@ -1833,12 +1851,22 @@ function StatusBarInner({ floatingTerminalOpen }: StatusBarProps): React.JSX.Ele
   const showFloatingTerminalToggle =
     floatingTerminalEnabled && floatingTerminalTriggerLocation === 'status-bar'
   const anyVisible =
-    showClaude || showCodex || showGemini || showOpencodeGo || showKimi || showResourceUsage
+    showClaude ||
+    showCodex ||
+    showGemini ||
+    showOpencodeGo ||
+    showKimi ||
+    showZai ||
+    showIdealab ||
+    showResourceUsage
   // Why: a brand-new user with no provider configured would otherwise see an
   // empty left side of the status bar and wonder what's missing. Settings are
   // included because managed accounts are durable even when live usage
   // snapshots are still hydrating or unavailable after an update.
-  const isEmptyUsageState = isUsageEmptyState({ claude, codex, gemini, opencodeGo, kimi }, settings)
+  const isEmptyUsageState = isUsageEmptyState(
+    { claude, codex, gemini, opencodeGo, kimi, zai, idealab },
+    settings
+  )
   // Why: the teaching CTA is a one-time nudge — once the user hides it, keep it
   // hidden even after providers are disconnected again.
   const showEmptyUsageCta = isEmptyUsageState && !usageEmptyStateDismissed
@@ -1847,7 +1875,9 @@ function StatusBarInner({ floatingTerminalOpen }: StatusBarProps): React.JSX.Ele
     codex?.status === 'fetching' ||
     gemini?.status === 'fetching' ||
     opencodeGo?.status === 'fetching' ||
-    kimi?.status === 'fetching'
+    kimi?.status === 'fetching' ||
+    zai?.status === 'fetching' ||
+    idealab?.status === 'fetching'
 
   const compact = containerWidth < 900
   const iconOnly = containerWidth < 500
@@ -1920,6 +1950,25 @@ function StatusBarInner({ floatingTerminalOpen }: StatusBarProps): React.JSX.Ele
                   'auto.components.status.bar.StatusBar.fda8146810',
                   'Open Kimi usage details'
                 )}
+              />
+            )}
+            {showZai && (
+              <ProviderDetailsMenu
+                provider={visibleZai}
+                compact={compact}
+                iconOnly={iconOnly}
+                ariaLabel={translate(
+                  'auto.components.status.bar.StatusBar.zai_usage_details',
+                  'Open Z.ai usage details'
+                )}
+              />
+            )}
+            {showIdealab && (
+              <ProviderDetailsMenu
+                provider={visibleIdealab}
+                compact={compact}
+                iconOnly={iconOnly}
+                ariaLabel={translate('settings.statusBar.idealabOpen', 'Open IdeaLab usage details')}
               />
             )}
           </>
@@ -2052,6 +2101,25 @@ function StatusBarInner({ floatingTerminalOpen }: StatusBarProps): React.JSX.Ele
               {translate('auto.components.status.bar.StatusBar.5e59007df4', 'Kimi Usage')}
             </DropdownMenuCheckboxItem>
           )}
+          <DropdownMenuCheckboxItem
+            checked={statusBarItems.includes('zai')}
+            onCheckedChange={() => {
+              recordFeatureInteraction('usage-tracking')
+              toggleStatusBarItem('zai')
+            }}
+          >
+            <ProviderIcon provider="zai" />
+            {translate('auto.components.status.bar.StatusBar.zai_usage', 'Z.ai Usage')}
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuCheckboxItem
+            checked={idealabToggle.checked}
+            onCheckedChange={(checked) => {
+              idealabToggle.setChecked(checked === true)
+            }}
+          >
+            <ProviderIcon provider="idealab" />
+            {translate('settings.statusBar.idealabUsage', 'IdeaLab Usage')}
+          </DropdownMenuCheckboxItem>
           <DropdownMenuCheckboxItem
             checked={statusBarItems.includes('ssh')}
             onCheckedChange={() => {

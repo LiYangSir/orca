@@ -44,13 +44,15 @@ export type UsageRateLimitMetadata = {
 }
 
 export type ProviderRateLimits = {
-  provider: 'claude' | 'codex' | 'gemini' | 'opencode-go' | 'kimi'
+  provider: 'claude' | 'codex' | 'gemini' | 'opencode-go' | 'kimi' | 'zai' | 'idealab'
   /** 5-hour session window, null if not available. */
   session: RateLimitWindow | null
   /** 7-day weekly window, null if not available. */
   weekly: RateLimitWindow | null
-  /** 30-day monthly window (OpenCode Go only), null if not available. */
+  /** 30-day monthly-style window (OpenCode Go monthly or Z.ai web searches), null if not available. */
   monthly?: RateLimitWindow | null
+  /** Optional display label for monthly-style windows with provider-specific names. */
+  monthlyLabel?: string
   /** Named per-model buckets (Gemini only). */
   buckets?: RateLimitBucket[]
   /** Available earned Codex rate-limit reset credits, if reported. */
@@ -99,6 +101,8 @@ export type RateLimitState = {
   gemini: ProviderRateLimits | null
   opencodeGo: ProviderRateLimits | null
   kimi: ProviderRateLimits | null
+  zai: ProviderRateLimits | null
+  idealab: ProviderRateLimits | null
   claudeTarget: RateLimitRuntimeTarget
   codexTarget: RateLimitRuntimeTarget
   inactiveClaudeAccounts: InactiveAccountUsage[]

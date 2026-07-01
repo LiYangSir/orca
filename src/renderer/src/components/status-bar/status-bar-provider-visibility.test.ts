@@ -70,6 +70,7 @@ function usageSettings(overrides: Partial<UsageProviderSettings> = {}): UsagePro
     claudeManagedAccounts: [],
     opencodeSessionCookie: '',
     geminiCliOAuthEnabled: false,
+    idealabUsageEnabled: false,
     ...overrides
   }
 }
@@ -117,6 +118,7 @@ describe('hasUsageProviderSettings', () => {
     expect(
       hasUsageProviderSettings(usageSettings({ opencodeSessionCookie: ' session=abc ' }))
     ).toBe(true)
+    expect(hasUsageProviderSettings(usageSettings({ idealabUsageEnabled: true }))).toBe(true)
   })
 
   it('does not treat empty or unloaded settings as configured', () => {
@@ -146,6 +148,9 @@ describe('hasUsageProviderSettingsForProvider', () => {
     ).toBe(true)
     expect(hasUsageProviderSettingsForProvider('claude', usageSettings())).toBe(false)
     expect(hasUsageProviderSettingsForProvider('kimi', usageSettings())).toBe(false)
+    expect(
+      hasUsageProviderSettingsForProvider('idealab', usageSettings({ idealabUsageEnabled: true }))
+    ).toBe(true)
   })
 })
 
@@ -218,7 +223,9 @@ describe('isUsageEmptyState', () => {
           codex: null,
           gemini: null,
           opencodeGo: null,
-          kimi: null
+          kimi: null,
+          zai: null,
+          idealab: null
         },
         usageSettings()
       )
@@ -233,7 +240,9 @@ describe('isUsageEmptyState', () => {
           codex: provider('fetching', { provider: 'codex' }),
           gemini: provider('unavailable'),
           opencodeGo: provider('unavailable', { provider: 'opencode-go' }),
-          kimi: provider('unavailable', { provider: 'kimi' })
+          kimi: provider('unavailable', { provider: 'kimi' }),
+          zai: provider('unavailable', { provider: 'zai' }),
+          idealab: provider('unavailable', { provider: 'idealab' })
         },
         usageSettings()
       )
@@ -248,7 +257,9 @@ describe('isUsageEmptyState', () => {
           codex: provider('unavailable', { provider: 'codex' }),
           gemini: provider('unavailable'),
           opencodeGo: provider('unavailable', { provider: 'opencode-go' }),
-          kimi: provider('unavailable', { provider: 'kimi' })
+          kimi: provider('unavailable', { provider: 'kimi' }),
+          zai: provider('unavailable', { provider: 'zai' }),
+          idealab: provider('unavailable', { provider: 'idealab' })
         },
         usageSettings({
           codexManagedAccounts: [
@@ -274,7 +285,9 @@ describe('isUsageEmptyState', () => {
           codex: null,
           gemini: null,
           opencodeGo: null,
-          kimi: null
+          kimi: null,
+          zai: null,
+          idealab: null
         },
         null
       )
@@ -289,7 +302,9 @@ describe('isUsageEmptyState', () => {
           codex: provider('unavailable', { provider: 'codex' }),
           gemini: provider('unavailable'),
           opencodeGo: provider('unavailable', { provider: 'opencode-go' }),
-          kimi: provider('unavailable', { provider: 'kimi' })
+          kimi: provider('unavailable', { provider: 'kimi' }),
+          zai: provider('unavailable', { provider: 'zai' }),
+          idealab: provider('unavailable', { provider: 'idealab' })
         },
         usageSettings()
       )

@@ -2737,6 +2737,8 @@ export type GlobalSettings = {
   /** Whether to extract OAuth credentials from the local Gemini CLI installation
    *  for rate-limit fetching. Disabled by default for explicit opt-in. */
   geminiCliOAuthEnabled: boolean
+  /** Whether to read IdeaLab quota cookies from the local keychain. */
+  idealabUsageEnabled?: boolean
   /** Per-agent CLI command overrides. A missing key means use the catalog default binary name. */
   agentCmdOverrides: Partial<Record<TuiAgent, string>>
   /** Per-agent default CLI arguments appended after the binary/path and before prompts. */
@@ -3078,6 +3080,8 @@ export type StatusBarItem =
   | 'gemini'
   | 'opencode-go'
   | 'kimi'
+  | 'zai'
+  | 'idealab'
   | 'ssh'
   | 'resource-usage'
   | 'ports'
@@ -3189,6 +3193,8 @@ export type PersistedUIState = {
   _portsStatusBarDefaultAdded?: boolean
   /** One-shot migration flag for adding the default-on Kimi status item. */
   _kimiStatusBarDefaultAdded?: boolean
+  /** One-shot migration flag for adding the default-on Z.ai status item. */
+  _zaiStatusBarDefaultAdded?: boolean
   statusBarItems: StatusBarItem[]
   statusBarVisible: boolean
   dismissedUpdateVersion: string | null
