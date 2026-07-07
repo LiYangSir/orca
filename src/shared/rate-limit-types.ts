@@ -44,11 +44,13 @@ export type UsageRateLimitMetadata = {
 }
 
 export type ProviderRateLimits = {
-  provider: 'claude' | 'codex' | 'gemini' | 'opencode-go' | 'kimi' | 'zai' | 'idealab'
+  provider: 'claude' | 'codex' | 'gemini' | 'opencode-go' | 'kimi' | 'zai' | 'idealab' | 'minimax'
   /** 5-hour session window, null if not available. */
   session: RateLimitWindow | null
   /** 7-day weekly window, null if not available. */
   weekly: RateLimitWindow | null
+  /** Claude Fable 7-day weekly window, null if not available. */
+  fableWeekly?: RateLimitWindow | null
   /** 30-day monthly-style window (OpenCode Go monthly or Z.ai web searches), null if not available. */
   monthly?: RateLimitWindow | null
   /** Optional display label for monthly-style windows with provider-specific names. */
@@ -103,6 +105,14 @@ export type RateLimitState = {
   kimi: ProviderRateLimits | null
   zai: ProviderRateLimits | null
   idealab: ProviderRateLimits | null
+  minimax: ProviderRateLimits | null
+  /**
+   * True when a MiniMax session cookie is persisted on disk. The cookie lives
+   * outside GlobalSettings, so this flag is the durable signal that the
+   * status bar uses to keep the MiniMax provider visible across reloads and
+   * between snapshot refreshes.
+   */
+  minimaxCookieConfigured: boolean
   claudeTarget: RateLimitRuntimeTarget
   codexTarget: RateLimitRuntimeTarget
   inactiveClaudeAccounts: InactiveAccountUsage[]

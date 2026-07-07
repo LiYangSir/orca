@@ -8,7 +8,13 @@ export type UsageProviderSettings = Pick<
   | 'opencodeSessionCookie'
   | 'geminiCliOAuthEnabled'
   | 'idealabUsageEnabled'
->
+> & {
+  // Why: the MiniMax cookie lives in the file system, not GlobalSettings, so
+  // we can't derive durability from settings alone. The renderer threads the
+  // flag from RateLimitState (pushed by the main process) so the bar stays
+  // visible across reloads and between snapshot refreshes.
+  minimaxCookieConfigured: boolean
+}
 
 type UsageProviderSnapshots = {
   claude: ProviderRateLimits | null
@@ -18,6 +24,7 @@ type UsageProviderSnapshots = {
   kimi: ProviderRateLimits | null
   zai: ProviderRateLimits | null
   idealab: ProviderRateLimits | null
+  minimax: ProviderRateLimits | null
 }
 
 type UsageProviderId = ProviderRateLimits['provider']
@@ -26,6 +33,7 @@ function hasUsageData(provider: ProviderRateLimits): boolean {
   return Boolean(
     provider.session ||
     provider.weekly ||
+    provider.fableWeekly ||
     provider.monthly ||
     (provider.buckets && provider.buckets.length > 0)
   )
@@ -61,7 +69,8 @@ export function hasUsageProviderSettings(
     (settings?.claudeManagedAccounts?.length ?? 0) > 0 ||
     settings?.geminiCliOAuthEnabled === true ||
     Boolean(settings?.opencodeSessionCookie?.trim()) ||
-    settings?.idealabUsageEnabled === true
+    settings?.idealabUsageEnabled === true ||
+    settings?.minimaxCookieConfigured === true
   )
 }
 
@@ -86,6 +95,9 @@ export function hasUsageProviderSettingsForProvider(
   }
   if (providerId === 'idealab') {
     return settings.idealabUsageEnabled === true
+  }
+  if (providerId === 'minimax') {
+    return settings.minimaxCookieConfigured === true
   }
   return false
 }
@@ -137,7 +149,8 @@ export function isUsageEmptyState(
     isProviderSnapshotPending(providers.opencodeGo) ||
     isProviderSnapshotPending(providers.kimi) ||
     isProviderSnapshotPending(providers.zai) ||
-    isProviderSnapshotPending(providers.idealab)
+    isProviderSnapshotPending(providers.idealab) ||
+    isProviderSnapshotPending(providers.minimax)
   ) {
     return false
   }
@@ -149,6 +162,7 @@ export function isUsageEmptyState(
     !isProviderConfigured(providers.opencodeGo) &&
     !isProviderConfigured(providers.kimi) &&
     !isProviderConfigured(providers.zai) &&
-    !isProviderConfigured(providers.idealab)
+    !isProviderConfigured(providers.idealab) &&
+    !isProviderConfigured(providers.minimax)
   )
 }

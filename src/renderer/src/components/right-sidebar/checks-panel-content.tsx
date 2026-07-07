@@ -95,7 +95,10 @@ import {
   RightPanelCommentComposer,
   type RightPanelCommentSubmitResult
 } from './right-panel-comment-composer'
-import { usePRCommentsListSelection } from './pr-comments-list-selection'
+import {
+  usePRCommentsListSelection,
+  type PRCommentsListSelectionClearRequest
+} from './pr-comments-list-selection'
 import { translate } from '@/i18n/i18n'
 import { useActiveWorktree } from '@/store/selectors'
 import { useAppStore } from '@/store'
@@ -120,9 +123,7 @@ function getPRCommentsListDisplayModeLabel(mode: PRCommentsListDisplayMode): str
     : translate('auto.components.right.sidebar.checks.panel.content.b13f85d75c', 'Timeline')
 }
 
-function getPRCommentsListResolutionFilterLabel(
-  filter: PRCommentsListResolutionFilter
-): string {
+function getPRCommentsListResolutionFilterLabel(filter: PRCommentsListResolutionFilter): string {
   if (filter === 'resolved') {
     return translate('auto.components.right.sidebar.checks.panel.content.8987d5a3dd', 'Resolved')
   }
@@ -136,10 +137,7 @@ function getPRCommentsListResolutionFilterDescription(
   filter: PRCommentsListResolutionFilter
 ): string {
   if (filter === 'resolved') {
-    return translate(
-      'auto.components.right.sidebar.checks.panel.content.aacfd5130a',
-      'Resolved'
-    )
+    return translate('auto.components.right.sidebar.checks.panel.content.aacfd5130a', 'Resolved')
   }
   if (filter === 'unresolved') {
     return translate(
@@ -147,10 +145,7 @@ function getPRCommentsListResolutionFilterDescription(
       'Needs action'
     )
   }
-  return translate(
-    'auto.components.right.sidebar.checks.panel.content.c066735e1c',
-    'Every thread'
-  )
+  return translate('auto.components.right.sidebar.checks.panel.content.c066735e1c', 'Every thread')
 }
 
 export const CHECK_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -1660,13 +1655,6 @@ function PRCommentActionBadge({
       </span>
     )
   }
-  if (actionState === 'open') {
-    return (
-      <span className={presentation.statusBadgeOpen}>
-        {translate('auto.components.right.sidebar.checks.panel.content.7c1f0a2b11', 'Open')}
-      </span>
-    )
-  }
   if (actionState === 'resolved') {
     return (
       <span className={presentation.statusBadgeResolved}>
@@ -1973,9 +1961,7 @@ function CommentRow({
             presentation={presentation}
           />
         ) : null}
-        {!isReply ? (
-          <PRCommentOutdatedBadge comment={comment} presentation={presentation} />
-        ) : null}
+        {!isReply ? <PRCommentOutdatedBadge comment={comment} presentation={presentation} /> : null}
         <div className="flex-1" />
         {commentActions}
       </>
@@ -2307,6 +2293,7 @@ export function PRCommentsList({
   commentsDisabled,
   commentsDisabledReason,
   selectionContextKey,
+  selectionClearRequest,
   resolveCommentsWithAIDisabled,
   resolveCommentsWithAIDisabledReason,
   onAddComment,
@@ -2322,6 +2309,7 @@ export function PRCommentsList({
   commentsDisabled?: boolean
   commentsDisabledReason?: string
   selectionContextKey?: string
+  selectionClearRequest?: PRCommentsListSelectionClearRequest | null
   resolveCommentsWithAIDisabled?: boolean
   resolveCommentsWithAIDisabledReason?: string
   onAddComment?: (body: string) => Promise<RightPanelCommentSubmitResult>
@@ -2335,8 +2323,7 @@ export function PRCommentsList({
   const activeWorktree = useActiveWorktree()
   const openFile = useAppStore((s) => s.openFile)
   const [commentFilter, setCommentFilter] = useState<PRCommentAudienceFilter>('all')
-  const [resolutionFilter, setResolutionFilter] =
-    useState<PRCommentsListResolutionFilter>('all')
+  const [resolutionFilter, setResolutionFilter] = useState<PRCommentsListResolutionFilter>('all')
   const [displayMode, setDisplayMode] = useState<PRCommentsListDisplayMode>('triage')
   const [replyingGroupId, setReplyingGroupId] = useState<string | null>(null)
   const [isAddingComment, setIsAddingComment] = useState(false)
@@ -2352,7 +2339,7 @@ export function PRCommentsList({
     addGroupToSelection,
     clearSelection,
     toggleGroupSelection
-  } = usePRCommentsListSelection(comments, selectionContextKey)
+  } = usePRCommentsListSelection(comments, selectionContextKey, selectionClearRequest)
   const audienceFilteredComments = React.useMemo(
     () => filterPRCommentsByAudience(comments, commentFilter),
     [commentFilter, comments]
@@ -2558,7 +2545,14 @@ export function PRCommentsList({
   return (
     <div className="border-t border-border">
       {/* Header */}
-      <div className={presentation.sectionHeader}>
+      <div
+        className={cn(
+          presentation.sectionHeader,
+          // Why: the checks sidebar scrolls as one column; pinning this header keeps
+          // filter and add-comment actions reachable while reading long threads.
+          'sticky top-0 z-10 bg-sidebar/95 backdrop-blur-sm'
+        )}
+      >
         <div className="flex min-w-0 items-center gap-2">
           <MessageSquare className="size-3.5 text-muted-foreground" />
           <span className={presentation.sectionHeaderLabel}>
@@ -2799,7 +2793,10 @@ export function PRCommentsList({
             </div>
             <div className="flex min-w-0 items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5">
               <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {translate('auto.components.right.sidebar.checks.panel.content.b4257beec1', 'Status')}
+                {translate(
+                  'auto.components.right.sidebar.checks.panel.content.b4257beec1',
+                  'Status'
+                )}
               </span>
               <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
                 {PR_COMMENT_LIST_RESOLUTION_FILTERS.map((filter) => {

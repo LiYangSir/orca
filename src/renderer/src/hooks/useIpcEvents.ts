@@ -2,6 +2,7 @@
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { useAppStore } from '../store'
+import { shouldRetryPaneSpawnOnSshReconnect } from './ssh-reconnect-pane-retry'
 import { getWorktreeMapFromState, getRepoMapFromState } from '@/store/selectors'
 import { applyUIZoom } from '@/lib/ui-zoom'
 import { activateAndRevealWorktree } from '@/lib/worktree-activation'
@@ -63,6 +64,7 @@ import {
 } from '../../../shared/agent-status-identity'
 import { isGitRepoKind } from '../../../shared/repo-kind'
 import { TOGGLE_FLOATING_TERMINAL_EVENT } from '@/lib/floating-terminal'
+import { TOGGLE_QUICK_COMMANDS_MENU_EVENT } from '@/lib/quick-commands-menu-events'
 import { focusTerminalTabSurface } from '@/lib/focus-terminal-tab-surface'
 import { activateTabAndFocusPane } from '@/lib/activate-tab-and-focus-pane'
 import { focusRuntimeTerminalSurface } from '@/runtime/sync-runtime-graph'
@@ -1231,6 +1233,12 @@ export function useIpcEvents(): void {
     )
 
     unsubs.push(
+      window.api.ui.onToggleQuickCommandsMenu(() => {
+        window.dispatchEvent(new CustomEvent(TOGGLE_QUICK_COMMANDS_MENU_EVENT))
+      })
+    )
+
+    unsubs.push(
       window.api.ui.onOpenNewWorkspace(() => {
         const store = useAppStore.getState()
         openNewWorkspaceFromShortcut(store)
@@ -1344,6 +1352,7 @@ export function useIpcEvents(): void {
           requestId,
           worktreeId,
           command,
+          cwd,
           env,
           launchConfig,
           launchToken,
@@ -1416,9 +1425,12 @@ export function useIpcEvents(): void {
                     ...(launchAgent
                       ? {
                           launchAgent,
-                          ...initialAgentTabViewModeProps(store.settings)
+                          ...initialAgentTabViewModeProps(store.settings, {
+                            agent: launchAgent
+                          })
                         }
                       : {}),
+                    ...(cwd ? { startupCwd: cwd } : {}),
                     // Why: tabId hint comes from CLI-spawned PTYs whose env
                     // already has the pane key baked in. Adopting the tab under
                     // the same id keeps hook-event attribution working.
@@ -1428,7 +1440,15 @@ export function useIpcEvents(): void {
                     worktreeId,
                     undefined,
                     undefined,
-                    shouldActivate ? undefined : { activate: false, recordInteraction: false }
+                    shouldActivate
+                      ? cwd
+                        ? { startupCwd: cwd }
+                        : undefined
+                      : {
+                          activate: false,
+                          recordInteraction: false,
+                          ...(cwd ? { startupCwd: cwd } : {})
+                        }
                   ))
             // Why: when an existing tab already owns this ptyId, we reuse it instead of
             // minting a new one — but the PTY env already carries a paneKey from main.
@@ -1556,7 +1576,9 @@ export function useIpcEvents(): void {
     unsubs.push(
       window.api.ui.onRequestTerminalCreate((data) => {
         try {
-          if (isRuntimeEnvironmentActive()) {
+          // Why: runtime-session requests are host-owned tabs materialized by this
+          // renderer, not ordinary local creates that bypass remote runtime mode.
+          if (isRuntimeEnvironmentActive() && data.source !== 'runtime-session') {
             window.api.ui.replyTerminalCreate({
               requestId: data.requestId,
               error: translate(
@@ -1593,11 +1615,20 @@ export function useIpcEvents(): void {
             ? {
                 ...(shouldActivate ? {} : { activate: false, recordInteraction: false }),
                 launchAgent: data.launchAgent,
-                ...initialAgentTabViewModeProps(store.settings)
+                ...initialAgentTabViewModeProps(store.settings, {
+                  agent: data.launchAgent
+                }),
+                ...(data.cwd ? { startupCwd: data.cwd } : {})
               }
             : shouldActivate
-              ? undefined
-              : { activate: false, recordInteraction: false }
+              ? data.cwd
+                ? { startupCwd: data.cwd }
+                : undefined
+              : {
+                  activate: false,
+                  recordInteraction: false,
+                  ...(data.cwd ? { startupCwd: data.cwd } : {})
+                }
           const tab = store.createTab(worktreeId, data.targetGroupId, undefined, tabOptions)
           if (data.afterTabId) {
             const createdUnifiedTab = useAppStore
@@ -2135,6 +2166,7 @@ export function useIpcEvents(): void {
             title: data.url,
             targetGroupId: data.activate ? undefined : activeBrowserUnifiedTab?.groupId,
             sessionProfileId: data.sessionProfileId,
+            sessionPartition: data.sessionPartition,
             activate: data.activate === true
           })
           // Why: registerGuest fires with the page ID (not workspace ID) as
@@ -2197,7 +2229,7 @@ export function useIpcEvents(): void {
           } else {
             destroyPersistentWebview(data.browserPageId)
           }
-          store.switchBrowserTabProfile(owningWorkspace.id, data.profileId)
+          store.switchBrowserTabProfile(owningWorkspace.id, data.profileId, data.sessionPartition)
           window.api.ui.replyTabSetProfile({ requestId: data.requestId })
         } catch (err) {
           window.api.ui.replyTabSetProfile({
@@ -2584,8 +2616,10 @@ export function useIpcEvents(): void {
         void Promise.all(remoteRepos.map((r) => store.fetchWorktrees(r.id))).then(async () => {
           await useAppStore.getState().fetchWorktreeLineage()
           // Why: terminal panes that failed to spawn (no PTY provider on cold
-          // start) sit inert. Bumping generation forces TerminalPane to remount
-          // and retry pty:spawn. Only bump tabs with no live ptyId.
+          // start) or whose deferred reattach never ran sit inert. Bumping
+          // generation forces TerminalPane to remount and retry; the remount
+          // routes through the deferred-connect gate, which reattaches the
+          // stranded session or spawns fresh now that the provider exists.
           const freshStore = useAppStore.getState()
           const remoteRepoIds = new Set(remoteRepos.map((r) => r.id))
           const worktreeIds = Object.values(freshStore.worktreesByRepo)
@@ -2595,13 +2629,18 @@ export function useIpcEvents(): void {
 
           for (const worktreeId of worktreeIds) {
             const tabs = freshStore.tabsByWorktree[worktreeId] ?? []
-            const hasDead = tabs.some((t) => !t.ptyId)
-            if (hasDead) {
+            const needsRetry = (t: { id: string; ptyId?: string | null }): boolean =>
+              shouldRetryPaneSpawnOnSshReconnect({
+                targetId,
+                tabPtyId: t.ptyId,
+                deferredSessionId: freshStore.deferredSshSessionIdsByTabId[t.id]
+              })
+            if (tabs.some(needsRetry)) {
               useAppStore.setState((s) => ({
                 tabsByWorktree: {
                   ...s.tabsByWorktree,
                   [worktreeId]: (s.tabsByWorktree[worktreeId] ?? []).map((t) =>
-                    t.ptyId ? t : { ...t, generation: (t.generation ?? 0) + 1 }
+                    needsRetry(t) ? { ...t, generation: (t.generation ?? 0) + 1 } : t
                   )
                 }
               }))

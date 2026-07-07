@@ -24,6 +24,10 @@ import {
 export type PtyDataMeta = {
   seq?: number
   rawLength?: number
+  background?: boolean
+  /** Main trimmed this pty's unsent backlog past its cap; the handler should
+   *  rebuild the dropped span from the main headless snapshot. */
+  droppedBacklog?: boolean
 }
 
 export const ptyDataHandlers = new Map<string, (data: string, meta?: PtyDataMeta) => void>()
@@ -114,6 +118,14 @@ export function ensurePtyDispatcher(): void {
       if (typeof payload.rawLength === 'number') {
         meta ??= {}
         meta.rawLength = payload.rawLength
+      }
+      if (payload.background === true) {
+        meta ??= {}
+        meta.background = true
+      }
+      if (payload.droppedBacklog === true) {
+        meta ??= {}
+        meta.droppedBacklog = true
       }
       const handler = ptyDataHandlers.get(payload.id)
       if (handler) {

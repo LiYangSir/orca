@@ -13,6 +13,7 @@ import {
   isTerminalInputTooLargeWithDeferredMeasurement,
   iterateTerminalInputChunks
 } from '../../../../shared/terminal-input'
+import { isRuntimeOwnedSshTargetId } from '../../../../shared/execution-host'
 import {
   ptyDataHandlers,
   ptyReplayHandlers,
@@ -22,9 +23,14 @@ import {
   getEagerPtyBufferHandle
 } from './pty-dispatcher'
 import { drainPreHandlerPtyData, drainPreHandlerPtyExit } from './pty-pre-handler-buffer'
+import { createPtyInputWriteQueue } from './pty-input-write-queue'
 import type { PtyDataMeta } from './pty-dispatcher'
 import type { IpcPtyTransportOptions, PtyConnectResult, PtyTransport } from './pty-transport-types'
 import { createBellDetector } from './bell-detector'
+import {
+  hasTerminalDisplayContent,
+  trimIncompleteTerminalControlTail
+} from './terminal-output-visibility'
 import {
   createAgentStatusOscProcessor,
   type ProcessedAgentStatusChunk
@@ -51,16 +57,14 @@ export type {
 export { extractLastOscTitle } from '../../../../shared/agent-detection'
 
 const SSH_SESSION_EXPIRED_ERROR = 'SSH_SESSION_EXPIRED'
+// Why: an app SSH PTY id embeds the connection it was created under. When a pane
+// restored after a workspace/host change reattaches a session that belongs to a
+// *different* connection, the main-side id router rejects it with this phrase.
+// That session is unreachable from this pane, so it is stale like an expired one
+// — recover by spawning fresh rather than surfacing a red "file an issue" crash.
+const SSH_PTY_CONNECTION_MISMATCH_MARKER = 'belongs to SSH connection'
 const STALE_TITLE_TIMEOUT = 3000 // ms before stale working title is cleared
 const MAX_PTY_SIDE_EFFECTS_PER_DRAIN = 64
-
-type PendingPtyInputWrite = {
-  id: string
-  text: string
-  tooLarge: boolean | Promise<boolean>
-  chunks?: Iterator<string>
-  nextChunk?: string
-}
 
 // Why: onAgentStatus callback added to IpcPtyTransportOptions in pty-dispatcher
 // so the OSC 9999 status payloads can be forwarded to the store.
@@ -82,6 +86,7 @@ type PtyOutputProcessorOptions = Pick<
 type ProcessPtyOutputOptions = {
   replayingBufferedData?: boolean
   suppressAttentionEvents?: boolean
+  clearBeforeReplay?: boolean
 }
 
 type PendingPtySideEffect = {
@@ -400,7 +405,11 @@ export function createPtyOutputProcessor({
     // session into the live store. The parser still consumes the bytes so they
     // do not leak into xterm, we just suppress the callback.
     if (options.replayingBufferedData && callbacks.onReplayData) {
-      callbacks.onReplayData(data)
+      if (options.clearBeforeReplay === false) {
+        callbacks.onReplayData(data, { clearBeforeReplay: false })
+      } else {
+        callbacks.onReplayData(data)
+      }
     } else {
       if (meta) {
         callbacks.onData?.(data, { ...meta, rawLength })
@@ -466,8 +475,10 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
   // unread marks, or notifications for unrelated worktrees just because Orca
   // is reconnecting background terminals on launch.
   let suppressAttentionEvents = false
-  let pendingInputWrites: PendingPtyInputWrite[] = []
-  let inputWriteDrainPromise: Promise<void> | null = null
+  const inputWriteQueue = createPtyInputWriteQueue({
+    isWritable: (id) => connected && ptyId === id,
+    write: (id, data) => window.api.pty.write(id, data)
+  })
   const outputProcessor = createPtyOutputProcessor({
     onTitleChange,
     onBell,
@@ -495,12 +506,6 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
     ptyReplayHandlers.delete(id)
   }
 
-  // Why: true while we're replaying buffered/attach-time bytes into the
-  // terminal. Routes those bytes through onReplayData so the renderer can
-  // engage the replay guard — otherwise xterm auto-replies to embedded
-  // query sequences leak into the shell as stray input.
-  let replayingBufferedData = false
-
   // Why: shared by connect() and attach() to avoid duplicating title/bell/exit
   // logic across the two code paths that register a PTY.
   function registerPtyDataHandler(id: string): void {
@@ -525,7 +530,6 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
         data,
         storedCallbacks,
         {
-          replayingBufferedData,
           suppressAttentionEvents
         },
         meta
@@ -541,84 +545,6 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
 
   function yieldToInputWriteDrain(): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, 0))
-  }
-
-  async function drainPendingInputWrites(): Promise<void> {
-    while (pendingInputWrites.length > 0) {
-      const next = pendingInputWrites[0]
-      if (!next) {
-        continue
-      }
-      if (!connected || ptyId !== next.id) {
-        pendingInputWrites.shift()
-        continue
-      }
-      if (next.tooLarge !== false) {
-        next.tooLarge = await Promise.resolve(next.tooLarge).catch(() => true)
-        if (next.tooLarge) {
-          pendingInputWrites.shift()
-          continue
-        }
-        if (!connected || ptyId !== next.id) {
-          pendingInputWrites.shift()
-          continue
-        }
-      }
-      next.chunks ??= iterateTerminalInputChunks(next.text)
-      const chunk =
-        next.nextChunk === undefined ? next.chunks.next() : { done: false, value: next.nextChunk }
-      next.nextChunk = undefined
-      if (chunk.done) {
-        pendingInputWrites.shift()
-        continue
-      }
-      window.api.pty.write(next.id, chunk.value)
-      const following = next.chunks.next()
-      if (following.done) {
-        pendingInputWrites.shift()
-      } else {
-        next.nextChunk = following.value
-      }
-      if (pendingInputWrites.length > 0) {
-        await yieldToInputWriteDrain()
-      }
-    }
-  }
-
-  function schedulePendingInputWriteDrain(): void {
-    if (inputWriteDrainPromise) {
-      return
-    }
-    inputWriteDrainPromise = drainPendingInputWrites().finally(() => {
-      inputWriteDrainPromise = null
-      if (pendingInputWrites.length > 0) {
-        schedulePendingInputWriteDrain()
-      }
-    })
-  }
-
-  function clearPendingInputWrites(): void {
-    pendingInputWrites = []
-  }
-
-  function enqueuePtyInputWrite(id: string, data: string): boolean {
-    try {
-      const tooLarge = isTerminalInputTooLargeWithDeferredMeasurement(data)
-      if (tooLarge === true) {
-        return false
-      }
-      pendingInputWrites.push({ id, text: data, tooLarge })
-      schedulePendingInputWriteDrain()
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  async function waitForPendingInputWrites(): Promise<void> {
-    while (inputWriteDrainPromise) {
-      await inputWriteDrainPromise
-    }
   }
 
   async function writeAcceptedPtyInput(id: string, data: string): Promise<boolean> {
@@ -763,7 +689,12 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
         return spawnResult.id
       } catch (err) {
         const msg = extractIpcErrorMessage(err, err instanceof Error ? err.message : String(err))
-        if (connectionId && options.sessionId && msg.includes(SSH_SESSION_EXPIRED_ERROR)) {
+        if (
+          connectionId &&
+          options.sessionId &&
+          (msg.includes(SSH_SESSION_EXPIRED_ERROR) ||
+            msg.includes(SSH_PTY_CONNECTION_MISMATCH_MARKER))
+        ) {
           return {
             id: options.sessionId,
             sessionExpired: true
@@ -789,9 +720,14 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
         // throws a raw IPC error. Replace with a friendly message since this
         // is an expected state, not an application crash.
         if (connectionId && msg.includes('No PTY provider for connection')) {
-          storedCallbacks.onError?.(
-            'SSH connection is not active. Use the reconnect dialog or Settings to connect.'
-          )
+          // Why: a runtime-owned (per-workspace-env) SSH target disappearing is an expected
+          // teardown state (e.g. the workspace was deleted) with no user-facing reconnect dialog —
+          // don't surface a "reconnect" toast for it.
+          if (!isRuntimeOwnedSshTargetId(connectionId)) {
+            storedCallbacks.onError?.(
+              'SSH connection is not active. Use the reconnect dialog or Settings to connect.'
+            )
+          }
         } else {
           storedCallbacks.onError?.(msg)
         }
@@ -818,26 +754,21 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
         return
       }
 
-      // Why: hidden automation PTYs may have already rendered their TUI into
-      // the eager buffer. Clear stale pane contents before replaying that
-      // buffer; clearing afterward erases the only visible frame and opens a
-      // blank terminal until the TUI happens to repaint.
-      if (!options.isAlternateScreen) {
-        const clear = '\x1b[2J\x1b[3J\x1b[H'
-        if (storedCallbacks.onReplayData) {
-          storedCallbacks.onReplayData(clear)
-        } else {
-          storedCallbacks.onData?.(clear)
-        }
-      }
-
-      // Why: replay buffered data through the real handler so title/bell/agent
-      // tracking (including OSC 9999 agent status) processes the output —
-      // otherwise restored tabs keep a default title.
       const bufferHandle = getEagerPtyBufferHandle(id)
       if (bufferHandle) {
         const buffered = bufferHandle.flush()
         if (buffered) {
+          const replayData = trimIncompleteTerminalControlTail(buffered)
+          const shouldClearBeforeReplay =
+            !options.isAlternateScreen && hasTerminalDisplayContent(replayData)
+          // Why: hidden automation PTYs may have already rendered their TUI into
+          // the eager buffer. Clear stale pane contents before replaying
+          // terminal-visible bytes, but keep scrollback for control-only frames.
+          if (shouldClearBeforeReplay && !storedCallbacks.onReplayData) {
+            const clear = '\x1b[2J\x1b[3J\x1b[H'
+            storedCallbacks.onData?.(clear)
+          }
+
           // Why: eager-buffered bytes are raw PTY output captured before the
           // pane mounted — often from the previous app session. We replay
           // them so titles/scrollback restore correctly, but must silence
@@ -845,20 +776,21 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
           // or completion captured from the prior session must not produce
           // a fresh bell on the freshly mounted pane.
           //
-          // replayingBufferedData additionally routes the bytes through
-          // onReplayData so the renderer engages the replay guard — xterm's
-          // auto-replies to embedded query sequences would otherwise leak
-          // into the shell's stdin.
+          // The replay option routes the bytes through onReplayData so the
+          // renderer engages the replay guard — xterm's auto-replies to
+          // embedded query sequences would otherwise leak into shell stdin.
           suppressAttentionEvents = true
-          replayingBufferedData = true
           try {
-            ptyDataHandlers.get(id)?.(buffered)
+            outputProcessor.processData(replayData, storedCallbacks, {
+              replayingBufferedData: true,
+              suppressAttentionEvents: true,
+              clearBeforeReplay: shouldClearBeforeReplay
+            })
           } finally {
             // Why: replay side effects are intentionally deferred for live
             // output, but replay cleanup must observe them before resetting
             // parser state or a partial OSC can swallow the next live BEL.
             outputProcessor.flushPendingSideEffects()
-            replayingBufferedData = false
             suppressAttentionEvents = false
             // Why: replaying eager-buffered bytes may have observed a "working" title
             // without a follow-up title, starting a stale-title timer. That timer would
@@ -889,7 +821,7 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
 
     disconnect() {
       clearAccumulatedState()
-      clearPendingInputWrites()
+      inputWriteQueue.clear()
       if (ptyId) {
         const id = ptyId
         window.api.pty.kill(id)
@@ -902,7 +834,7 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
 
     detach() {
       clearAccumulatedState()
-      clearPendingInputWrites()
+      inputWriteQueue.clear()
       if (ptyId) {
         // Why: detach() is used for in-session remounts such as moving a tab
         // between split groups. Stop delivering data/title events into the
@@ -920,7 +852,7 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
       if (!connected || !ptyId) {
         return false
       }
-      return enqueuePtyInputWrite(ptyId, data)
+      return inputWriteQueue.enqueue(ptyId, data)
     },
 
     ...(connectionId
@@ -931,7 +863,7 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
               return false
             }
             const id = ptyId
-            await waitForPendingInputWrites()
+            await inputWriteQueue.waitForDrain()
             if (!connected || ptyId !== id) {
               return false
             }

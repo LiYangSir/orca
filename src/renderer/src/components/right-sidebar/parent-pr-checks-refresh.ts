@@ -25,6 +25,7 @@ type FetchHostedReview = (
     linkedAzureDevOpsPR?: number | null
     linkedGiteaPR?: number | null
     linkedCodeMR?: number | null
+    currentHeadOid?: string | null
   }
 ) => Promise<HostedReviewInfo | null>
 
@@ -136,6 +137,7 @@ async function refreshParentPrChecksCandidate(
       linkedAzureDevOpsPR: candidate.worktree.linkedAzureDevOpsPR ?? null,
       linkedGiteaPR: candidate.worktree.linkedGiteaPR ?? null,
       linkedCodeMR: candidate.worktree.linkedCodeMR ?? null,
+      currentHeadOid: candidate.worktree.head ?? null,
       staleWhileRevalidate: true
     })
     if (!review) {

@@ -23,6 +23,9 @@ export function getProviderDisplayName(provider: ProviderRateLimits['provider'])
   if (provider === 'idealab') {
     return 'IdeaLab'
   }
+  if (provider === 'minimax') {
+    return 'MiniMax'
+  }
   return provider
 }
 

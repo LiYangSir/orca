@@ -71,6 +71,7 @@ function usageSettings(overrides: Partial<UsageProviderSettings> = {}): UsagePro
     opencodeSessionCookie: '',
     geminiCliOAuthEnabled: false,
     idealabUsageEnabled: false,
+    minimaxCookieConfigured: false,
     ...overrides
   }
 }
@@ -119,6 +120,7 @@ describe('hasUsageProviderSettings', () => {
       hasUsageProviderSettings(usageSettings({ opencodeSessionCookie: ' session=abc ' }))
     ).toBe(true)
     expect(hasUsageProviderSettings(usageSettings({ idealabUsageEnabled: true }))).toBe(true)
+    expect(hasUsageProviderSettings(usageSettings({ minimaxCookieConfigured: true }))).toBe(true)
   })
 
   it('does not treat empty or unloaded settings as configured', () => {
@@ -151,6 +153,17 @@ describe('hasUsageProviderSettingsForProvider', () => {
     expect(
       hasUsageProviderSettingsForProvider('idealab', usageSettings({ idealabUsageEnabled: true }))
     ).toBe(true)
+  })
+
+  it('treats minimaxCookieConfigured as the durable signal for MiniMax', () => {
+    expect(
+      hasUsageProviderSettingsForProvider(
+        'minimax',
+        usageSettings({ minimaxCookieConfigured: true })
+      )
+    ).toBe(true)
+    expect(hasUsageProviderSettingsForProvider('minimax', usageSettings())).toBe(false)
+    expect(hasUsageProviderSettingsForProvider('minimax', null)).toBe(false)
   })
 })
 
@@ -212,6 +225,45 @@ describe('getVisibleUsageProvider', () => {
     expect(getVisibleUsageProvider('codex', null, usageSettings())).toBe(null)
     expect(getVisibleUsageProvider('gemini', provider('fetching'), usageSettings())).toBe(null)
   })
+
+  it('keeps MiniMax visible while the snapshot is pending when a cookie is configured', () => {
+    const visible = getVisibleUsageProvider(
+      'minimax',
+      null,
+      usageSettings({ minimaxCookieConfigured: true })
+    )
+    expect(visible).toMatchObject({
+      provider: 'minimax',
+      status: 'fetching',
+      session: null,
+      weekly: null
+    })
+  })
+
+  it('keeps MiniMax visible when the fetch returns unavailable for a configured cookie', () => {
+    const unavailable = provider('unavailable', {
+      provider: 'minimax',
+      error: 'MiniMax session expired. Replace the MiniMax cookie in Settings.'
+    })
+    expect(
+      getVisibleUsageProvider(
+        'minimax',
+        unavailable,
+        usageSettings({ minimaxCookieConfigured: true })
+      )
+    ).toBe(unavailable)
+  })
+
+  it('hides MiniMax when no cookie is configured and the snapshot is empty', () => {
+    expect(getVisibleUsageProvider('minimax', null, usageSettings())).toBe(null)
+    expect(
+      getVisibleUsageProvider(
+        'minimax',
+        provider('unavailable', { provider: 'minimax' }),
+        usageSettings()
+      )
+    ).toBe(null)
+  })
 })
 
 describe('isUsageEmptyState', () => {
@@ -225,7 +277,8 @@ describe('isUsageEmptyState', () => {
           opencodeGo: null,
           kimi: null,
           zai: null,
-          idealab: null
+          idealab: null,
+          minimax: null
         },
         usageSettings()
       )
@@ -242,7 +295,8 @@ describe('isUsageEmptyState', () => {
           opencodeGo: provider('unavailable', { provider: 'opencode-go' }),
           kimi: provider('unavailable', { provider: 'kimi' }),
           zai: provider('unavailable', { provider: 'zai' }),
-          idealab: provider('unavailable', { provider: 'idealab' })
+          idealab: provider('unavailable', { provider: 'idealab' }),
+          minimax: provider('unavailable', { provider: 'minimax' })
         },
         usageSettings()
       )
@@ -259,7 +313,8 @@ describe('isUsageEmptyState', () => {
           opencodeGo: provider('unavailable', { provider: 'opencode-go' }),
           kimi: provider('unavailable', { provider: 'kimi' }),
           zai: provider('unavailable', { provider: 'zai' }),
-          idealab: provider('unavailable', { provider: 'idealab' })
+          idealab: provider('unavailable', { provider: 'idealab' }),
+          minimax: provider('unavailable', { provider: 'minimax' })
         },
         usageSettings({
           codexManagedAccounts: [
@@ -287,7 +342,8 @@ describe('isUsageEmptyState', () => {
           opencodeGo: null,
           kimi: null,
           zai: null,
-          idealab: null
+          idealab: null,
+          minimax: null
         },
         null
       )
@@ -304,7 +360,8 @@ describe('isUsageEmptyState', () => {
           opencodeGo: provider('unavailable', { provider: 'opencode-go' }),
           kimi: provider('unavailable', { provider: 'kimi' }),
           zai: provider('unavailable', { provider: 'zai' }),
-          idealab: provider('unavailable', { provider: 'idealab' })
+          idealab: provider('unavailable', { provider: 'idealab' }),
+          minimax: provider('unavailable', { provider: 'minimax' })
         },
         usageSettings()
       )

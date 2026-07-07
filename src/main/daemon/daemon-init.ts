@@ -44,6 +44,10 @@ import {
   rebindLocalProviderListeners
 } from '../ipc/pty'
 import { isStartupDiagnosticsEnabled, logStartupDiagnostic } from '../startup/startup-diagnostics'
+import {
+  confirmSeededClaudeLivePtys,
+  hasSeededUnconfirmedClaudePtys
+} from '../claude-accounts/live-pty-gate'
 
 // Why: daemon init runs concurrently with window load, so harness-side stderr
 // arrival times are useless — in-process `t` lets the startup benchmark derive
@@ -240,7 +244,7 @@ function createOutOfProcessLauncher(runtimeDir: string): DaemonLauncher {
       if (liveSessionCount !== null && liveSessionCount > 0) {
         if (health === 'pty-spawn-unhealthy') {
           console.warn(
-            `[daemon] Preserving daemon that failed the PTY spawn health check because it owns ${liveSessionCount} live session${liveSessionCount === 1 ? '' : 's'}; fresh terminals will use the local provider until the daemon is restarted`
+            `[daemon] DEGRADED MODE: preserving daemon that failed the PTY spawn health check because it owns ${liveSessionCount} live session${liveSessionCount === 1 ? '' : 's'}. Existing sessions keep working; fresh terminals run on the local provider WITHOUT daemon persistence until you restart the daemon (Manage Sessions → Restart).`
           )
           return createPreservedDaemonHandle(
             runtimeDir,
@@ -453,6 +457,38 @@ export async function initDaemonPtyProvider(signal?: AbortSignal): Promise<void>
   // data/exit events through the renderer and runtime listeners.
   rebindLocalProviderListeners()
   logDaemonMilestone('daemon-init-done', { legacyAdapters: legacyAdapters.length })
+  await reconcileSeededClaudeLivePtys(routedAdapter)
+}
+
+// Why: the Claude live-PTY gate is seeded pessimistically from persistence at
+// store load. Once the daemon is up we know which of those sessions actually
+// survived — release dead ids so they cannot defer OAuth refresh forever.
+// Listing failures keep the seeds: over-holding the gate only delays a usage
+// refresh, while releasing it early can rotate a live CLI's refresh token.
+async function reconcileSeededClaudeLivePtys(provider: DaemonProvider): Promise<void> {
+  if (!hasSeededUnconfirmedClaudePtys()) {
+    return
+  }
+  try {
+    const adapters =
+      provider instanceof DaemonPtyRouter || provider instanceof DegradedDaemonPtyProvider
+        ? provider.getAllAdapters()
+        : [provider]
+    const results = await Promise.allSettled(adapters.map((entry) => entry.listSessions()))
+    if (results.some((result) => result.status === 'rejected')) {
+      console.warn('[daemon] Keeping seeded Claude live-PTY gate — session listing failed')
+      return
+    }
+    confirmSeededClaudeLivePtys(
+      results.flatMap((result) =>
+        result.status === 'fulfilled' ? result.value.map((session) => session.sessionId) : []
+      )
+    )
+  } catch (error) {
+    // Why: gate bookkeeping must never fail daemon init; stale seeds only
+    // defer a usage refresh until the next restart.
+    console.warn('[daemon] Failed to reconcile seeded Claude live-PTY gate:', error)
+  }
 }
 
 // Why: the Manage Sessions IPC handlers need read access to the current

@@ -89,7 +89,8 @@ import type { OrcaHookScriptKind } from '../../lib/orca-hook-trust'
 import type { SettingsNavTarget } from '@/lib/settings-navigation-types'
 import {
   filterSetupScriptPromptDismissalsToValidRepos,
-  getSetupScriptPromptDismissalKey
+  getSetupScriptPromptDismissalKey,
+  sanitizeSetupScriptPromptDismissals
 } from '../../lib/setup-script-prompt'
 import { DEFAULT_PET_ID, isBundledPetId } from '../../components/pet/pet-models'
 import { revokeCustomPetBlobUrl } from '../../components/pet/pet-blob-cache'
@@ -264,6 +265,7 @@ function migrateStatusBarItems(items: readonly string[] | undefined): StatusBarI
 const DEFAULT_ON_PORTS_STATUS_BAR_ITEM: StatusBarItem = 'ports'
 const DEFAULT_ON_KIMI_STATUS_BAR_ITEM: StatusBarItem = 'kimi'
 const DEFAULT_ON_ZAI_STATUS_BAR_ITEM: StatusBarItem = 'zai'
+const DEFAULT_ON_MINIMAX_STATUS_BAR_ITEM: StatusBarItem = 'minimax'
 
 function normalizeHydratedVisibleWorkspaceHostIds(ui: PersistedUIState): VisibleWorkspaceHostIds {
   const visibleHostIds = normalizeVisibleExecutionHostIds(ui.visibleWorkspaceHostIds)
@@ -349,17 +351,54 @@ function collectAcknowledgedAgentNotificationId({
   }
 }
 
-function filterTrustedOrcaHooksToValidRepos(
-  trust: PersistedTrustedOrcaHooks,
-  validRepoIds: Set<string>
-): PersistedTrustedOrcaHooks {
+function isPlainPersistedRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function sanitizePersistedRepoIds(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value.filter((repoId): repoId is string => typeof repoId === 'string')
+}
+
+function sanitizeTrustedOrcaHooks(trust: unknown): PersistedTrustedOrcaHooks {
+  if (!isPlainPersistedRecord(trust)) {
+    return {}
+  }
   const next: PersistedTrustedOrcaHooks = {}
   for (const [repoId, entry] of Object.entries(trust)) {
+    if (!isSafePersistedRecordKey(repoId) || !isPlainPersistedRecord(entry)) {
+      continue
+    }
+    next[repoId] = entry as PersistedTrustedOrcaHooks[string]
+  }
+  return next
+}
+
+function filterTrustedOrcaHooksToValidRepos(
+  trust: unknown,
+  validRepoIds: Set<string>
+): PersistedTrustedOrcaHooks {
+  const sanitized = sanitizeTrustedOrcaHooks(trust)
+  const next: PersistedTrustedOrcaHooks = {}
+  for (const [repoId, entry] of Object.entries(sanitized)) {
     if (validRepoIds.has(repoId)) {
       next[repoId] = entry
     }
   }
   return next
+}
+
+function hydrateTrustedOrcaHooks(
+  trust: unknown,
+  validRepoIds: Set<string>
+): PersistedTrustedOrcaHooks {
+  const sanitized = sanitizeTrustedOrcaHooks(trust)
+  if (validRepoIds.size === 0) {
+    return sanitized
+  }
+  return filterTrustedOrcaHooksToValidRepos(sanitized, validRepoIds)
 }
 
 function isSafePersistedRecordKey(key: string): boolean {
@@ -2193,6 +2232,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   hydratePersistedUI: (ui) =>
     set((s) => {
       const validRepoIds = new Set(s.repos.map((repo) => repo.id))
+      const persistedFilterRepoIds = sanitizePersistedRepoIds(ui.filterRepoIds)
       // Why: persisted UI from pre-rename builds used sidekick* keys. Read
       // those only as fallbacks so new pet* writes win immediately after upgrade.
       const customPets = Array.isArray(ui.customPets)
@@ -2224,18 +2264,24 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
         ui._zaiStatusBarDefaultAdded || statusBarItems.includes('zai')
           ? statusBarItems
           : [...statusBarItems, DEFAULT_ON_ZAI_STATUS_BAR_ITEM]
+      const statusBarItemsWithMiniMax =
+        ui._minimaxStatusBarDefaultAdded || statusBarItemsWithZai.includes('minimax')
+          ? statusBarItemsWithZai
+          : [...statusBarItemsWithZai, DEFAULT_ON_MINIMAX_STATUS_BAR_ITEM]
       if (
         (!ui._portsStatusBarDefaultAdded ||
           !ui._kimiStatusBarDefaultAdded ||
-          !ui._zaiStatusBarDefaultAdded) &&
+          !ui._zaiStatusBarDefaultAdded ||
+          !ui._minimaxStatusBarDefaultAdded) &&
         typeof window !== 'undefined'
       ) {
         window.api.ui
           .set({
-            statusBarItems: statusBarItemsWithZai,
+            statusBarItems: statusBarItemsWithMiniMax,
             _portsStatusBarDefaultAdded: true,
             _kimiStatusBarDefaultAdded: true,
-            _zaiStatusBarDefaultAdded: true
+            _zaiStatusBarDefaultAdded: true,
+            _minimaxStatusBarDefaultAdded: true
           })
           .catch(console.error)
       }
@@ -2284,7 +2330,12 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
         hideDefaultBranchWorkspace: ui.hideDefaultBranchWorkspace ?? false,
         hideAutomationGeneratedWorkspaces: ui.hideAutomationGeneratedWorkspaces === true,
         showDotfilesByWorktree: sanitizeShowDotfilesByWorktree(ui.showDotfilesByWorktree),
-        filterRepoIds: (ui.filterRepoIds ?? []).filter((repoId) => validRepoIds.has(repoId)),
+        // Why: startup hydrates UI before repo catalogs now. With no catalog
+        // loaded yet, defer repo-filter validation to the all-host repo refresh.
+        filterRepoIds:
+          validRepoIds.size === 0
+            ? persistedFilterRepoIds
+            : persistedFilterRepoIds.filter((repoId) => validRepoIds.has(repoId)),
         collapsedGroups: new Set(ui.collapsedGroups ?? []),
         uiZoomLevel: ui.uiZoomLevel ?? 0,
         editorFontZoomLevel: ui.editorFontZoomLevel ?? 0,
@@ -2295,7 +2346,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
         workspaceBoardOpacity: clampWorkspaceBoardOpacity(ui.workspaceBoardOpacity),
         workspaceBoardColumnWidth: clampWorkspaceBoardColumnWidth(ui.workspaceBoardColumnWidth),
         syncTaskStatusFromWorkspaceBoard: ui.syncTaskStatusFromWorkspaceBoard === true,
-        statusBarItems: statusBarItemsWithZai,
+        statusBarItems: statusBarItemsWithMiniMax,
         statusBarVisible: ui.statusBarVisible ?? true,
         // Why: absent → true so existing users see the pet the first time
         // they enable the experimental flag. Only an explicit Hide pet
@@ -2333,14 +2384,14 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
           typeof ui.contextualToursAutoEligible === 'boolean'
             ? ui.contextualToursAutoEligible
             : null,
-        trustedOrcaHooks: filterTrustedOrcaHooksToValidRepos(
-          ui.trustedOrcaHooks ?? {},
-          validRepoIds
-        ),
-        setupScriptPromptDismissedRepoIds: filterSetupScriptPromptDismissalsToValidRepos(
-          ui.setupScriptPromptDismissedRepoIds,
-          validRepoIds
-        ),
+        trustedOrcaHooks: hydrateTrustedOrcaHooks(ui.trustedOrcaHooks, validRepoIds),
+        setupScriptPromptDismissedRepoIds:
+          validRepoIds.size === 0
+            ? sanitizeSetupScriptPromptDismissals(ui.setupScriptPromptDismissedRepoIds)
+            : filterSetupScriptPromptDismissalsToValidRepos(
+                ui.setupScriptPromptDismissedRepoIds,
+                validRepoIds
+              ),
         setupGuideSidebarDismissed: ui.setupGuideSidebarDismissed === true,
         setupGuideBrowserMilestoneMigrated: ui.setupGuideBrowserMilestoneMigrated === true,
         setupGuideBrowserMilestoneLegacyComplete:
