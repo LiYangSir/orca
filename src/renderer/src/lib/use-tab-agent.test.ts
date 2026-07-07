@@ -222,16 +222,14 @@ describe('resolveTabAgentFromSignals', () => {
     ).toBe('codex')
   })
 
-  it('keeps Qoder launch identity when its Gemini-derived foreground leaks through', () => {
+  it('keeps Qoder launch identity when its Gemini-derived process agent leaks through', () => {
     expect(
       resolveTabAgentFromSignals({
-        foreground: 'gemini',
+        processAgent: 'gemini',
         hasObservedAgentSignal: true,
-        shellForegroundAfterAgentSignal: false,
         isRemote: false,
         title: '✦ Gemini CLI',
         hookAgent: null,
-        hasCompletedHook: false,
         launchAgent: 'qoder'
       })
     ).toBe('qoder')
