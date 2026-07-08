@@ -26,6 +26,7 @@ import type {
 } from '../../../../shared/types'
 import type { ProjectExecutionRuntimeResolution } from '../../../../shared/project-execution-runtime'
 import { resolveTerminalTabTitle } from '../../../../shared/tab-title-resolution'
+import { filterEnabledTuiAgents } from '../../../../shared/tui-agent-selection'
 import { useAppStore } from '../../store'
 import { buildStatusMap } from '../right-sidebar/status-display'
 import type { OpenFile } from '../../store/slices/editor'
@@ -68,6 +69,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import type { TabCreateEntryArgs } from './tab-create-entry-action'
+import { AgentIcon } from '@/lib/agent-catalog'
 import { buildTabAgentLaunchOptions, orderTabLaunchAgents } from './tab-agent-launch-options'
 import { buildTabCreateMenuOptions, type TabCreateMenuOption } from './tab-create-menu-options'
 import { MobileEmulatorTabIntroCallout } from '../emulator-pane/MobileEmulatorTabIntroCallout'
@@ -369,6 +371,18 @@ function TabBarInner({
       ),
     [agentCmdOverrides, defaultAgent, detectedIds]
   )
+  const disabledAgents = useAppStore((s) => s.settings?.disabledTuiAgents ?? [])
+  const inlineAgentButtons = useMemo(
+    () =>
+      buildTabAgentLaunchOptions(
+        orderTabLaunchAgents(
+          defaultAgent,
+          filterEnabledTuiAgents(detectedIds ?? [], disabledAgents)
+        ),
+        agentCmdOverrides
+      ),
+    [agentCmdOverrides, defaultAgent, detectedIds, disabledAgents]
+  )
   const isWebClient = (globalThis as { __ORCA_WEB_CLIENT__?: boolean }).__ORCA_WEB_CLIENT__ === true
   const windowsTerminalCapabilityOwnerKey = getWindowsTerminalCapabilityOwnerKey(
     activeRuntimeEnvironmentId,
@@ -654,6 +668,28 @@ function TabBarInner({
       return
     }
     queueNewActiveTerminalFocusAfterNewTabMenuClose()
+  }
+  const handleInlineLaunchAgent = (agent: TuiAgent): void => {
+    const option = inlineAgentButtons.find((candidate) => candidate.agent === agent)
+    const result = launchAgentInNewTab({
+      agent,
+      worktreeId,
+      groupId: resolvedGroupId,
+      launchSource: 'tab_bar_quick_launch'
+    })
+    if (!result) {
+      toast.error(
+        translate(
+          'auto.components.tab.bar.TabBar.ab589350e5',
+          'Could not build launch command for {{value0}}.',
+          { value0: option?.label ?? agent }
+        )
+      )
+      return
+    }
+    if (result.tabId) {
+      focusTerminalTabSurface(result.tabId)
+    }
   }
   const runPendingNewTabMenuFocusAfterClose = (): void => {
     const pendingFocus = pendingNewTabMenuFocusRef.current
@@ -1265,6 +1301,29 @@ function TabBarInner({
             {translate('auto.components.tab.bar.TabBar.232e075b07', 'Scroll tabs right')}
           </TooltipContent>
         </Tooltip>
+      ) : null}
+      {showAgentLaunchItems && inlineAgentButtons.length > 0 ? (
+        <div
+          className="ml-1 my-auto flex shrink-0 items-center gap-0.5"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
+          {inlineAgentButtons.map((option) => (
+            <Tooltip key={option.agent}>
+              <TooltipTrigger asChild>
+                <button
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                  onClick={() => handleInlineLaunchAgent(option.agent)}
+                  aria-label={option.label}
+                >
+                  <AgentIcon agent={option.agent} size={14} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" sideOffset={6}>
+                {option.label}
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </div>
       ) : null}
       <DropdownMenu
         open={newTabMenuOpen}
