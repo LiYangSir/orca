@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../types'
-import type { SkillSourceKind } from '../../../../shared/skills'
+import type { SkillSourceType } from '../../../../shared/skills'
 import type { SkillsPageTab, SkillsInstallTab } from '../../components/skills/skills-page-tabs'
 import type { SkillsViewMode } from '../../components/skills/skills-view-constants'
 
@@ -9,7 +9,7 @@ export type SkillsViewSlice = {
   skillsViewMode: SkillsViewMode
   skillsViewSelectedSkillId: string | null
   skillsViewSearch: string
-  skillsViewFilterSourceKind: SkillSourceKind | null
+  skillsViewFilterSourceKind: SkillSourceType | null
   skillsViewFilterTags: string[]
   skillsViewInstallTab: SkillsInstallTab
 
@@ -17,7 +17,7 @@ export type SkillsViewSlice = {
   setSkillsViewMode: (mode: SkillsViewMode) => void
   setSkillsViewSelectedSkillId: (id: string | null) => void
   setSkillsViewSearch: (query: string) => void
-  setSkillsViewFilterSourceKind: (kind: SkillSourceKind | null) => void
+  setSkillsViewFilterSourceKind: (kind: SkillSourceType | null) => void
   setSkillsViewFilterTags: (tags: string[]) => void
   setSkillsViewInstallTab: (tab: SkillsInstallTab) => void
   clearSkillsViewFilters: () => void

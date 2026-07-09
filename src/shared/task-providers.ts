@@ -1,6 +1,7 @@
-export type TaskProvider = 'github' | 'gitlab' | 'linear' | 'jira' | 'aone'
+export type TaskProvider = 'github' | 'gitlab' | 'linear' | 'jira' | 'aone' | 'local'
 
 export const TASK_PROVIDERS: readonly TaskProvider[] = [
+  'local',
   'github',
   'gitlab',
   'linear',
@@ -21,7 +22,7 @@ export function normalizeTaskProviderSettings(value: {
   const visibleTaskProviders = normalizeVisibleTaskProviders(value.visibleTaskProviders)
   const defaultTaskSource = isTaskProvider(value.defaultTaskSource)
     ? value.defaultTaskSource
-    : resolveVisibleTaskProvider('github', visibleTaskProviders)
+    : resolveVisibleTaskProvider('local', visibleTaskProviders)
 
   if (visibleTaskProviders.includes(defaultTaskSource)) {
     return { visibleTaskProviders, defaultTaskSource }
@@ -72,7 +73,7 @@ export function filterAvailableTaskProviders(
     isTaskProviderAvailable(provider, availability)
   )
 
-  return available.length > 0 ? available : ['github']
+  return available.length > 0 ? available : ['local']
 }
 
 export function restoreAvailableDefaultTaskProvider(
@@ -115,6 +116,9 @@ function isTaskProviderAvailable(
   if (provider === 'aone') {
     return availability.aoneInstalled
   }
+  if (provider === 'local') {
+    return true
+  }
   return availability.linearConnected
 }
 
@@ -125,5 +129,5 @@ export function resolveVisibleTaskProvider(
   if (preferred && visibleProviders.includes(preferred)) {
     return preferred
   }
-  return visibleProviders[0] ?? 'github'
+  return visibleProviders[0] ?? 'local'
 }

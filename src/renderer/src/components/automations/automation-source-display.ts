@@ -43,6 +43,8 @@ function getProviderLabel(provider: TaskSourceContext['provider']): string {
       return 'Jira'
     case 'aone':
       return 'Aone'
+    case 'local':
+      return 'Local'
   }
 }
 
@@ -62,6 +64,8 @@ function getSourceIdentityLabel(sourceContext: TaskSourceContext): string | null
         return identity.siteUrl ?? identity.siteId ?? null
       case 'aone':
         return identity.projectName ?? identity.projectId ?? identity.appName ?? null
+      case 'local':
+        return null
     }
   }
   return sourceContext.accountLabel ?? sourceContext.repoId ?? null

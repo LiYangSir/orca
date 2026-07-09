@@ -2974,13 +2974,20 @@ export class Store {
         })
         const visibleTaskProvidersDefaultedForJira =
           parsed.settings?.visibleTaskProvidersDefaultedForJira === true
-        const migratedVisibleTaskProviders = visibleTaskProvidersDefaultedForJira
+        const afterJiraMigration = visibleTaskProvidersDefaultedForJira
           ? rawTaskProviderSettings.visibleTaskProviders
           : rawTaskProviderSettings.visibleTaskProviders.includes('jira')
             ? rawTaskProviderSettings.visibleTaskProviders
             : [...rawTaskProviderSettings.visibleTaskProviders, 'jira' as const]
+        const visibleTaskProvidersDefaultedForLocal =
+          parsed.settings?.visibleTaskProvidersDefaultedForLocal === true
+        const afterLocalMigration = visibleTaskProvidersDefaultedForLocal
+          ? afterJiraMigration
+          : afterJiraMigration.includes('local')
+            ? afterJiraMigration
+            : [...afterJiraMigration, 'local' as const]
         const taskProviderSettings = normalizeTaskProviderSettings({
-          visibleTaskProviders: migratedVisibleTaskProviders,
+          visibleTaskProviders: afterLocalMigration,
           defaultTaskSource: rawTaskProviderSettings.defaultTaskSource
         })
         const primarySelectionDefaultedForLinux =
@@ -2999,7 +3006,7 @@ export class Store {
         if (migratePrimarySelectionPlatformDefault || stampPrimarySelectionTerminalDefaults) {
           this.loadNeedsSave = true
         }
-        if (!visibleTaskProvidersDefaultedForJira) {
+        if (!visibleTaskProvidersDefaultedForJira || !visibleTaskProvidersDefaultedForLocal) {
           this.loadNeedsSave = true
         }
         const claudeAgentTeamsDefaultDisabledMigrated =
@@ -3137,6 +3144,7 @@ export class Store {
             defaultTaskSource: taskProviderSettings.defaultTaskSource,
             visibleTaskProviders: taskProviderSettings.visibleTaskProviders,
             visibleTaskProvidersDefaultedForJira: true,
+            visibleTaskProvidersDefaultedForLocal: true,
             terminalShortcutPolicy: normalizeTerminalShortcutPolicy(
               parsed.settings?.terminalShortcutPolicy
             ),
@@ -5161,6 +5169,7 @@ export class Store {
       sanitizedUpdates.visibleTaskProviders = taskProviderSettings.visibleTaskProviders
       if ('visibleTaskProviders' in updates) {
         sanitizedUpdates.visibleTaskProvidersDefaultedForJira = true
+        sanitizedUpdates.visibleTaskProvidersDefaultedForLocal = true
       }
     }
     if ('autoRenameBranchFromWork' in updates || 'autoRenameBranchFromWorkDefaultedOn' in updates) {
@@ -6295,6 +6304,7 @@ function getDefaultWorktreeMeta(): WorktreeMeta {
     linkedAzureDevOpsPR: null,
     linkedGiteaPR: null,
     linkedCodeMR: null,
+    linkedLocalTask: null,
     isArchived: false,
     isUnread: false,
     isPinned: false,

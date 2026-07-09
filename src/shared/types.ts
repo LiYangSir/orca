@@ -338,13 +338,14 @@ export type FolderWorkspace = {
 }
 
 export type FolderWorkspaceLinkedTask = {
-  provider: 'github' | 'gitlab' | 'linear' | 'jira'
+  provider: 'github' | 'gitlab' | 'linear' | 'jira' | 'local'
   type: 'issue' | 'pr' | 'mr'
   number: number
   title: string
   url: string
   linearIdentifier?: string
   jiraIdentifier?: string
+  localIdentifier?: string
   repoId?: string
 }
 
@@ -474,6 +475,7 @@ export type Worktree = {
   linkedAzureDevOpsPR?: number | null
   linkedGiteaPR?: number | null
   linkedCodeMR?: number | null
+  linkedLocalTask?: string | null
   isArchived: boolean
   isUnread: boolean
   isPinned: boolean
@@ -585,6 +587,7 @@ export type WorktreeMeta = {
   linkedGiteaPR?: number | null
   /** Optional for backward compatibility — see Worktree.linkedCodeMR. */
   linkedCodeMR?: number | null
+  linkedLocalTask?: string | null
   isArchived: boolean
   isUnread: boolean
   isPinned: boolean
@@ -2081,6 +2084,7 @@ export type CreateWorktreeArgs = {
   linkedAzureDevOpsPR?: number | null
   linkedGiteaPR?: number | null
   linkedCodeMR?: number | null
+  linkedLocalTask?: string | null
   pushTarget?: GitPushTarget
   workspaceStatus?: WorkspaceStatus
   manualOrder?: number
@@ -2768,6 +2772,7 @@ export type GlobalSettings = {
   /** Why: one-shot migration guard so Jira becomes visible for existing
    *  profiles once, without re-adding it after a later deliberate opt-out. */
   visibleTaskProvidersDefaultedForJira: boolean
+  visibleTaskProvidersDefaultedForLocal: boolean
   /** Why: persists the user's repo selection in the cross-repo tasks view.
    *  `null` means sticky-all — every eligible repo is selected, including
    *  repos added in future sessions, so the "All repos" label stays

@@ -77,6 +77,8 @@ export function getTaskSourceContextSummary(args: {
         hostLabelById: args.hostLabelById,
         hostAvailability: args.hostAvailability
       })
+    case 'local':
+      return { label: args.providerLabel, title: args.providerLabel }
   }
 }
 
@@ -213,6 +215,8 @@ function getProviderIdentityLabel(
       return identity.siteUrl ?? identity.siteId ?? null
     case 'aone':
       return identity.projectName ?? identity.projectId ?? identity.appName ?? null
+    case 'local':
+      return null
   }
 }
 

@@ -1,4 +1,4 @@
-import { Briefcase, Check, Github, Gitlab } from 'lucide-react'
+import { Briefcase, Check, Github, Gitlab, ListChecks } from 'lucide-react'
 import type { GlobalSettings, TaskProvider } from '../../../../shared/types'
 import {
   TASK_PROVIDERS,
@@ -88,6 +88,19 @@ const TASK_PROVIDER_OPTIONS: readonly {
       )
     },
     Icon: ({ className }) => <Briefcase className={className} />
+  },
+  {
+    id: 'local',
+    get label() {
+      return translate('auto.components.settings.TasksPane.local_label', 'Local')
+    },
+    get description() {
+      return translate(
+        'auto.components.settings.TasksPane.local_description',
+        'Manage local tasks stored on disk. Always available, no account required.'
+      )
+    },
+    Icon: ({ className }) => <ListChecks className={className} />
   }
 ]
 
@@ -137,7 +150,8 @@ export function TasksPane({ settings, updateSettings }: TasksPaneProps): React.J
             'jira',
             'atlassian',
             'display',
-            'hide'
+            'hide',
+            'local'
           ]}
           className="grid gap-2 py-2"
         >

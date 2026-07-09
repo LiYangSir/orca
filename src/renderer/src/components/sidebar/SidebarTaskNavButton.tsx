@@ -75,7 +75,7 @@ export function SidebarTaskNavButton(): React.JSX.Element | null {
   const canBrowseTasks = repos.some((repo) => isGitRepoKind(repo))
   const showTasksButton = useAppStore((s) => s.settings?.showTasksButton !== false)
   const rawVisibleTaskProviders = useAppStore((s) => s.settings?.visibleTaskProviders)
-  const defaultTaskSource = useAppStore((s) => s.settings?.defaultTaskSource ?? 'github')
+  const defaultTaskSource = useAppStore((s) => s.settings?.defaultTaskSource ?? 'local')
   const preflightStatus = useAppStore((s) => s.preflightStatus)
   const preflightStatusChecked = useAppStore((s) => s.preflightStatusChecked)
   const preflightStatusContextKey = useAppStore((s) => s.preflightStatusContextKey)

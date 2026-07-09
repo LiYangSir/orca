@@ -54,6 +54,9 @@ import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Input } from '@/components/ui/input'
 import { AoneTaskList } from '@/components/aone/AoneTaskList'
+import { LocalTaskList } from '@/components/local-tasks/LocalTaskList'
+import { buildLocalTaskLinkedWorkItem } from '@/lib/local-task-linked-work-item'
+import type { LocalTask } from '../../../shared/local-task-types'
 import {
   Command,
   CommandEmpty,
@@ -185,7 +188,10 @@ import {
   normalizeTaskSourceContext,
   type TaskSourceContext
 } from '../../../shared/task-source-context'
-import { getLinearIssueWorkspaceName } from '../../../shared/workspace-name'
+import {
+  getLinearIssueWorkspaceName,
+  getLocalTaskWorkspaceName
+} from '../../../shared/workspace-name'
 import {
   buildTaskPageRepoSourceState,
   deriveTaskPageGitHubWorkItemsFetchOptions,
@@ -3183,7 +3189,7 @@ export default function TaskPage(): React.JSX.Element {
     () => normalizeVisibleTaskProviders(settings?.visibleTaskProviders),
     [settings?.visibleTaskProviders]
   )
-  const defaultTaskSource = settings?.defaultTaskSource ?? 'github'
+  const defaultTaskSource = settings?.defaultTaskSource ?? 'local'
   const visibleTaskProviders = useMemo(
     () =>
       restoreAvailableDefaultTaskProvider(
@@ -7685,6 +7691,19 @@ export default function TaskPage(): React.JSX.Element {
     [openComposerForLinearItem]
   )
 
+  const handleUseLocalTask = useCallback(
+    (task: LocalTask): void => {
+      useAppStore.getState().recordFeatureInteraction('local-tasks')
+      const linkedWorkItem = buildLocalTaskLinkedWorkItem(task)
+      openModal('new-workspace-composer', {
+        linkedWorkItem,
+        prefilledName: getLocalTaskWorkspaceName(task),
+        telemetrySource: 'sidebar'
+      })
+    },
+    [openModal]
+  )
+
   const handleLinearWorkspaceChange = useCallback(
     (workspaceId: LinearWorkspaceSelection): void => {
       clearSelectedLinearIssue()
@@ -8892,6 +8911,8 @@ export default function TaskPage(): React.JSX.Element {
                   </>
                 ) : taskSource === 'aone' ? (
                   <AoneTaskList />
+                ) : taskSource === 'local' ? (
+                  <LocalTaskList onStartWorkspace={handleUseLocalTask} />
                 ) : null}
               </div>
             </section>
@@ -10015,11 +10036,11 @@ export default function TaskPage(): React.JSX.Element {
               onClose={closeTaskDetailPage}
               sourceContext={linearDetailSourceContext}
             />
-          ) : !linearStatusReady ? (
+          ) : taskSource === 'linear' && !linearStatusReady ? (
             <div className="mt-4 flex items-center justify-center py-14">
               <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
             </div>
-          ) : !linearConnected ? (
+          ) : taskSource === 'linear' && !linearConnected ? (
             <div className="mt-4 flex flex-col items-center justify-center rounded-md border border-border/50 bg-muted/50 px-6 py-14 text-center shadow-sm">
               <LinearIcon className="mb-4 size-8 text-muted-foreground/60" />
               <p className="text-base font-medium text-foreground">
@@ -10040,7 +10061,9 @@ export default function TaskPage(): React.JSX.Element {
                 {translate('auto.components.TaskPage.851017590d', 'Add Linear access')}
               </Button>
             </div>
-          ) : selectedLinearProject && linearProjectTab === 'overview' ? (
+          ) : taskSource === 'linear' &&
+            selectedLinearProject &&
+            linearProjectTab === 'overview' ? (
             <div className="flex min-h-0 max-h-full flex-col overflow-hidden rounded-md rounded-t-none border border-t-0 border-border/50 bg-background shadow-sm">
               <LinearProjectOverview
                 project={selectedLinearProjectDetail ?? selectedLinearProject}
@@ -10087,7 +10110,7 @@ export default function TaskPage(): React.JSX.Element {
                 onOpenIssues={() => setLinearProjectTab('issues')}
               />
             </div>
-          ) : linearMode === 'projects' && !selectedLinearProject ? (
+          ) : taskSource === 'linear' && linearMode === 'projects' && !selectedLinearProject ? (
             <div className="flex min-h-0 max-h-full flex-col overflow-hidden rounded-md rounded-t-none border border-t-0 border-border/50 bg-background shadow-sm">
               <div className="grid h-8 flex-none items-center gap-3 border-b border-border/50 bg-muted/25 px-3 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground grid-cols-[minmax(180px,1.5fr)_110px_100px_90px_120px_110px_80px_70px]">
                 <span>{translate('auto.components.TaskPage.00022ec0ba', 'Project')}</span>
@@ -10129,7 +10152,7 @@ export default function TaskPage(): React.JSX.Element {
                 label={translate('auto.components.TaskPage.b39fe6511d', 'projects')}
               />
             </div>
-          ) : linearMode === 'views' && !selectedLinearCustomView ? (
+          ) : taskSource === 'linear' && linearMode === 'views' && !selectedLinearCustomView ? (
             <div className="flex min-h-0 max-h-full flex-col overflow-hidden rounded-md rounded-t-none border border-t-0 border-border/50 bg-background shadow-sm">
               <div className="grid h-8 flex-none items-center gap-3 border-b border-border/50 bg-muted/25 px-3 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground grid-cols-[minmax(220px,1.5fr)_120px_120px_120px_130px_60px]">
                 <span>{translate('auto.components.TaskPage.9c57663908', 'View')}</span>
@@ -10165,7 +10188,9 @@ export default function TaskPage(): React.JSX.Element {
                 label={translate('auto.components.TaskPage.3cb855080f', 'views')}
               />
             </div>
-          ) : selectedLinearCustomView?.model === 'project' && !selectedLinearProject ? (
+          ) : taskSource === 'linear' &&
+            selectedLinearCustomView?.model === 'project' &&
+            !selectedLinearProject ? (
             <div className="flex min-h-0 max-h-full flex-col overflow-hidden rounded-md rounded-t-none border border-t-0 border-border/50 bg-background shadow-sm">
               <div className="flex h-10 flex-none items-center justify-between gap-3 border-b border-border/50 bg-muted/35 px-3">
                 <div className="flex min-w-0 items-center gap-2">
@@ -10234,7 +10259,7 @@ export default function TaskPage(): React.JSX.Element {
                 label={translate('auto.components.TaskPage.b39fe6511d', 'projects')}
               />
             </div>
-          ) : (
+          ) : taskSource === 'linear' ? (
             <div className="flex min-h-0 max-h-full flex-col overflow-hidden rounded-md rounded-t-none border border-t-0 border-border/50 bg-background shadow-sm">
               <div className="flex h-10 flex-none items-center justify-between gap-3 border-b border-border/50 bg-muted/35 px-3">
                 <div className="flex min-w-0 items-center gap-2">
@@ -10950,7 +10975,7 @@ export default function TaskPage(): React.JSX.Element {
                 </>
               )}
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 

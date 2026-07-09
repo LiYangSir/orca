@@ -46,7 +46,7 @@ export type WorkspaceIntentWorkItem = {
   type: 'issue' | 'pr' | 'mr'
   number: number
   title: string
-  provider?: 'github' | 'gitlab' | 'linear' | 'jira' | 'aone'
+  provider?: 'github' | 'gitlab' | 'linear' | 'jira' | 'aone' | 'local'
   linearIdentifier?: string
   jiraIdentifier?: string
   aoneIdentifier?: string
@@ -259,4 +259,8 @@ export function resolveWorkspaceCreateName(args: {
   fallback: string
 }): string {
   return args.draft?.trim() || args.fallback
+}
+
+export function getLocalTaskWorkspaceName(task: { title: string }): string {
+  return getLinkedWorkItemSuggestedName(task)
 }

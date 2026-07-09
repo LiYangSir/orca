@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises'
+import type { Dirent } from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 import { copyDirRecursive } from './sync-engine'
@@ -49,9 +50,12 @@ async function updateAgentSymlinks(orcaSkillsDir: string): Promise<void> {
 
   for (const adapter of adapters) {
     const toolDir = getSkillsDir(adapter)
-    let entries: Awaited<ReturnType<typeof fs.readdir>>
+    let entries: Dirent<string>[]
     try {
-      entries = await fs.readdir(toolDir, { withFileTypes: true })
+      entries = (await fs.readdir(toolDir, {
+        withFileTypes: true,
+        encoding: 'utf-8'
+      })) as Dirent<string>[]
     } catch {
       continue
     }

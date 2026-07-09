@@ -1,5 +1,5 @@
 import React from 'react'
-import { Briefcase, Github, Gitlab, LayoutGrid, List } from 'lucide-react'
+import { Briefcase, Github, Gitlab, LayoutGrid, List, ListChecks } from 'lucide-react'
 
 import { JiraIcon } from '@/components/icons/JiraIcon'
 import { createLocalizedCatalog } from '@/i18n/localized-catalog'
@@ -129,6 +129,11 @@ export const getSourceOptions = createLocalizedCatalog((): SourceOption[] => [
     id: 'aone',
     label: translate('auto.components.TaskPage.aone_label', 'Aone'),
     Icon: ({ className }) => <Briefcase className={className} />
+  },
+  {
+    id: 'local',
+    label: translate('auto.components.TaskPage.local_label', 'Local'),
+    Icon: ({ className }) => <ListChecks className={className} />
   }
 ])
 
