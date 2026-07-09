@@ -62,10 +62,16 @@ module.exports = {
     '!Casks{,/**/*}',
     '!{AGENTS.md,CLAUDE.md,DEVELOPING.md,bundle-size-progress.md}',
     '!out/**/*.test.js',
+    // Why: out/electron-dev/ contains cached dev-mode Electron app copies
+    // (~272 MB each) created by `pnpm dev`. They must not ship in app.asar.
+    '!out/electron-dev{,/**/*}',
     '!electron.vite.config.{js,ts,mjs,cjs}',
+    '!vite.web.config.{js,ts,mjs,cjs}',
     '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,CHANGELOG.md,README.md}',
     '!{.env,.env.*,.npmrc,pnpm-lock.yaml}',
     '!tsconfig.json',
+    '!{notes,tools,previews}{,/**/*}',
+    '!{.oxfmtrc.json,.oxlintrc.json,components.json,orca.yaml}',
     // Why: feature-wall media is copied via extraResources so runtime can read
     // it from process.resourcesPath; exclude the source copy from app.asar.
     '!resources/onboarding/feature-wall/**'

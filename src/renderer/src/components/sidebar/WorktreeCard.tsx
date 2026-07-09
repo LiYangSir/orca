@@ -12,10 +12,10 @@ import {
   AlertTriangle,
   ChevronDown,
   GitMerge,
+  Home,
   LoaderCircle,
   Server,
   ServerOff,
-  Star,
   Trash2,
   Workflow
 } from 'lucide-react'
@@ -1557,12 +1557,7 @@ const WorktreeCard = React.memo(function WorktreeCard({
             {!compactCards && worktree.isMainWorktree && !isFolder && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Badge
-                    variant="outline"
-                    className="h-[16px] px-1.5 text-[10px] font-medium rounded shrink-0 leading-none text-foreground/70 border-foreground/20 bg-foreground/[0.06]"
-                  >
-                    {translate('auto.components.sidebar.WorktreeCard.7d517f82e2', 'primary')}
-                  </Badge>
+                  <Home className="size-3 shrink-0 text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={8}>
                   {translate(
@@ -1616,7 +1611,7 @@ const WorktreeCard = React.memo(function WorktreeCard({
                         'Primary worktree'
                       )}
                     >
-                      <Star className="size-3 fill-amber-400 text-amber-400" />
+                      <Home className="size-3 text-muted-foreground" />
                     </span>
                   </TooltipTrigger>
                   <TooltipContent side="right" sideOffset={8}>
