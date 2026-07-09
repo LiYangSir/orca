@@ -59,11 +59,15 @@ import type {
 import type { GitHistoryOptions, GitHistoryResult } from '../shared/git-history'
 import type { ShellOpenLocalPathResult } from '../shared/shell-open-types'
 import type {
+  CentralSkill,
   DiscoveredSkill,
+  GitPreviewResult,
   SavedSkill,
   SkillDiscoveryResult,
   SkillDiscoveryTarget,
-  SkillPreset
+  SkillPreset,
+  SkillsShSkill,
+  ToolInfo
 } from '../shared/skills'
 import type {
   RuntimeBrowserDriverState,
@@ -1485,6 +1489,57 @@ const api = {
     }): Promise<unknown> => ipcRenderer.invoke('aone:getMRWithExtras', args)
   },
 
+  localTasks: {
+    list: (args?: { repoPath?: string; parentId?: string | null }): Promise<unknown> =>
+      ipcRenderer.invoke('localTasks:list', args),
+    get: (args: { id: string }): Promise<unknown> => ipcRenderer.invoke('localTasks:get', args),
+    create: (args: {
+      title: string
+      status?: string
+      priority?: string
+      description?: string
+      labelIds?: string[]
+      parentId?: string
+      repoPath?: string
+    }): Promise<unknown> => ipcRenderer.invoke('localTasks:create', args),
+    update: (args: {
+      id: string
+      title?: string
+      status?: string
+      priority?: string
+      description?: string
+      labelIds?: string[]
+      parentId?: string
+      repoPath?: string
+    }): Promise<unknown> => ipcRenderer.invoke('localTasks:update', args),
+    delete: (args: { id: string }): Promise<unknown> =>
+      ipcRenderer.invoke('localTasks:delete', args)
+  },
+
+  localTaskLabels: {
+    list: (): Promise<unknown> => ipcRenderer.invoke('localTaskLabels:list'),
+    create: (args: { name: string; color: string }): Promise<unknown> =>
+      ipcRenderer.invoke('localTaskLabels:create', args),
+    update: (args: { id: string; name?: string; color?: string }): Promise<unknown> =>
+      ipcRenderer.invoke('localTaskLabels:update', args),
+    delete: (args: { id: string }): Promise<unknown> =>
+      ipcRenderer.invoke('localTaskLabels:delete', args)
+  },
+
+  localTaskComments: {
+    list: (args: { taskId: string }): Promise<unknown> =>
+      ipcRenderer.invoke('localTaskComments:list', args),
+    create: (args: { taskId: string; content: string }): Promise<unknown> =>
+      ipcRenderer.invoke('localTaskComments:create', args),
+    delete: (args: { id: string }): Promise<unknown> =>
+      ipcRenderer.invoke('localTaskComments:delete', args)
+  },
+
+  localTaskActivities: {
+    list: (args: { taskId: string }): Promise<unknown> =>
+      ipcRenderer.invoke('localTaskActivities:list', args)
+  },
+
   linear: {
     connect: (args: {
       apiKey: string
@@ -2105,7 +2160,67 @@ const api = {
       ipcRenderer.invoke('skills:savePreset', args),
 
     removePreset: (args: { presetId: string }): Promise<void> =>
-      ipcRenderer.invoke('skills:removePreset', args)
+      ipcRenderer.invoke('skills:removePreset', args),
+
+    list: (): Promise<CentralSkill[]> => ipcRenderer.invoke('skills:list'),
+
+    get: (args: { skillId: string }): Promise<CentralSkill | null> =>
+      ipcRenderer.invoke('skills:get', args),
+
+    getDocument: (args: { skillId: string }): Promise<string | null> =>
+      ipcRenderer.invoke('skills:getDocument', args),
+
+    delete: (args: { skillId: string }): Promise<void> => ipcRenderer.invoke('skills:delete', args),
+
+    installLocal: (args: { path: string; name?: string }): Promise<CentralSkill> =>
+      ipcRenderer.invoke('skills:installLocal', args),
+
+    installGit: (args: { url: string }): Promise<CentralSkill> =>
+      ipcRenderer.invoke('skills:installGit', args),
+
+    installFromMarketplace: (args: { source: string; name: string }): Promise<CentralSkill> =>
+      ipcRenderer.invoke('skills:installFromMarketplace', args),
+
+    previewGitInstall: (args: { url: string }): Promise<GitPreviewResult> =>
+      ipcRenderer.invoke('skills:previewGitInstall', args),
+
+    confirmGitInstall: (args: {
+      tempDir: string
+      selections: { relativePath: string; name: string }[]
+    }): Promise<CentralSkill[]> => ipcRenderer.invoke('skills:confirmGitInstall', args),
+
+    checkUpdate: (args: { skillId: string }): Promise<CentralSkill> =>
+      ipcRenderer.invoke('skills:checkUpdate', args),
+
+    checkAllUpdates: (): Promise<void> => ipcRenderer.invoke('skills:checkAllUpdates'),
+
+    scanInstalledSkills: (): Promise<void> => ipcRenderer.invoke('skills:scanInstalledSkills'),
+
+    batchImportFolder: (args: { path: string }): Promise<CentralSkill[]> =>
+      ipcRenderer.invoke('skills:batchImportFolder', args),
+
+    getTags: (): Promise<string[]> => ipcRenderer.invoke('skills:getTags'),
+
+    setTags: (args: { skillId: string; tags: string[] }): Promise<void> =>
+      ipcRenderer.invoke('skills:setTags', args),
+
+    syncToTool: (args: { skillId: string; toolKey: string }): Promise<void> =>
+      ipcRenderer.invoke('skills:syncToTool', args),
+
+    unsyncFromTool: (args: { skillId: string; toolKey: string }): Promise<void> =>
+      ipcRenderer.invoke('skills:unsyncFromTool', args),
+
+    getToolsStatus: (): Promise<ToolInfo[]> => ipcRenderer.invoke('skills:getToolsStatus'),
+
+    setToolEnabled: (args: { toolKey: string; enabled: boolean }): Promise<void> =>
+      ipcRenderer.invoke('skills:setToolEnabled', args),
+
+    marketplaceFetchLeaderboard: (args: {
+      sort: 'hot' | 'trending' | 'all_time'
+    }): Promise<SkillsShSkill[]> => ipcRenderer.invoke('skills:marketplace:fetchLeaderboard', args),
+
+    marketplaceSearch: (args: { query: string }): Promise<SkillsShSkill[]> =>
+      ipcRenderer.invoke('skills:marketplace:search', args)
   },
 
   pet: {

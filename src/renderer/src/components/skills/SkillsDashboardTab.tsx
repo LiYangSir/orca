@@ -1,26 +1,22 @@
 import { Download, Search, WandSparkles, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
-import type { DiscoveredSkill, SkillDiscoverySource } from '../../../../shared/skills'
-import { sourceLabels } from './skill-display-labels'
+import type { CentralSkill, ToolInfo } from '../../../../shared/skills'
 import type { SkillsPageTab } from './skills-page-tabs'
 
 type SkillsDashboardTabProps = {
-  skills: DiscoveredSkill[]
-  savedCount: number
-  presetCount: number
-  sources: SkillDiscoverySource[]
+  skills: CentralSkill[]
+  tools: ToolInfo[]
   onSelectTab: (tab: SkillsPageTab) => void
 }
 
 export function SkillsDashboardTab({
   skills,
-  savedCount,
-  presetCount,
-  sources,
+  tools,
   onSelectTab
 }: SkillsDashboardTabProps): React.JSX.Element {
-  const activeSourceCount = sources.filter((source) => source.exists).length
+  const syncedCount = skills.reduce((sum, s) => sum + s.targets.length, 0)
+  const agentCount = tools.filter((t) => t.installed && t.enabled).length
   const recentSkills = [...skills]
     .sort((left, right) => (right.updatedAt ?? 0) - (left.updatedAt ?? 0))
     .slice(0, 5)
@@ -34,16 +30,12 @@ export function SkillsDashboardTab({
             value: skills.length
           },
           {
-            label: translate('auto.components.skills.SkillsDashboardTab.f04164db24', 'Saved'),
-            value: savedCount
+            label: translate('auto.components.skills.SkillsDashboardTab.synced', 'Synced'),
+            value: syncedCount
           },
           {
-            label: translate('auto.components.skills.SkillsDashboardTab.05749fb191', 'Sources'),
-            value: activeSourceCount
-          },
-          {
-            label: translate('auto.components.skills.SkillsDashboardTab.d2bd738f3f', 'Presets'),
-            value: presetCount
+            label: translate('auto.components.skills.SkillsDashboardTab.agents', 'Agents'),
+            value: agentCount
           }
         ].map((stat) => (
           <div key={stat.label} className="flex items-baseline gap-1.5">
@@ -87,9 +79,7 @@ export function SkillsDashboardTab({
                   <WandSparkles className="size-3.5 shrink-0 text-muted-foreground" />
                   <span className="truncate text-sm">{skill.name}</span>
                 </div>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {sourceLabels[skill.sourceKind]}
-                </span>
+                <span className="shrink-0 text-xs text-muted-foreground">{skill.sourceType}</span>
               </div>
             ))}
           </div>

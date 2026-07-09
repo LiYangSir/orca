@@ -281,11 +281,15 @@ import type { ResolvedSourceControlAiGenerationParams } from '../shared/source-c
 import type { SourceControlAiSettings } from '../shared/source-control-ai-types'
 import type { ShellOpenLocalPathResult } from '../shared/shell-open-types'
 import type {
+  CentralSkill,
   DiscoveredSkill,
+  GitPreviewResult,
   SavedSkill,
   SkillDiscoveryResult,
   SkillDiscoveryTarget,
-  SkillPreset
+  SkillPreset,
+  SkillsShSkill,
+  ToolInfo
 } from '../shared/skills'
 import type {
   CrashReportBreadcrumbData,
@@ -1755,6 +1759,44 @@ export type PreloadApi = {
       repoPath?: string | null
     }) => Promise<unknown>
   }
+  localTasks: {
+    list: (args?: { repoPath?: string; parentId?: string | null }) => Promise<unknown>
+    get: (args: { id: string }) => Promise<unknown>
+    create: (args: {
+      title: string
+      status?: string
+      priority?: string
+      description?: string
+      labelIds?: string[]
+      parentId?: string
+      repoPath?: string
+    }) => Promise<unknown>
+    update: (args: {
+      id: string
+      title?: string
+      status?: string
+      priority?: string
+      description?: string
+      labelIds?: string[]
+      parentId?: string
+      repoPath?: string
+    }) => Promise<unknown>
+    delete: (args: { id: string }) => Promise<unknown>
+  }
+  localTaskLabels: {
+    list: () => Promise<unknown>
+    create: (args: { name: string; color: string }) => Promise<unknown>
+    update: (args: { id: string; name?: string; color?: string }) => Promise<unknown>
+    delete: (args: { id: string }) => Promise<unknown>
+  }
+  localTaskComments: {
+    list: (args: { taskId: string }) => Promise<unknown>
+    create: (args: { taskId: string; content: string }) => Promise<unknown>
+    delete: (args: { id: string }) => Promise<unknown>
+  }
+  localTaskActivities: {
+    list: (args: { taskId: string }) => Promise<unknown>
+  }
   linear: {
     connect: (args: {
       apiKey: string
@@ -2105,6 +2147,36 @@ export type PreloadApi = {
     listPresets: () => Promise<SkillPreset[]>
     savePreset: (args: { id?: string; name: string; skillIds: string[] }) => Promise<SkillPreset>
     removePreset: (args: { presetId: string }) => Promise<void>
+
+    list: () => Promise<CentralSkill[]>
+    get: (args: { skillId: string }) => Promise<CentralSkill | null>
+    getDocument: (args: { skillId: string }) => Promise<string | null>
+    delete: (args: { skillId: string }) => Promise<void>
+    installLocal: (args: { path: string; name?: string }) => Promise<CentralSkill>
+    installGit: (args: { url: string }) => Promise<CentralSkill>
+    installFromMarketplace: (args: { source: string; name: string }) => Promise<CentralSkill>
+    previewGitInstall: (args: { url: string }) => Promise<GitPreviewResult>
+    confirmGitInstall: (args: {
+      tempDir: string
+      selections: { relativePath: string; name: string }[]
+    }) => Promise<CentralSkill[]>
+    checkUpdate: (args: { skillId: string }) => Promise<CentralSkill>
+    checkAllUpdates: () => Promise<void>
+    scanInstalledSkills: () => Promise<void>
+    batchImportFolder: (args: { path: string }) => Promise<CentralSkill[]>
+    getTags: () => Promise<string[]>
+    setTags: (args: { skillId: string; tags: string[] }) => Promise<void>
+
+    syncToTool: (args: { skillId: string; toolKey: string }) => Promise<void>
+    unsyncFromTool: (args: { skillId: string; toolKey: string }) => Promise<void>
+
+    getToolsStatus: () => Promise<ToolInfo[]>
+    setToolEnabled: (args: { toolKey: string; enabled: boolean }) => Promise<void>
+
+    marketplaceFetchLeaderboard: (args: {
+      sort: 'hot' | 'trending' | 'all_time'
+    }) => Promise<SkillsShSkill[]>
+    marketplaceSearch: (args: { query: string }) => Promise<SkillsShSkill[]>
   }
   pet: {
     import: () => Promise<CustomPet | null>

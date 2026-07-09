@@ -9,6 +9,7 @@ import type {
   SkillDiscoveryTarget,
   SkillPreset
 } from '../../shared/skills'
+import { registerCentralSkillsHandlers } from './skills-central'
 import { getDefaultWslDistro, getWslHome } from '../wsl'
 
 type SkillDiscoveryRuntimeTarget =
@@ -128,4 +129,7 @@ export function registerSkillsHandlers(store: Store): void {
   ipcMain.handle('skills:removePreset', (_event, args: { presetId: string }): void => {
     store.removeSkillPreset(args.presetId)
   })
+
+  // Central-repo skill handlers (superset parity) — split into skills-central.ts
+  registerCentralSkillsHandlers(store)
 }

@@ -73,3 +73,73 @@ export type SkillFrontmatterSummary = {
   name: string | null
   description: string | null
 }
+
+// ---------------------------------------------------------------------------
+// Central-repo skill model (superset parity)
+// ---------------------------------------------------------------------------
+
+export type SkillSourceType = 'local' | 'import' | 'git' | 'skillssh' | 'memory'
+
+export type SkillUpdateStatus =
+  | 'up_to_date'
+  | 'update_available'
+  | 'unknown'
+  | 'checking'
+  | 'updating'
+  | 'error'
+  | 'local_only'
+  | 'source_missing'
+
+export type SkillTarget = {
+  tool: string
+  status: string
+}
+
+/** A skill managed by the central repository. */
+export type CentralSkill = {
+  id: string
+  name: string
+  description: string | null
+  sourceType: SkillSourceType
+  sourceRef: string | null
+  sourceBranch: string | null
+  sourceRevision: string | null
+  centralPath: string
+  contentHash: string | null
+  enabled: boolean
+  tags: string[] | null
+  updateStatus: SkillUpdateStatus
+  targets: SkillTarget[]
+  createdAt: number
+  updatedAt: number
+}
+
+export type ToolCategory = 'coding' | 'lobster'
+
+export type ToolInfo = {
+  key: string
+  displayName: string
+  installed: boolean
+  enabled: boolean
+  category: ToolCategory
+}
+
+export type SkillsShSkill = {
+  id: string
+  skillId: string
+  name: string
+  source: string
+  installs: number
+}
+
+export type GitSkillPreview = {
+  name: string
+  relativePath: string
+  description: string | null
+  hasSkillMd: boolean
+}
+
+export type GitPreviewResult = {
+  tempDir: string
+  skills: GitSkillPreview[]
+}
