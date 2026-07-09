@@ -9,32 +9,7 @@ export type ToolAdapter = {
   displayName: string
   relativeSkillsDir: string
   relativeDetectDir: string
-  additionalScanDirs: string[]
   overrideSkillsDir: string | null
-  isCustom: boolean
-  recursiveScan: boolean
-  projectRelativeSkillsDir: string | null
-  category: ToolCategory
-}
-
-export type CustomToolDef = {
-  key: string
-  displayName: string
-  skillsDir: string
-  projectRelativeSkillsDir: string | null
-  category: ToolCategory
-}
-
-export type ToolInfoFull = {
-  key: string
-  displayName: string
-  installed: boolean
-  skillsDir: string
-  enabled: boolean
-  isCustom: boolean
-  hasPathOverride: boolean
-  projectRelativeSkillsDir: string
-  hasProjectPathOverride: boolean
   category: ToolCategory
 }
 
@@ -79,12 +54,8 @@ export function getSkillsDir(adapter: ToolAdapter): string {
   return selectExistingOrDefault(candidatePaths(adapter.relativeSkillsDir))
 }
 
-export function getProjectRelativeSkillsDir(adapter: ToolAdapter): string {
-  return adapter.projectRelativeSkillsDir ?? adapter.relativeSkillsDir
-}
-
 export function isToolInstalled(adapter: ToolAdapter): boolean {
-  if (adapter.isCustom || adapter.overrideSkillsDir) {
+  if (adapter.overrideSkillsDir) {
     return true
   }
   const paths = candidatePaths(adapter.relativeDetectDir)
@@ -96,21 +67,14 @@ function makeAdapter(
   displayName: string,
   relativeSkillsDir: string,
   relativeDetectDir: string,
-  category: ToolCategory,
-  extras?: Partial<
-    Pick<ToolAdapter, 'additionalScanDirs' | 'recursiveScan' | 'projectRelativeSkillsDir'>
-  >
+  category: ToolCategory
 ): ToolAdapter {
   return {
     key,
     displayName,
     relativeSkillsDir,
     relativeDetectDir,
-    additionalScanDirs: extras?.additionalScanDirs ?? [],
     overrideSkillsDir: null,
-    isCustom: false,
-    recursiveScan: extras?.recursiveScan ?? false,
-    projectRelativeSkillsDir: extras?.projectRelativeSkillsDir ?? null,
     category
   }
 }
@@ -119,12 +83,8 @@ export function getDefaultAdapters(): ToolAdapter[] {
   return [
     makeAdapter('cursor', 'Cursor', '.cursor/skills', '.cursor', 'coding'),
     makeAdapter('claude_code', 'Claude Code', '.claude/skills', '.claude', 'coding'),
-    makeAdapter('codex', 'Codex', '.codex/skills', '.codex', 'coding', {
-      additionalScanDirs: ['.agents/skills']
-    }),
-    makeAdapter('opencode', 'OpenCode', '.config/opencode/skills', '.config/opencode', 'coding', {
-      projectRelativeSkillsDir: '.opencode/skills'
-    }),
+    makeAdapter('codex', 'Codex', '.codex/skills', '.codex', 'coding'),
+    makeAdapter('opencode', 'OpenCode', '.config/opencode/skills', '.config/opencode', 'coding'),
     makeAdapter(
       'antigravity',
       'Antigravity',
@@ -137,9 +97,7 @@ export function getDefaultAdapters(): ToolAdapter[] {
     makeAdapter('roo_code', 'Roo Code', '.roo/skills', '.roo', 'coding'),
     makeAdapter('goose', 'Goose', '.config/goose/skills', '.config/goose', 'coding'),
     makeAdapter('gemini_cli', 'Gemini CLI', '.gemini/skills', '.gemini', 'coding'),
-    makeAdapter('github_copilot', 'GitHub Copilot', '.copilot/skills', '.copilot', 'coding', {
-      additionalScanDirs: ['.agents/skills']
-    }),
+    makeAdapter('github_copilot', 'GitHub Copilot', '.copilot/skills', '.copilot', 'coding'),
     makeAdapter('openclaw', 'OpenClaw', '.openclaw/skills', '.openclaw', 'lobster'),
     makeAdapter('droid', 'Droid', '.factory/skills', '.factory', 'coding'),
     makeAdapter('windsurf', 'Windsurf', '.codeium/windsurf/skills', '.codeium/windsurf', 'coding'),
@@ -173,9 +131,7 @@ export function getDefaultAdapters(): ToolAdapter[] {
     makeAdapter('trae_cn', 'TRAE CN', '.trae-cn/skills', '.trae-cn', 'coding'),
     makeAdapter('zencoder', 'Zencoder', '.zencoder/skills', '.zencoder', 'coding'),
     makeAdapter('adal', 'AdaL', '.adal/skills', '.adal', 'coding'),
-    makeAdapter('hermes', 'Hermes Agent', '.hermes/skills', '.hermes', 'lobster', {
-      recursiveScan: true
-    }),
+    makeAdapter('hermes', 'Hermes Agent', '.hermes/skills', '.hermes', 'lobster'),
     makeAdapter('qclaw', 'QClaw', '.qclaw/skills', '.qclaw', 'lobster'),
     makeAdapter('easyclaw', 'EasyClaw', '.easyclaw/skills', '.easyclaw', 'lobster'),
     makeAdapter(
@@ -195,63 +151,8 @@ export function getDefaultAdapters(): ToolAdapter[] {
   ]
 }
 
-export function getAllAdapters(settings: SkillSettingsAccessor): ToolAdapter[] {
-  const adapters = getDefaultAdapters()
-
-  const customToolsJson = settings.getSetting('custom_tools')
-  if (customToolsJson) {
-    try {
-      const customTools: CustomToolDef[] = JSON.parse(customToolsJson)
-      for (const ct of customTools) {
-        adapters.push({
-          key: ct.key,
-          displayName: ct.displayName,
-          relativeSkillsDir: ct.skillsDir,
-          relativeDetectDir: ct.skillsDir,
-          additionalScanDirs: [],
-          overrideSkillsDir: ct.skillsDir,
-          isCustom: true,
-          recursiveScan: false,
-          projectRelativeSkillsDir: ct.projectRelativeSkillsDir,
-          category: ct.category
-        })
-      }
-    } catch {
-      // invalid JSON, skip custom tools
-    }
-  }
-
-  for (const adapter of adapters) {
-    const overrideKey = `tool_path_override_${adapter.key}`
-    const overridePath = settings.getSetting(overrideKey)
-    if (overridePath) {
-      adapter.overrideSkillsDir = overridePath
-    }
-
-    const projectOverrideKey = `tool_project_path_override_${adapter.key}`
-    const projectOverridePath = settings.getSetting(projectOverrideKey)
-    if (projectOverridePath) {
-      adapter.projectRelativeSkillsDir = projectOverridePath
-    }
-  }
-
-  return adapters
-}
-
-export function findAdapter(key: string): ToolAdapter | undefined {
-  return getDefaultAdapters().find((a) => a.key === key)
-}
-
-export function findAdapterWithSettings(
-  settings: SkillSettingsAccessor,
-  key: string
-): ToolAdapter | undefined {
-  return getAllAdapters(settings).find((a) => a.key === key)
-}
-
 export function getEnabledInstalledAdapters(settings: SkillSettingsAccessor): ToolAdapter[] {
-  const adapters = getAllAdapters(settings)
-  return adapters.filter((adapter) => {
+  return getDefaultAdapters().filter((adapter) => {
     if (!isToolInstalled(adapter)) {
       return false
     }

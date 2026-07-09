@@ -160,11 +160,3 @@ export async function installFromLocal(
 
   return installSkillDirToDestination(source, resolvedName, destination)
 }
-
-export async function installFromGitDir(
-  source: string,
-  name: string | null,
-  centralRepo: string
-): Promise<InstallResult> {
-  return installFromLocal(source, name, centralRepo)
-}

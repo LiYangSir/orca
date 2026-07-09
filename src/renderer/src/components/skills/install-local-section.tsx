@@ -1,4 +1,4 @@
-import { Archive, FolderInput, FolderSearch, Loader2 } from 'lucide-react'
+import { FolderInput, FolderSearch, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -7,7 +7,6 @@ import { translate } from '@/i18n/i18n'
 
 export function LocalSection(): React.JSX.Element {
   const [folderPath, setFolderPath] = useState('')
-  const [archivePath, setArchivePath] = useState('')
   const [batchPath, setBatchPath] = useState('')
   const [scanning, setScanning] = useState(false)
   const [importing, setImporting] = useState(false)
@@ -112,37 +111,6 @@ export function LocalSection(): React.JSX.Element {
               <Loader2 className="size-3.5 animate-spin" />
             ) : (
               <FolderInput className="size-3.5" />
-            )}
-            {translate('auto.components.skills.SkillsInstallTab.cf9d382ca1', 'Import')}
-          </Button>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <p className="flex items-center gap-2 text-sm font-medium">
-          <Archive className="size-3.5" />
-          {translate('auto.components.skills.SkillsInstallTab.86985ad70d', 'Import Archive')}
-        </p>
-        <div className="flex gap-2">
-          <Input
-            placeholder={translate(
-              'auto.components.skills.SkillsInstallTab.c2617825d0',
-              'Path to .zip or .skill file...'
-            )}
-            value={archivePath}
-            onChange={(e) => setArchivePath(e.target.value)}
-            className="h-8 flex-1 bg-background/50 text-xs"
-          />
-          <Button
-            size="sm"
-            className="h-8 shrink-0 gap-1.5 text-xs"
-            disabled={!archivePath.trim() || importing}
-            onClick={() => void handleImport(archivePath)}
-          >
-            {importing ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Archive className="size-3.5" />
             )}
             {translate('auto.components.skills.SkillsInstallTab.cf9d382ca1', 'Import')}
           </Button>

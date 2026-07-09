@@ -1,35 +1,25 @@
 import fs from 'node:fs/promises'
+import type { Dirent } from 'node:fs'
 import path from 'node:path'
-
-export type SkillSyncMode = 'symlink' | 'copy'
 
 export type SyncResult = {
   success: boolean
   targetPath: string
-  mode: SkillSyncMode
   error?: string
 }
 
-export async function syncSkill(
-  source: string,
-  target: string,
-  mode: SkillSyncMode
-): Promise<SyncResult> {
+export async function syncSkill(source: string, target: string): Promise<SyncResult> {
   try {
     await fs.mkdir(path.dirname(target), { recursive: true })
     ensureDstNotInsideSrc(source, target)
     await removeTarget(target)
+    await fs.symlink(source, target, 'dir')
 
-    await (mode === 'symlink'
-      ? fs.symlink(source, target, 'dir')
-      : copyDirRecursive(source, target))
-
-    return { success: true, targetPath: target, mode }
+    return { success: true, targetPath: target }
   } catch (err) {
     return {
       success: false,
       targetPath: target,
-      mode,
       error: err instanceof Error ? err.message : String(err)
     }
   }
@@ -55,34 +45,6 @@ export async function removeTarget(target: string): Promise<void> {
   }
 }
 
-export async function isTargetCurrent(
-  source: string,
-  target: string,
-  mode: SkillSyncMode,
-  lastSyncedHash?: string,
-  currentHash?: string
-): Promise<boolean> {
-  try {
-    const stat = await fs.lstat(target)
-
-    if (mode === 'symlink') {
-      if (!stat.isSymbolicLink()) {
-        return false
-      }
-      const resolved = await fs.realpath(target)
-      const resolvedSource = await fs.realpath(source)
-      return resolved === resolvedSource
-    }
-
-    if (!lastSyncedHash || !currentHash) {
-      return false
-    }
-    return lastSyncedHash === currentHash
-  } catch {
-    return false
-  }
-}
-
 export async function copyDirRecursive(src: string, dst: string): Promise<void> {
   await fs.mkdir(dst, { recursive: true })
   const entries = await fs.readdir(src, { withFileTypes: true })
@@ -103,19 +65,22 @@ export function targetDirName(centralPath: string, skillName: string): string {
   return path.basename(centralPath) || skillName
 }
 
-export async function detectExistingTargets(
+export async function detectExistingTargets<T extends { key: string }>(
   centralRepoPath: string,
-  adapters: { key: string }[],
-  getDir: (adapter: { key: string }) => string
+  adapters: T[],
+  getDir: (adapter: T) => string
 ): Promise<Map<string, { tool: string; status: string }[]>> {
   const resolved = await fs.realpath(centralRepoPath).catch(() => centralRepoPath)
   const result = new Map<string, { tool: string; status: string }[]>()
 
   for (const adapter of adapters) {
     const toolDir = getDir(adapter)
-    let entries: Awaited<ReturnType<typeof fs.readdir>>
+    let entries: Dirent<string>[]
     try {
-      entries = await fs.readdir(toolDir, { withFileTypes: true })
+      entries = (await fs.readdir(toolDir, {
+        withFileTypes: true,
+        encoding: 'utf-8'
+      })) as Dirent<string>[]
     } catch {
       continue
     }

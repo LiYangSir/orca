@@ -73,21 +73,6 @@ export function createLocalRecord(
 }
 
 export function recordToCentral(record: SkillRecord): CentralSkill {
-  return {
-    id: record.id,
-    name: record.name,
-    description: record.description,
-    sourceType: record.sourceType,
-    sourceRef: record.sourceRef,
-    sourceBranch: record.sourceBranch,
-    sourceRevision: record.sourceRevision,
-    centralPath: record.centralPath,
-    contentHash: record.contentHash,
-    enabled: record.enabled,
-    tags: record.tags,
-    updateStatus: record.updateStatus,
-    targets: record.targets,
-    createdAt: record.createdAt,
-    updatedAt: record.updatedAt
-  }
+  const { remoteRevision: _, ...rest } = record
+  return rest
 }

@@ -17,7 +17,7 @@ export async function hashDirectory(dir: string): Promise<string> {
   return hash.digest('hex')
 }
 
-export async function listContentFiles(dir: string): Promise<string[]> {
+async function listContentFiles(dir: string): Promise<string[]> {
   const results: string[] = []
   await walkDir(dir, dir, results)
   results.sort()
@@ -40,9 +40,4 @@ async function walkDir(base: string, current: string, results: string[]): Promis
       results.push(path.relative(base, fullPath))
     }
   }
-}
-
-export async function hashFile(filePath: string): Promise<string> {
-  const contents = await fs.readFile(filePath)
-  return crypto.createHash('sha256').update(contents).digest('hex')
 }

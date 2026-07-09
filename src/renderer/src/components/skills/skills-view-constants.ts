@@ -14,7 +14,7 @@ export const SOURCE_TYPES: readonly {
   { id: 'memory', label: 'Memory', color: '#22c55e' }
 ]
 
-export const UPDATE_STATUSES: readonly {
+const UPDATE_STATUSES: readonly {
   id: SkillUpdateStatus
   label: string
   color: string

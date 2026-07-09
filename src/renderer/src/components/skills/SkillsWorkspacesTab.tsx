@@ -1,17 +1,6 @@
-import {
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  Bot,
-  ChevronDown,
-  ChevronRight,
-  Circle,
-  FolderOpen,
-  Loader2,
-  Unlink
-} from 'lucide-react'
+import { Bot, ChevronDown, ChevronRight, Circle, FolderOpen, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { translate } from '@/i18n/i18n'
 import type { CentralSkill, ToolInfo } from '../../../../shared/skills'
@@ -65,9 +54,6 @@ function AgentToolCard({
                 className="flex items-center justify-between rounded-lg px-3 py-1.5 transition-colors hover:bg-accent/40"
               >
                 <span className="truncate text-xs">{skill.name}</span>
-                <Button variant="ghost" size="icon" className="size-6 shrink-0" title="Unsync">
-                  <Unlink className="size-3" />
-                </Button>
               </div>
             ))}
           </div>
@@ -181,28 +167,6 @@ function ProjectsSection(): React.JSX.Element {
             <p className="truncate text-sm font-medium">{project.name}</p>
             <p className="truncate text-xs text-muted-foreground">{project.mainRepoPath}</p>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7 shrink-0"
-            title={translate(
-              'auto.components.skills.SkillsWorkspacesTab.importFromProject',
-              'Import from project'
-            )}
-          >
-            <ArrowDownToLine className="size-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7 shrink-0"
-            title={translate(
-              'auto.components.skills.SkillsWorkspacesTab.pushToProject',
-              'Push to project'
-            )}
-          >
-            <ArrowUpFromLine className="size-3.5" />
-          </Button>
         </div>
       ))}
     </div>

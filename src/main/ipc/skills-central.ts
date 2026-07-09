@@ -18,13 +18,6 @@ export function registerCentralSkillsHandlers(_store: Store): void {
   })
 
   ipcMain.handle(
-    'skills:get',
-    async (_event, args: { skillId: string }): Promise<CentralSkill | null> => {
-      return repo.getSkill(args.skillId)
-    }
-  )
-
-  ipcMain.handle(
     'skills:getDocument',
     async (_event, args: { skillId: string }): Promise<string | null> => {
       const skill = await repo.getSkill(args.skillId)
@@ -99,17 +92,6 @@ export function registerCentralSkillsHandlers(_store: Store): void {
     await repo.scanCentralRepo()
   })
 
-  ipcMain.handle('skills:getTags', async (): Promise<string[]> => {
-    return repo.getTags()
-  })
-
-  ipcMain.handle(
-    'skills:setTags',
-    async (_event, args: { skillId: string; tags: string[] }): Promise<void> => {
-      await repo.setTags(args.skillId, args.tags)
-    }
-  )
-
   ipcMain.handle(
     'skills:syncToTool',
     async (_event, args: { skillId: string; toolKey: string }): Promise<void> => {
@@ -127,13 +109,6 @@ export function registerCentralSkillsHandlers(_store: Store): void {
   ipcMain.handle('skills:getToolsStatus', async (): Promise<ToolInfo[]> => {
     return repo.getToolsStatus()
   })
-
-  ipcMain.handle(
-    'skills:setToolEnabled',
-    async (_event, args: { toolKey: string; enabled: boolean }): Promise<void> => {
-      await repo.setToolEnabled(args.toolKey, args.enabled)
-    }
-  )
 
   registerSkillsInstallHandlers(repo)
 }

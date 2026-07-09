@@ -261,6 +261,8 @@ function getAutomationSourceProviderLabel(provider: TaskSourceContext['provider'
       return 'Jira'
     case 'aone':
       return 'Aone'
+    case 'local':
+      return 'Local'
   }
 }
 
@@ -313,9 +315,7 @@ function getAutomationSshTargetId(automation: Automation, repo: Repo): string | 
   return repo.connectionId?.trim() || null
 }
 
-function unavailable(
+const unavailable = (
   reason: Exclude<AutomationTargetAvailability['reason'], 'available'>,
   message: string
-): AutomationTargetAvailability {
-  return { canRunNow: false, reason, message }
-}
+): AutomationTargetAvailability => ({ canRunNow: false, reason, message })

@@ -2164,9 +2164,6 @@ const api = {
 
     list: (): Promise<CentralSkill[]> => ipcRenderer.invoke('skills:list'),
 
-    get: (args: { skillId: string }): Promise<CentralSkill | null> =>
-      ipcRenderer.invoke('skills:get', args),
-
     getDocument: (args: { skillId: string }): Promise<string | null> =>
       ipcRenderer.invoke('skills:getDocument', args),
 
@@ -2199,11 +2196,6 @@ const api = {
     batchImportFolder: (args: { path: string }): Promise<CentralSkill[]> =>
       ipcRenderer.invoke('skills:batchImportFolder', args),
 
-    getTags: (): Promise<string[]> => ipcRenderer.invoke('skills:getTags'),
-
-    setTags: (args: { skillId: string; tags: string[] }): Promise<void> =>
-      ipcRenderer.invoke('skills:setTags', args),
-
     syncToTool: (args: { skillId: string; toolKey: string }): Promise<void> =>
       ipcRenderer.invoke('skills:syncToTool', args),
 
@@ -2211,9 +2203,6 @@ const api = {
       ipcRenderer.invoke('skills:unsyncFromTool', args),
 
     getToolsStatus: (): Promise<ToolInfo[]> => ipcRenderer.invoke('skills:getToolsStatus'),
-
-    setToolEnabled: (args: { toolKey: string; enabled: boolean }): Promise<void> =>
-      ipcRenderer.invoke('skills:setToolEnabled', args),
 
     marketplaceFetchLeaderboard: (args: {
       sort: 'hot' | 'trending' | 'all_time'

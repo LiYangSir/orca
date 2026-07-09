@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises'
+import type { Dirent } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import type { CentralSkill, ToolInfo } from '../../shared/skills'
@@ -130,7 +131,7 @@ export class SkillsRepository {
       const toolDir = getSkillsDir(adapter)
       const dirName = targetDirName(skill.centralPath, skill.name)
       const targetPath = path.join(toolDir, dirName)
-      const result = await syncSkill(skill.centralPath, targetPath, 'symlink')
+      const result = await syncSkill(skill.centralPath, targetPath)
       targets.push({
         tool: adapter.key,
         status: result.success ? 'synced' : 'error'
@@ -156,7 +157,7 @@ export class SkillsRepository {
     const toolDir = getSkillsDir(adapter)
     const dirName = targetDirName(skill.centralPath, skill.name)
     const targetPath = path.join(toolDir, dirName)
-    const result = await syncSkill(skill.centralPath, targetPath, 'symlink')
+    const result = await syncSkill(skill.centralPath, targetPath)
 
     const existing = skill.targets.findIndex((t) => t.tool === toolKey)
     const entry = { tool: toolKey, status: result.success ? 'synced' : 'error' }
@@ -207,39 +208,6 @@ export class SkillsRepository {
       })
   }
 
-  async setToolEnabled(toolKey: string, enabled: boolean): Promise<void> {
-    const store = await this.load()
-    const key = `tool_disabled_${toolKey}`
-    if (enabled) {
-      delete store.settings[key]
-    } else {
-      store.settings[key] = 'true'
-    }
-    await this.save()
-  }
-
-  async getTags(): Promise<string[]> {
-    const store = await this.load()
-    const tagSet = new Set<string>()
-    for (const skill of store.skills) {
-      if (skill.tags) {
-        skill.tags.forEach((t) => tagSet.add(t))
-      }
-    }
-    return Array.from(tagSet).sort()
-  }
-
-  async setTags(skillId: string, tags: string[]): Promise<void> {
-    const store = await this.load()
-    const skill = store.skills.find((s) => s.id === skillId)
-    if (!skill) {
-      return
-    }
-    skill.tags = tags.length > 0 ? tags : null
-    skill.updatedAt = Date.now()
-    await this.save()
-  }
-
   async updateSkillStatus(
     skillId: string,
     updates: Partial<Pick<SkillRecord, 'updateStatus' | 'remoteRevision' | 'contentHash'>>
@@ -257,9 +225,12 @@ export class SkillsRepository {
     const centralRepo = await this.ensureCentralRepo()
     const store = await this.load()
 
-    let entries: Awaited<ReturnType<typeof fs.readdir>>
+    let entries: Dirent<string>[]
     try {
-      entries = await fs.readdir(centralRepo, { withFileTypes: true })
+      entries = (await fs.readdir(centralRepo, {
+        withFileTypes: true,
+        encoding: 'utf-8'
+      })) as Dirent<string>[]
     } catch {
       return
     }

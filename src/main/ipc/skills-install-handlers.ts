@@ -1,7 +1,7 @@
 import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { ipcMain } from 'electron'
-import { installFromLocal, installFromGitDir } from '../skills/installer'
+import { installFromLocal } from '../skills/installer'
 import {
   parseGitSource,
   previewGitInstall as gitPreview,
@@ -54,7 +54,7 @@ export function registerSkillsInstallHandlers(repo: SkillsRepository): void {
       try {
         const skillDir = resolveSkillDir(tempDir.tempDir, source)
         const revision = await getHeadRevision(tempDir.tempDir)
-        const result = await installFromGitDir(skillDir, null, centralRepo)
+        const result = await installFromLocal(skillDir, null, centralRepo)
         const now = Date.now()
         const record: SkillRecord = {
           id: `git-${result.name}-${now}`,
@@ -93,7 +93,7 @@ export function registerSkillsInstallHandlers(repo: SkillsRepository): void {
       try {
         const skillDir = resolveSkillDir(preview.tempDir, source)
         const revision = await getHeadRevision(preview.tempDir)
-        const result = await installFromGitDir(skillDir, args.name, centralRepo)
+        const result = await installFromLocal(skillDir, args.name, centralRepo)
         const now = Date.now()
         const record: SkillRecord = {
           id: `skillssh-${result.name}-${now}`,
@@ -140,7 +140,7 @@ export function registerSkillsInstallHandlers(repo: SkillsRepository): void {
 
       for (const selection of args.selections) {
         const skillDir = join(args.tempDir, selection.relativePath)
-        const result = await installFromGitDir(skillDir, selection.name, centralRepo)
+        const result = await installFromLocal(skillDir, selection.name, centralRepo)
         const now = Date.now()
         const record: SkillRecord = {
           id: `git-${result.name}-${now}`,

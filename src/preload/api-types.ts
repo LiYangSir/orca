@@ -2149,7 +2149,6 @@ export type PreloadApi = {
     removePreset: (args: { presetId: string }) => Promise<void>
 
     list: () => Promise<CentralSkill[]>
-    get: (args: { skillId: string }) => Promise<CentralSkill | null>
     getDocument: (args: { skillId: string }) => Promise<string | null>
     delete: (args: { skillId: string }) => Promise<void>
     installLocal: (args: { path: string; name?: string }) => Promise<CentralSkill>
@@ -2164,15 +2163,10 @@ export type PreloadApi = {
     checkAllUpdates: () => Promise<void>
     scanInstalledSkills: () => Promise<void>
     batchImportFolder: (args: { path: string }) => Promise<CentralSkill[]>
-    getTags: () => Promise<string[]>
-    setTags: (args: { skillId: string; tags: string[] }) => Promise<void>
-
     syncToTool: (args: { skillId: string; toolKey: string }) => Promise<void>
     unsyncFromTool: (args: { skillId: string; toolKey: string }) => Promise<void>
 
     getToolsStatus: () => Promise<ToolInfo[]>
-    setToolEnabled: (args: { toolKey: string; enabled: boolean }) => Promise<void>
-
     marketplaceFetchLeaderboard: (args: {
       sort: 'hot' | 'trending' | 'all_time'
     }) => Promise<SkillsShSkill[]>
