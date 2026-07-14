@@ -9,11 +9,15 @@ export type UsageProviderSettings = Pick<
   | 'geminiCliOAuthEnabled'
   | 'idealabUsageEnabled'
 > & {
-  // Why: the MiniMax cookie lives in the file system, not GlobalSettings, so
-  // we can't derive durability from settings alone. The renderer threads the
-  // flag from RateLimitState (pushed by the main process) so the bar stays
-  // visible across reloads and between snapshot refreshes.
+  // Why: Antigravity has no separate persisted usage credential in Orca. The
+  // checked status-bar item is the durable user signal; StatusBar only sets
+  // this after PATH detection says the agent is available. Durability further
+  // requires geminiCliOAuthEnabled — the snapshot mirrors the Gemini fetch,
+  // which never yields data while that opt-in is off.
+  antigravityUsageConfigured: boolean
+  // Why: MiniMax/Grok sign-in live on disk, not in settings; main sets these each poll.
   minimaxCookieConfigured: boolean
+  grokAuthConfigured: boolean
 }
 
 type UsageProviderSnapshots = {
@@ -24,7 +28,9 @@ type UsageProviderSnapshots = {
   kimi: ProviderRateLimits | null
   zai: ProviderRateLimits | null
   idealab: ProviderRateLimits | null
+  antigravity: ProviderRateLimits | null
   minimax: ProviderRateLimits | null
+  grok: ProviderRateLimits | null
 }
 
 type UsageProviderId = ProviderRateLimits['provider']
@@ -70,7 +76,10 @@ export function hasUsageProviderSettings(
     settings?.geminiCliOAuthEnabled === true ||
     Boolean(settings?.opencodeSessionCookie?.trim()) ||
     settings?.idealabUsageEnabled === true ||
-    settings?.minimaxCookieConfigured === true
+    // Antigravity's durable signal requires geminiCliOAuthEnabled, so it is
+    // already covered by the gemini term above.
+    settings?.minimaxCookieConfigured === true ||
+    settings?.grokAuthConfigured === true
   )
 }
 
@@ -96,8 +105,17 @@ export function hasUsageProviderSettingsForProvider(
   if (providerId === 'idealab') {
     return settings.idealabUsageEnabled === true
   }
+  if (providerId === 'antigravity') {
+    // Why: the Antigravity snapshot mirrors the Gemini fetch, which stays
+    // 'unavailable' until the user opts into Gemini CLI OAuth. Without that
+    // gate the default-on checked item would pin a permanently dead bar.
+    return settings.antigravityUsageConfigured === true && settings.geminiCliOAuthEnabled === true
+  }
   if (providerId === 'minimax') {
     return settings.minimaxCookieConfigured === true
+  }
+  if (providerId === 'grok') {
+    return settings.grokAuthConfigured === true
   }
   return false
 }
@@ -142,6 +160,9 @@ export function isUsageEmptyState(
   // Why: system-default Claude/Codex accounts have no persisted account row;
   // their first durable signal is the usage snapshot, so wait for snapshots to
   // settle before teaching the user to connect an account.
+  const antigravitySnapshotPending =
+    hasUsageProviderSettingsForProvider('antigravity', settings) &&
+    isProviderSnapshotPending(providers.antigravity)
   if (
     isProviderSnapshotPending(providers.claude) ||
     isProviderSnapshotPending(providers.codex) ||
@@ -150,7 +171,9 @@ export function isUsageEmptyState(
     isProviderSnapshotPending(providers.kimi) ||
     isProviderSnapshotPending(providers.zai) ||
     isProviderSnapshotPending(providers.idealab) ||
-    isProviderSnapshotPending(providers.minimax)
+    antigravitySnapshotPending ||
+    isProviderSnapshotPending(providers.minimax) ||
+    isProviderSnapshotPending(providers.grok)
   ) {
     return false
   }
@@ -163,6 +186,8 @@ export function isUsageEmptyState(
     !isProviderConfigured(providers.kimi) &&
     !isProviderConfigured(providers.zai) &&
     !isProviderConfigured(providers.idealab) &&
-    !isProviderConfigured(providers.minimax)
+    !isProviderConfigured(providers.antigravity) &&
+    !isProviderConfigured(providers.minimax) &&
+    !isProviderConfigured(providers.grok)
   )
 }

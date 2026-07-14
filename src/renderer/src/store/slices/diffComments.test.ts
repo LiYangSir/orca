@@ -128,6 +128,7 @@ import { createOpenCodeUsageSlice } from './opencode-usage'
 import { createBrowserSlice } from './browser'
 import { createRateLimitSlice } from './rate-limits'
 import { createSshSlice } from './ssh'
+import { createRuntimeEnvironmentSshSlice } from './runtime-environment-ssh'
 import { createAgentStatusSlice } from './agent-status'
 import { createPaneForegroundAgentSlice } from './pane-foreground-agent'
 import { createDiffCommentsSlice } from './diffComments'
@@ -140,6 +141,8 @@ import { createPullRequestGenerationSlice } from './pull-request-generation'
 import { createCommitMessageGenerationSlice } from './commit-message-generation'
 import { createPinnedTabCloseConfirmSlice } from './pinned-tab-close-confirm'
 import { createSkillsViewSlice } from './skills-view'
+import { createOrcaProfilesSlice } from './orca-profiles'
+import { createNewIssueDraftSlice } from './new-issue-draft'
 
 function createTestStore() {
   return create<AppState>()((...a) => ({
@@ -166,6 +169,7 @@ function createTestStore() {
     ...createBrowserSlice(...a),
     ...createRateLimitSlice(...a),
     ...createSshSlice(...a),
+    ...createRuntimeEnvironmentSshSlice(...a),
     ...createAgentStatusSlice(...a),
     ...createPaneForegroundAgentSlice(...a),
     ...createDiffCommentsSlice(...a),
@@ -177,7 +181,9 @@ function createTestStore() {
     ...createPullRequestGenerationSlice(...a),
     ...createCommitMessageGenerationSlice(...a),
     ...createPinnedTabCloseConfirmSlice(...a),
-    ...createSkillsViewSlice(...a)
+    ...createSkillsViewSlice(...a),
+    ...createOrcaProfilesSlice(...a),
+    ...createNewIssueDraftSlice(...a)
   }))
 }
 

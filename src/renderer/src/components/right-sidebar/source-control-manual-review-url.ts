@@ -28,6 +28,7 @@ export type SourceControlManualReviewContext = ManualReviewUrlInput & {
   linkedBitbucketPR?: number | null
   linkedAzureDevOpsPR?: number | null
   linkedGiteaPR?: number | null
+  linkedCodeMR?: number | null
 }
 
 export function resolveSourceControlManualReviewProvider(input: {
@@ -39,6 +40,7 @@ export function resolveSourceControlManualReviewProvider(input: {
   linkedBitbucketPR?: number | null
   linkedAzureDevOpsPR?: number | null
   linkedGiteaPR?: number | null
+  linkedCodeMR?: number | null
 }): HostedReviewProvider | null {
   return (
     input.hostedReviewProvider ??
@@ -51,9 +53,11 @@ export function resolveSourceControlManualReviewProvider(input: {
           ? 'azure-devops'
           : input.linkedGiteaPR != null
             ? 'gitea'
-            : input.linkedGitHubPR != null || input.fallbackGitHubPRNumber != null
-              ? 'github'
-              : null)
+            : input.linkedCodeMR != null
+              ? 'code'
+              : input.linkedGitHubPR != null || input.fallbackGitHubPRNumber != null
+                ? 'github'
+                : null)
   )
 }
 
@@ -69,6 +73,7 @@ export function buildSourceControlManualReviewUrlFromContext(
     linkedBitbucketPR,
     linkedAzureDevOpsPR,
     linkedGiteaPR,
+    linkedCodeMR,
     ...urlInput
   } = input
   return buildSourceControlManualReviewUrl({
@@ -81,7 +86,8 @@ export function buildSourceControlManualReviewUrlFromContext(
       linkedGitLabMR,
       linkedBitbucketPR,
       linkedAzureDevOpsPR,
-      linkedGiteaPR
+      linkedGiteaPR,
+      linkedCodeMR
     })
   })
 }
@@ -162,6 +168,8 @@ export function buildSourceControlManualReviewUrl(input: ManualReviewUrlInput): 
       : localBranch)
 
   switch (provider) {
+    case null:
+      return null
     case 'github':
       return `${baseRepo.webBaseUrl}/compare/${encodeCompareRef(baseBranch)}...${encodeCompareRef(
         githubHeadRef(baseRepo, headRepo, headBranch)
@@ -183,7 +191,9 @@ export function buildSourceControlManualReviewUrl(input: ManualReviewUrlInput): 
       })
     case 'gitea':
       return `${baseRepo.webBaseUrl}/compare/${encodeCompareRef(baseBranch)}...${encodeCompareRef(headBranch)}`
-    default:
+    case 'code':
+      // Why: Aone review creation is CLI-backed; it has no portable browser
+      // compare URL that can be derived from a generic git remote.
       return null
   }
 }

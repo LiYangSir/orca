@@ -4,10 +4,12 @@ export const DEFAULT_STATUS_BAR_ITEMS: StatusBarItem[] = [
   'claude',
   'codex',
   'gemini',
+  'antigravity',
   'opencode-go',
   'kimi',
   'zai',
   'minimax',
+  'grok',
   'ssh',
   'resource-usage',
   'ports'

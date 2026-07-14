@@ -6,15 +6,18 @@ import Placeholder from '@tiptap/extension-placeholder'
 
 import { createRichMarkdownExtensions } from '@/components/editor/rich-markdown-extensions'
 import { encodeRawMarkdownHtmlForRichEditor } from '@/components/editor/raw-markdown-html'
+import { createRichMarkdownEditorCodec } from '@/components/editor/rich-markdown-source-transport'
 import { LinearIssueMarkdownToolbar } from '@/components/LinearIssueMarkdownToolbar'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 
 const isMac = typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac')
 
-function createLocalTaskMarkdownExtensions() {
+function createLocalTaskMarkdownExtensions(
+  codec: ReturnType<typeof createRichMarkdownEditorCodec>
+) {
   return [
-    ...createRichMarkdownExtensions(),
+    ...createRichMarkdownExtensions({ codec }),
     Placeholder.configure({
       placeholder: translate(
         'auto.components.LocalTaskMarkdownEditor.placeholder',
@@ -37,17 +40,23 @@ export function LocalTaskMarkdownEditor({
   const language = i18n.resolvedLanguage ?? i18n.language
   const lastEditorMarkdownRef = useRef(value)
   const editorRef = useRef<Editor | null>(null)
+  // Why: each editor instance needs its own Marked registry so translated
+  // extension recreation cannot accumulate parser hooks across languages.
+  const codec = useMemo(() => {
+    void language
+    return createRichMarkdownEditorCodec()
+  }, [language])
 
   const extensions = useMemo(() => {
     void language
-    return createLocalTaskMarkdownExtensions()
-  }, [language])
+    return createLocalTaskMarkdownExtensions(codec)
+  }, [codec, language])
 
   const editor = useEditor(
     {
       immediatelyRender: false,
       extensions,
-      content: encodeRawMarkdownHtmlForRichEditor(value),
+      content: encodeRawMarkdownHtmlForRichEditor(value, codec),
       contentType: 'markdown',
       editorProps: {
         attributes: {
@@ -75,7 +84,7 @@ export function LocalTaskMarkdownEditor({
         lastEditorMarkdownRef.current = nextEditor.getMarkdown()
       }
     },
-    [language]
+    [codec, language]
   )
 
   useEffect(() => {
@@ -91,12 +100,12 @@ export function LocalTaskMarkdownEditor({
       lastEditorMarkdownRef.current = value
       return
     }
-    editor.commands.setContent(encodeRawMarkdownHtmlForRichEditor(value), {
+    editor.commands.setContent(encodeRawMarkdownHtmlForRichEditor(value, codec), {
       contentType: 'markdown',
       emitUpdate: false
     })
     lastEditorMarkdownRef.current = value
-  }, [editor, value])
+  }, [codec, editor, value])
 
   const submitLabel = isMac ? '⌘ Enter' : 'Ctrl+Enter'
 

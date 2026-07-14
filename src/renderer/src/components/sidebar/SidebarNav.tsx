@@ -1,5 +1,6 @@
 import React from 'react'
 import { Bell, BookOpen, CalendarClock, Search, Smartphone } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '@/store'
 import { cn } from '@/lib/utils'
 import type { GlobalSettings } from '../../../../shared/types'
@@ -40,6 +41,9 @@ export function shouldShowSkillsButton(
 }
 
 const SidebarNav = React.memo(function SidebarNav() {
+  // Why: this memo boundary needs its own language subscription, while
+  // translate() preserves Orca's pseudo-localization behavior.
+  useTranslation()
   const worktreePaletteShortcutCombos = useShortcutKeyComboDetails('worktree.palette')
   const openAutomationsPage = useAppStore((s) => s.openAutomationsPage)
   const openSkillsPage = useAppStore((s) => s.openSkillsPage)
