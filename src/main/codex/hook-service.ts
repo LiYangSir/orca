@@ -78,6 +78,10 @@ const CODEX_EVENTS = [
   'PreToolUse',
   'PermissionRequest',
   'PostToolUse',
+  // Why: Codex reports in-process workers only through these lifecycle hooks;
+  // without them Orca cannot populate the existing subagent child rows.
+  'SubagentStart',
+  'SubagentStop',
   'Stop'
 ] as const
 
@@ -103,6 +107,8 @@ const CODEX_EVENT_LABEL: Record<(typeof CODEX_EVENTS)[number], CodexEventLabel> 
   PreToolUse: CODEX_HOOK_EVENT_LABEL.PreToolUse!,
   PermissionRequest: CODEX_HOOK_EVENT_LABEL.PermissionRequest!,
   PostToolUse: CODEX_HOOK_EVENT_LABEL.PostToolUse!,
+  SubagentStart: CODEX_HOOK_EVENT_LABEL.SubagentStart!,
+  SubagentStop: CODEX_HOOK_EVENT_LABEL.SubagentStop!,
   Stop: CODEX_HOOK_EVENT_LABEL.Stop!
 }
 
@@ -535,7 +541,15 @@ function dedupeHookDefinitions(definitions: readonly HookDefinition[]): HookDefi
 function cleanupLegacySystemManagedHooks(): void {
   const legacyConfigPath = getSystemConfigPath()
   const runtimeConfigPath = getConfigPath()
-  if (legacyConfigPath === runtimeConfigPath) {
+  const systemHomePath = normalizeCodexProjectPathForLookup(
+    getCodexCanonicalTrustPath(getSystemCodexHomePath())
+  )
+  const runtimeHomePath = normalizeCodexProjectPathForLookup(
+    getCodexCanonicalTrustPath(getOrcaManagedCodexHomePath())
+  )
+  // Why: older production profiles can keep `home` as a symlink to ~/.codex;
+  // cleaning that alias would delete the managed hooks we just installed.
+  if (legacyConfigPath === runtimeConfigPath || systemHomePath === runtimeHomePath) {
     return
   }
 

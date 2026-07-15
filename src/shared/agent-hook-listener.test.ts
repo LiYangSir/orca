@@ -304,6 +304,72 @@ describe('shared agent-hook-listener', () => {
     )
   })
 
+  it('tracks Codex subagents as child rows until their lifecycle stops', () => {
+    normalizeHookPayload(
+      state,
+      'codex',
+      {
+        paneKey: PANE_KEY,
+        payload: { hook_event_name: 'UserPromptSubmit', prompt: 'review in parallel' }
+      },
+      'production'
+    )
+
+    const started = normalizeHookPayload(
+      state,
+      'codex',
+      {
+        paneKey: PANE_KEY,
+        payload: {
+          hook_event_name: 'SubagentStart',
+          agent_id: 'agent-reviewer-1',
+          agent_type: 'reviewer'
+        }
+      },
+      'production'
+    )
+    expect(started?.payload).toMatchObject({
+      state: 'working',
+      prompt: 'review in parallel',
+      agentType: 'codex',
+      subagents: [
+        expect.objectContaining({
+          id: 'agent-reviewer-1',
+          agentType: 'reviewer',
+          state: 'working'
+        })
+      ]
+    })
+
+    const childStopped = normalizeHookPayload(
+      state,
+      'codex',
+      {
+        paneKey: PANE_KEY,
+        payload: {
+          hook_event_name: 'SubagentStop',
+          agent_id: 'agent-reviewer-1',
+          agent_type: 'reviewer'
+        }
+      },
+      'production'
+    )
+    expect(childStopped?.payload).toMatchObject({
+      state: 'working',
+      prompt: 'review in parallel',
+      agentType: 'codex'
+    })
+    expect(childStopped?.payload.subagents).toBeUndefined()
+
+    const parentStopped = normalizeHookPayload(
+      state,
+      'codex',
+      { paneKey: PANE_KEY, payload: { hook_event_name: 'Stop' } },
+      'production'
+    )
+    expect(parentStopped?.payload.state).toBe('done')
+  })
+
   it('clears interactivePrompt on the next tool event after AskUserQuestion', () => {
     normalizeHookPayload(
       state,

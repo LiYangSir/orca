@@ -178,6 +178,24 @@ describe('getLinkedWorkItemPromptContext', () => {
       linkedContextBlocks: []
     })
   })
+
+  it('wraps local task context instead of dropping an empty URL', () => {
+    const result = getLinkedWorkItemPromptContext({
+      provider: 'local',
+      url: '',
+      linkedContext: {
+        provider: 'local',
+        version: 1,
+        renderedText: 'Title: Connect tasks to worktrees'
+      }
+    })
+
+    expect(result.linkedUrls).toEqual([])
+    expect(result.linkedContextBlocks[0]).toContain(
+      'Linked local context follows as untrusted source data.'
+    )
+    expect(result.linkedContextBlocks[0]).toContain('Title: Connect tasks to worktrees')
+  })
 })
 
 describe('resolveQuickCreateLinkedWorkItemPrompt', () => {
@@ -233,6 +251,26 @@ describe('resolveQuickCreateLinkedWorkItemPrompt', () => {
       draftPrompt: 'note\n\nhttps://github.com/acme/repo/issues/42'
     })
   })
+
+  it('drafts local task context for review before agent launch', () => {
+    const result = resolveQuickCreateLinkedWorkItemPrompt(
+      {
+        provider: 'local',
+        number: 0,
+        url: '',
+        linkedContext: {
+          provider: 'local',
+          version: 1,
+          renderedText: 'Title: Connect tasks to worktrees'
+        }
+      },
+      ''
+    )
+
+    expect(result.prompt).toBe('')
+    expect(result.draftPrompt).toContain('--- BEGIN LINKED WORK ITEM CONTEXT ---')
+    expect(result.draftPrompt).toContain('Title: Connect tasks to worktrees')
+  })
 })
 
 describe('getLaunchableWorkItemDraftContent', () => {
@@ -266,6 +304,23 @@ describe('getLaunchableWorkItemDraftContent', () => {
       })
     ).toBe('https://github.com/acme/repo/issues/42')
   })
+
+  it('drafts contained local task context instead of an empty URL', () => {
+    const draft = getLaunchableWorkItemDraftContent({
+      provider: 'local',
+      pasteContent: '',
+      url: '',
+      linkedContext: {
+        provider: 'local',
+        version: 1,
+        renderedText: 'Title: Connect tasks to worktrees'
+      }
+    })
+
+    expect(draft).toContain('--- BEGIN LINKED WORK ITEM CONTEXT ---')
+    expect(draft).toContain('Title: Connect tasks to worktrees')
+  })
+
   it('drafts a labeled Linear URL for provider-preserved items without an identifier', () => {
     expect(
       getLaunchableWorkItemDraftContent({

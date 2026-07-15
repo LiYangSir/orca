@@ -3133,7 +3133,32 @@ function normalizeCodexEvent(
   paneKey: string,
   hookPayload: Record<string, unknown>
 ): ParsedAgentStatusPayload | null {
+  const isSubagentLifecycle = eventName === 'SubagentStart' || eventName === 'SubagentStop'
+  if (isSubagentLifecycle) {
+    const agentId = readString(hookPayload, 'agent_id')
+    if (!agentId) {
+      return null
+    }
+    // Why: Codex workers are one-shot subagents, which use the simple subset
+    // of the existing roster lifecycle; no separate Codex state machine is needed.
+    const roster = getOrCreateClaudeSubagentRoster(state, paneKey)
+    if (eventName === 'SubagentStart') {
+      upsertWorkingClaudeSubagent(
+        roster,
+        agentId,
+        { agentType: readString(hookPayload, 'agent_type') },
+        Date.now()
+      )
+    } else {
+      if (!roster.has(agentId)) {
+        return null
+      }
+      finishClaudeSubagent(roster, agentId, { listedAsSubagentTask: true })
+    }
+  }
+
   const stateName =
+    isSubagentLifecycle ||
     eventName === 'SessionStart' ||
     eventName === 'UserPromptSubmit' ||
     eventName === 'PreToolUse' ||
@@ -3149,26 +3174,31 @@ function normalizeCodexEvent(
     return null
   }
 
-  const snapshot = resolveToolState(
-    state,
-    paneKey,
-    extractToolFields('codex', eventName, hookPayload),
-    { resetOnNewTurn: isNewTurnEvent('codex', eventName) }
-  )
+  if (!isSubagentLifecycle && (eventName === 'SessionStart' || eventName === 'Stop')) {
+    // Why: process/turn completion cannot retain Codex's one-shot workers;
+    // clear missed-stop rows before reporting the boundary event.
+    state.claudeSubagentRosterByPaneKey.delete(paneKey)
+  }
 
-  return parseAgentStatusPayload(
-    JSON.stringify({
-      state: stateName,
-      prompt: resolvePrompt(state, paneKey, promptText, {
+  const snapshot = !isSubagentLifecycle
+    ? resolveToolState(state, paneKey, extractToolFields('codex', eventName, hookPayload), {
         resetOnNewTurn: isNewTurnEvent('codex', eventName)
-      }),
-      agentType: 'codex',
-      toolName: snapshot.toolName,
-      toolInput: snapshot.toolInput,
-      interactivePrompt: snapshot.interactivePrompt,
-      lastAssistantMessage: snapshot.lastAssistantMessage
-    })
-  )
+      })
+    : (state.lastToolByPaneKey.get(paneKey) ?? {})
+
+  return normalizeAgentStatusPayload({
+    state: stateName,
+    prompt: resolvePrompt(state, paneKey, isSubagentLifecycle ? '' : promptText, {
+      // Why: child lifecycle refreshes must preserve the parent turn label.
+      resetOnNewTurn: !isSubagentLifecycle && isNewTurnEvent('codex', eventName)
+    }),
+    agentType: 'codex',
+    toolName: snapshot.toolName,
+    toolInput: snapshot.toolInput,
+    interactivePrompt: snapshot.interactivePrompt,
+    lastAssistantMessage: snapshot.lastAssistantMessage,
+    subagents: claudeRosterToSnapshots(state.claudeSubagentRosterByPaneKey.get(paneKey))
+  })
 }
 
 function normalizeOpenCodeFamilyEvent(

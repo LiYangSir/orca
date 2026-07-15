@@ -12,6 +12,7 @@ import {
 } from './tab-agent'
 import { resolveExplicitTerminalTitleAgentType } from '../../../shared/terminal-title-agent-type'
 import { resolveCompatibleAgentTypeForOwner } from '../../../shared/agent-title-owner'
+import { resolveForegroundAgentForLaunch } from '../../../shared/agent-title-overrides'
 import { resolvePaneAgentOwner } from '../../../shared/pane-agent-owner'
 import type { TerminalTab, TuiAgent } from '../../../shared/types'
 
@@ -168,7 +169,12 @@ export function resolveTabAgentFromSignals(args: {
     processShellForeground: args.processShellForeground
   })
   const activeLaunchAgent = launchedAgentExited ? null : launchAgent
-  const processAgent = args.processAgent ?? null
+  // Why: Qoder is Gemini-derived; qodercli spawns a gemini-cli node child, so
+  // foreground detection reports `gemini`. Re-own it through the launch agent
+  // so a Qoder launch keeps its icon instead of showing Gemini CLI.
+  const processAgent = args.processAgent
+    ? resolveForegroundAgentForLaunch(launchAgent, args.processAgent)
+    : null
   const sleepingSessionAgent = args.sleepingSessionAgent ?? null
   // Identity-first precedence. The live focused hook is ground truth while the
   // agent works; process identity covers agents with neither hook nor title; the

@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { ProjectGroup, Repo } from '../../../../shared/types'
 import {
   getFolderSourceRepos,
-  getFolderWorkspacePrimaryActionLabel
+  getFolderWorkspacePrimaryActionLabel,
+  toFolderWorkspaceLinkedTask
 } from './folder-workspace-composer-helpers'
 
 function repo(id: string, overrides: Partial<Repo> = {}): Repo {
@@ -87,5 +88,23 @@ describe('getFolderWorkspacePrimaryActionLabel', () => {
 
     expect(label).toBe('Create workspace')
     expect(label).not.toContain('Agent')
+  })
+})
+
+describe('toFolderWorkspaceLinkedTask', () => {
+  it('preserves the durable local task identifier', () => {
+    expect(
+      toFolderWorkspaceLinkedTask({
+        provider: 'local',
+        type: 'issue',
+        number: 0,
+        title: 'Connect tasks to workspaces',
+        url: '',
+        localIdentifier: 'task-1'
+      })
+    ).toMatchObject({
+      provider: 'local',
+      localIdentifier: 'task-1'
+    })
   })
 })

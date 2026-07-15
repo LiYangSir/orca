@@ -10532,6 +10532,14 @@
           "ProjectCombobox": {
             "search": "Search projects...",
             "empty": "No projects match your search."
+          },
+          "LocalTaskLinkPicker": {
+            "unavailable": "Local tasks are not available in this session.",
+            "linkLocalTask": "Link local task",
+            "searchPlaceholder": "Search local tasks...",
+            "loading": "Loading tasks...",
+            "empty": "No matching local tasks.",
+            "noProject": "No project"
           }
         }
       },
@@ -13022,6 +13030,17 @@
         "searchLabels": "Filter labels…",
         "searchAssignee": "Filter assignee…",
         "back": "Back"
+      },
+      "LocalTaskWorkspaces": {
+        "title": "Workspaces",
+        "empty": "Link a workspace to see its agent activity here.",
+        "unlink": "Unlink workspace",
+        "agentActivity": "Agent activity",
+        "noAgentActivity": "No agent activity yet.",
+        "unlinkFailed": "Failed to unlink workspace.",
+        "link": "Link existing",
+        "search": "Search workspaces...",
+        "noCandidates": "No available workspaces for this project."
       }
     },
     "i18n": {

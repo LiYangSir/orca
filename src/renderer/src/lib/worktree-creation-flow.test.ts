@@ -422,7 +422,7 @@ describe('staged background worktree creation', () => {
     store.setActiveView.mockClear()
     store.setSidebarOpen.mockClear()
 
-    const request = makeRequest({ setupDecision: 'run' })
+    const request = makeRequest({ setupDecision: 'run', linkedLocalTask: 'task-1' })
     const started = continueBackgroundWorktreeCreation('creation-1', request)
 
     expect(started).toBe(true)
@@ -441,6 +441,7 @@ describe('staged background worktree creation', () => {
     expect(createCall?.[1]).toBe('feature')
     expect(createCall?.[3]).toBe('run')
     expect(createCall?.[18]).toBe('creation-1')
+    expect(createCall?.[25]).toEqual({ linkedLocalTask: 'task-1' })
     expect(store.setActivePendingWorktreeCreation).toHaveBeenCalledWith('creation-1')
     expect(store.setActiveView).toHaveBeenCalledWith('terminal')
     expect(store.setSidebarOpen).toHaveBeenCalledWith(true)

@@ -51,6 +51,7 @@ import SparseCheckoutPresetSelect from '@/components/sparse/SparseCheckoutPreset
 import SmartWorkspaceNameField, {
   type SmartWorkspaceNameSelection
 } from '@/components/new-workspace/SmartWorkspaceNameField'
+import { LocalTaskLinkPicker } from '@/components/new-workspace/LocalTaskLinkPicker'
 import type { SmartNameMode } from '@/components/new-workspace/smart-workspace-source-results'
 import ProjectCombobox from '@/components/new-workspace/ProjectCombobox'
 import type { SetupConfig } from '@/lib/new-workspace'
@@ -62,6 +63,7 @@ import type {
 import type { WorkspaceCreateErrorDisplay } from '@/lib/workspace-create-error-format'
 import type { SshConnectionStatus } from '../../../shared/ssh-types'
 import type { TaskSourceContext } from '../../../shared/task-source-context'
+import type { LocalTask } from '../../../shared/local-task-types'
 import { translate } from '@/i18n/i18n'
 
 type RepoOption = React.ComponentProps<typeof RepoCombobox>['repos'][number]
@@ -110,6 +112,7 @@ type NewWorkspaceComposerCardProps = {
   onSmartBranchSelect: (refName: string, localBranchName: string) => void
   onSmartNameModeChange?: (mode: SmartNameMode) => void
   onSmartLinearIssueSelect: (issue: LinearIssue) => void
+  onSmartLocalTaskSelect?: (task: LocalTask) => void
   smartNameSelection: SmartWorkspaceNameSelection | null
   onClearSmartNameSelection: () => void
   /** True when an existing local branch is selected and can be reused. */
@@ -143,6 +146,7 @@ type NewWorkspaceComposerCardProps = {
   resolvedSetupDecision: 'run' | 'skip' | null
   createError: WorkspaceCreateErrorDisplay | null
   selectedRepoConnectionId: string | null
+  selectedRepoPath?: string | null
   selectedRepoSshStatus: SshConnectionStatus | null
   selectedRepoRequiresConnection: boolean
   selectedRepoConnectInProgress: boolean
@@ -575,6 +579,7 @@ export default function NewWorkspaceComposerCard({
   onSmartBranchSelect,
   onSmartNameModeChange,
   onSmartLinearIssueSelect,
+  onSmartLocalTaskSelect,
   smartNameSelection,
   onClearSmartNameSelection,
   canReuseSelectedBranch,
@@ -605,6 +610,7 @@ export default function NewWorkspaceComposerCard({
   resolvedSetupDecision,
   createError,
   selectedRepoConnectionId,
+  selectedRepoPath = null,
   selectedRepoSshStatus,
   selectedRepoRequiresConnection,
   selectedRepoConnectInProgress,
@@ -971,6 +977,11 @@ export default function NewWorkspaceComposerCard({
               agentTrigger?.focus()
             }}
           />
+          {onSmartLocalTaskSelect && smartNameSelection?.kind !== 'local' ? (
+            <div className="flex justify-start">
+              <LocalTaskLinkPicker repoPath={selectedRepoPath} onSelect={onSmartLocalTaskSelect} />
+            </div>
+          ) : null}
           {forkPushWarning ? (
             <p className="flex items-start gap-1.5 text-[11px] text-yellow-600 dark:text-yellow-500">
               <AlertTriangle className="mt-0.5 size-3 shrink-0" aria-hidden="true" />

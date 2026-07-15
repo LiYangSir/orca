@@ -1927,6 +1927,7 @@ export async function createRemoteWorktree(
       : {}),
     ...(args.linkedGiteaPR !== undefined ? { linkedGiteaPR: args.linkedGiteaPR } : {}),
     ...(args.linkedCodeMR !== undefined ? { linkedCodeMR: args.linkedCodeMR } : {}),
+    ...(args.linkedLocalTask !== undefined ? { linkedLocalTask: args.linkedLocalTask } : {}),
     ...(args.workspaceStatus !== undefined ? { workspaceStatus: args.workspaceStatus } : {})
   }
   const { worktree } = timing.timeSync('persist_metadata', () => {
@@ -2551,6 +2552,7 @@ export async function createLocalWorktree(
       : {}),
     ...(args.linkedGiteaPR !== undefined ? { linkedGiteaPR: args.linkedGiteaPR } : {}),
     ...(args.linkedCodeMR !== undefined ? { linkedCodeMR: args.linkedCodeMR } : {}),
+    ...(args.linkedLocalTask !== undefined ? { linkedLocalTask: args.linkedLocalTask } : {}),
     ...(args.workspaceStatus !== undefined ? { workspaceStatus: args.workspaceStatus } : {})
   }
   const { worktree } = timing.timeSync('persist_metadata', () => {

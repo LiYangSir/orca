@@ -2,8 +2,10 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import type { LocalTask, LocalTaskLabel } from '../../../../shared/local-task-types'
+import type { Worktree } from '../../../../shared/types'
 import { LocalTaskDetailContent } from './local-task-detail-content'
 import { DetailSidebar } from './local-task-detail-sidebar'
+import { LocalTaskWorkspaces } from './local-task-workspaces'
 
 export function LocalTaskDetailPage({
   task,
@@ -21,7 +23,11 @@ export function LocalTaskDetailPage({
   onCreateLabel,
   onUpdateLabel,
   onDeleteLabel,
-  onStartWorkspace
+  onStartWorkspace,
+  linkedWorktrees,
+  allWorktrees,
+  onLinkWorktree,
+  onUnlinkWorktree
 }: {
   task: LocalTask
   allTasks: LocalTask[]
@@ -39,6 +45,10 @@ export function LocalTaskDetailPage({
   onUpdateLabel: (id: string, name: string, color: string) => void
   onDeleteLabel: (id: string) => void
   onStartWorkspace?: (task: LocalTask) => void
+  linkedWorktrees: Worktree[]
+  allWorktrees: Worktree[]
+  onLinkWorktree: (worktreeId: string) => Promise<void>
+  onUnlinkWorktree: (worktreeId: string) => Promise<void>
 }): React.JSX.Element {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-border/50 bg-background shadow-sm">
@@ -58,6 +68,15 @@ export function LocalTaskDetailPage({
             onCycleSubtaskStatus={onCycleSubtaskStatus}
             onDeleteSubtask={onDeleteSubtask}
             onOpenSubtask={onOpenSubtask}
+            workspaceSection={
+              <LocalTaskWorkspaces
+                task={task}
+                linkedWorktrees={linkedWorktrees}
+                allWorktrees={allWorktrees}
+                onLink={onLinkWorktree}
+                onUnlink={onUnlinkWorktree}
+              />
+            }
           />
           <DetailSidebar
             task={task}

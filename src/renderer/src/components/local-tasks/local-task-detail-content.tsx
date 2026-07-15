@@ -20,7 +20,8 @@ export function LocalTaskDetailContent({
   onCreateSubtask,
   onCycleSubtaskStatus,
   onDeleteSubtask,
-  onOpenSubtask
+  onOpenSubtask,
+  workspaceSection
 }: {
   task: LocalTask
   allTasks: LocalTask[]
@@ -29,6 +30,7 @@ export function LocalTaskDetailContent({
   onCycleSubtaskStatus: (subtask: LocalTask) => void
   onDeleteSubtask: (id: string) => void
   onOpenSubtask: (id: string) => void
+  workspaceSection?: React.ReactNode
 }): React.JSX.Element {
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState(task.title)
@@ -164,6 +166,8 @@ export function LocalTaskDetailContent({
         onDelete={onDeleteSubtask}
         onOpen={onOpenSubtask}
       />
+
+      {workspaceSection}
 
       <section className="mt-12 border-t border-border/60 pt-9">
         <div className="mb-8 flex items-center justify-between gap-3">

@@ -81,6 +81,23 @@ describe('folderWorkspaceToWorktree', () => {
     expect(worktree.linkedGitLabMR).toBeNull()
   })
 
+  it('projects local task ids for task workspace activity', () => {
+    const worktree = folderWorkspaceToWorktree(
+      makeFolderWorkspace({
+        linkedTask: {
+          provider: 'local',
+          type: 'issue',
+          number: 0,
+          title: 'Connect tasks to workspaces',
+          url: '',
+          localIdentifier: 'task-1'
+        }
+      })
+    )
+
+    expect(worktree.linkedLocalTask).toBe('task-1')
+  })
+
   it('projects first-message rename state for folder workspace cards', () => {
     const worktree = folderWorkspaceToWorktree(
       makeFolderWorkspace({

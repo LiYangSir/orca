@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   buildLinearWorkspaceSource,
   buildWorkspaceSourceSelection,
+  getWorkspaceSourceCreateMetadata,
   getWorkspaceSourceName,
   getWorkspaceSourceProvider,
   shouldApplyWorkspaceSourceAutoName,
-  shouldPreserveWorkspaceSourceOnRepoChange
+  shouldPreserveWorkspaceSourceOnRepoChange,
+  workspaceSourceAllowsRepoIssueAutomation
 } from './workspace-source'
 
 describe('workspace source policy', () => {
@@ -34,6 +36,16 @@ describe('workspace source policy', () => {
     expect(shouldPreserveWorkspaceSourceOnRepoChange(linear)).toBe(true)
     expect(
       shouldPreserveWorkspaceSourceOnRepoChange({
+        provider: 'local',
+        type: 'issue',
+        number: 0,
+        title: 'Local task',
+        url: '',
+        localIdentifier: 'task-1'
+      })
+    ).toBe(true)
+    expect(
+      shouldPreserveWorkspaceSourceOnRepoChange({
         provider: 'github',
         type: 'issue',
         number: 1,
@@ -41,6 +53,34 @@ describe('workspace source policy', () => {
         url: 'https://github.com/o/r/issues/1'
       })
     ).toBe(false)
+  })
+
+  it('maps provider-specific create metadata in one place', () => {
+    expect(getWorkspaceSourceCreateMetadata(linear)).toEqual({
+      linkedLinearIssue: 'ENG-42',
+      linkedLinearIssueWorkspaceId: 'workspace-1',
+      linkedLinearIssueOrganizationUrlKey: 'acme'
+    })
+    expect(
+      getWorkspaceSourceCreateMetadata({
+        provider: 'local',
+        type: 'issue',
+        number: 0,
+        title: 'Local task',
+        url: '',
+        localIdentifier: 'task-1'
+      })
+    ).toEqual({ linkedLocalTask: 'task-1' })
+  })
+
+  it('blocks repo issue automation only for provider-neutral sources', () => {
+    expect(workspaceSourceAllowsRepoIssueAutomation('github')).toBe(true)
+    expect(workspaceSourceAllowsRepoIssueAutomation('gitlab')).toBe(true)
+    expect(workspaceSourceAllowsRepoIssueAutomation('jira')).toBe(true)
+    expect(workspaceSourceAllowsRepoIssueAutomation('linear')).toBe(false)
+    expect(workspaceSourceAllowsRepoIssueAutomation('local')).toBe(false)
+    // Why: typed issue numbers can start automation before provider lookup resolves.
+    expect(workspaceSourceAllowsRepoIssueAutomation(null)).toBe(true)
   })
 
   it('shares provider inference, selection labels, and auto-name gates', () => {
@@ -55,6 +95,18 @@ describe('workspace source policy', () => {
       kind: 'gitlab-issue',
       label: '#7 Self hosted'
     })
+    expect(
+      buildWorkspaceSourceSelection({
+        linkedWorkItem: {
+          provider: 'local',
+          type: 'issue',
+          number: 0,
+          title: 'Local task',
+          url: '',
+          localIdentifier: 'task-1'
+        }
+      })
+    ).toMatchObject({ kind: 'local', label: 'Local task' })
     expect(shouldApplyWorkspaceSourceAutoName({ currentName: '#42', lastAutoName: 'old' })).toBe(
       true
     )

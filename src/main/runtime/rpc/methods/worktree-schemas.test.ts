@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { WorktreeCreate } from './worktree-schemas'
+import { WorktreeCreate, WorktreeSet } from './worktree-schemas'
 
 describe('worktree RPC schemas', () => {
   it('rejects invalid startup agent values', () => {
@@ -21,5 +21,16 @@ describe('worktree RPC schemas', () => {
     })
 
     expect(parsed.success).toBe(false)
+  })
+
+  it('accepts durable local task links on create and unlink on set', () => {
+    expect(
+      WorktreeCreate.safeParse({
+        repo: 'repo-1',
+        name: 'task-workspace',
+        linkedLocalTask: 'task-1'
+      }).success
+    ).toBe(true)
+    expect(WorktreeSet.safeParse({ worktree: 'id:wt-1', linkedLocalTask: null }).success).toBe(true)
   })
 })

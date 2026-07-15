@@ -53,6 +53,7 @@ import type {
   WorkspaceCreateTelemetrySource,
   ProjectGroup
 } from '../../../shared/types'
+import type { LocalTask } from '../../../shared/local-task-types'
 import { isWorkspaceStatusId } from '../../../shared/workspace-statuses'
 import {
   CLIENT_PLATFORM,
@@ -76,10 +77,8 @@ import {
   resolveQuickCreateLinkedWorkItemPrompt
 } from '@/lib/linked-work-item-context'
 import { getLocalRepoProjectExecutionRuntimeContext } from '@/lib/local-preflight-context'
-import {
-  buildLinearIssueLinkedWorkItem,
-  isLinearLinkedWorkItem
-} from '@/lib/linear-linked-work-item'
+import { buildLinearIssueLinkedWorkItem } from '@/lib/linear-linked-work-item'
+import { buildLocalTaskLinkedWorkItem } from '@/lib/local-task-linked-work-item'
 import { getLinearIssueWorkspaceName } from '../../../shared/workspace-name'
 import {
   getFullComposerCreateDisabled,
@@ -149,7 +148,10 @@ import type { SmartNameMode } from '@/components/new-workspace/smart-workspace-s
 import { getForkPushWarning } from './fork-push-warning'
 import {
   buildWorkspaceSourceSelection,
-  shouldApplyWorkspaceSourceAutoName
+  getWorkspaceSourceCreateMetadata,
+  shouldApplyWorkspaceSourceAutoName,
+  shouldPreserveWorkspaceSourceOnRepoChange,
+  workspaceSourceAllowsRepoIssueAutomation
 } from '../../../shared/new-workspace/workspace-source'
 import { CONTEXTUAL_TOUR_ENABLE_AUTO_WORKSPACE_NAME_EVENT } from '@/components/contextual-tours/contextual-tour-composer-events'
 import { ensureHooksConfirmed } from '@/lib/ensure-hooks-confirmed'
@@ -270,6 +272,7 @@ export type ComposerCardProps = {
   onSmartBranchSelect: (refName: string, localBranchName: string) => void
   onSmartNameModeChange?: (mode: SmartNameMode) => void
   onSmartLinearIssueSelect: (issue: LinearIssue) => void
+  onSmartLocalTaskSelect: (task: LocalTask) => void
   smartNameGitHubSourceContext?: TaskSourceContext | null
   /** GitLab parallel of onBaseBranchPrSelect. */
   onBaseBranchMrSelect?: (
@@ -1508,14 +1511,15 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
   )
   const setupPolicy: SetupRunPolicy = selectedRepo?.hookSettings?.setupRunPolicy ?? 'run-by-default'
   const linkedWorkItemProvider = linkedWorkItem ? getLinkedWorkItemProvider(linkedWorkItem) : null
-  // Why: the "no prompt + linked item" path below rehydrates the issueCommand
-  // template into the main startup prompt. Linear starts never use that
-  // product-authored workflow text, so they should not wait for it either.
+  // Why: Linear and local tasks carry provider-neutral context. Repo issue
+  // templates would either add unrelated workflow text or render an empty URL.
+  const linkedWorkItemAllowsRepoAutomation =
+    workspaceSourceAllowsRepoIssueAutomation(linkedWorkItemProvider)
   const willApplyIssueCommandAsPrompt =
     enableIssueAutomation &&
     !agentPrompt.trim() &&
     Boolean(linkedWorkItem) &&
-    linkedWorkItemProvider !== 'linear'
+    linkedWorkItemAllowsRepoAutomation
   const shouldWaitForIssueAutomationCheck =
     enableIssueAutomation &&
     (parsedLinkedIssueNumber !== null || willApplyIssueCommandAsPrompt) &&
@@ -1558,7 +1562,7 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
     !agentPrompt.trim() &&
     Boolean(linkedWorkItem) &&
     hasLoadedIssueCommand &&
-    linkedWorkItemProvider !== 'linear'
+    linkedWorkItemAllowsRepoAutomation
   const linkedOnlyTemplatePrompt = useMemo(() => {
     if (!shouldApplyLinkedOnlyTemplate || !linkedWorkItem) {
       return ''
@@ -2645,7 +2649,7 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
           hint = `was ${baseBranch}`
         }
       }
-      const preserveLinearLinkedWorkItem = isLinearLinkedWorkItem(linkedWorkItem)
+      const preserveLinkedWorkItem = shouldPreserveWorkspaceSourceOnRepoChange(linkedWorkItem)
       setRepoId(value)
       if (!options.preserveStartFrom) {
         smartGitHubPrStartPointSelectionRef.current = null
@@ -2654,9 +2658,9 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
         setLinkedGitLabIssue(null)
         setLinkedGitLabMR(null)
         // Why: repo changes invalidate repo-scoped sources (GitHub/GitLab/branch),
-        // but a selected Linear issue is workspace-scoped source context and
+        // but global and local task sources are independent of the repo-backed picker and
         // must survive choosing the implementation project.
-        if (!preserveLinearLinkedWorkItem) {
+        if (!preserveLinkedWorkItem) {
           setLinkedWorkItem(null)
         }
       }
@@ -2691,10 +2695,9 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
       }
       setRepoId(value)
       smartGitHubPrStartPointSelectionRef.current = null
-      setLinkedWorkItem((current) => {
-        const provider = current ? getLinkedWorkItemProvider(current) : null
-        return provider === 'github' || provider === 'gitlab' ? null : current
-      })
+      setLinkedWorkItem((current) =>
+        shouldPreserveWorkspaceSourceOnRepoChange(current) ? current : null
+      )
       setLinkedIssue('')
       setLinkedPR(null)
       setLinkedGitLabIssue(null)
@@ -2740,8 +2743,7 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
         setLinkedPR(null)
         setLinkedGitLabIssue(null)
         setLinkedGitLabMR(null)
-        const linkedProvider = linkedWorkItem ? getLinkedWorkItemProvider(linkedWorkItem) : null
-        if (linkedWorkItem && linkedProvider !== 'linear' && linkedProvider !== 'jira') {
+        if (!shouldPreserveWorkspaceSourceOnRepoChange(linkedWorkItem)) {
           setLinkedWorkItem(null)
         }
         setSparseEnabled(false)
@@ -3232,6 +3234,31 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
     [isProjectGroupTarget, name]
   )
 
+  const handleSmartLocalTaskSelect = useCallback(
+    (task: LocalTask): void => {
+      const linkedItem = buildLocalTaskLinkedWorkItem(task)
+      setLinkedIssue('')
+      setLinkedPR(null)
+      setLinkedGitLabIssue(null)
+      setLinkedGitLabMR(null)
+      setLinkedWorkItem(linkedItem)
+      const suggestedName = getLinkedWorkItemWorkspaceName(linkedItem)?.seedName ?? task.title
+      if (
+        shouldApplyWorkspaceSourceAutoName({
+          currentName: name,
+          lastAutoName: lastAutoNameRef.current
+        })
+      ) {
+        setName(suggestedName)
+        lastAutoNameRef.current = suggestedName
+      }
+      setBranchNameOverride(undefined)
+      setForkPushWarning(null)
+      branchAutoNameRef.current = ''
+    },
+    [name]
+  )
+
   const handleClearSmartNameSelection = useCallback((): void => {
     smartGitHubPrStartPointSelectionRef.current = null
     setLinkedIssue('')
@@ -3487,12 +3514,15 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
       const submitLinkedWorkItemProvider = submitLinkedWorkItem
         ? getLinkedWorkItemProvider(submitLinkedWorkItem)
         : null
+      const submitLinkedWorkItemAllowsRepoAutomation = workspaceSourceAllowsRepoIssueAutomation(
+        submitLinkedWorkItemProvider
+      )
       const submitShouldApplyLinkedOnlyTemplate =
         enableIssueAutomation &&
         !agentPrompt.trim() &&
         Boolean(submitLinkedWorkItem) &&
         hasLoadedIssueCommand &&
-        submitLinkedWorkItemProvider !== 'linear'
+        submitLinkedWorkItemAllowsRepoAutomation
       const submitLinkedOnlyTemplatePrompt =
         submitShouldApplyLinkedOnlyTemplate && submitLinkedWorkItem
           ? renderIssueCommandTemplate(
@@ -3520,7 +3550,7 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
           )
       const submitShouldRunIssueAutomation =
         enableIssueAutomation &&
-        submitLinkedWorkItemProvider !== 'linear' &&
+        submitLinkedWorkItemAllowsRepoAutomation &&
         submitLinkedIssueNumber !== null &&
         issueCommandTemplate.length > 0 &&
         !submitShouldApplyLinkedOnlyTemplate
@@ -3541,18 +3571,7 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
             : await ensureHooksConfirmed(useAppStore.getState(), repoId, 'issueCommand')
       }
 
-      const linkedLinearIssue =
-        submitLinkedWorkItem && submitLinkedWorkItemProvider === 'linear'
-          ? submitLinkedWorkItem.linearIdentifier
-          : undefined
-      const linkedLinearIssueWorkspaceId =
-        submitLinkedWorkItem && submitLinkedWorkItemProvider === 'linear'
-          ? submitLinkedWorkItem.linearWorkspaceId
-          : undefined
-      const linkedLinearIssueOrganizationUrlKey =
-        submitLinkedWorkItem && submitLinkedWorkItemProvider === 'linear'
-          ? submitLinkedWorkItem.linearOrganizationUrlKey
-          : undefined
+      const linkedSourceCreateMetadata = getWorkspaceSourceCreateMetadata(submitLinkedWorkItem)
       const effectiveBranchNameOverride = resolveComposerBranchNameOverrideForCreate({
         branchNameOverride: submitBranchNameOverride,
         branchAutoName: branchAutoNameRef.current,
@@ -3636,7 +3655,7 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
         submitLinkedPR ?? undefined,
         submitPushTarget,
         tuiAgent,
-        linkedLinearIssue,
+        linkedSourceCreateMetadata.linkedLinearIssue,
         effectiveBranchNameOverride,
         resolvedInitialWorkspaceStatus,
         smartGitHubResolution.kind === 'none' ? (linkedGitLabMR ?? undefined) : undefined,
@@ -3644,12 +3663,15 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
         backendStartup,
         pendingFirstAgentMessageRename,
         undefined,
-        linkedLinearIssueWorkspaceId,
-        linkedLinearIssueOrganizationUrlKey,
+        linkedSourceCreateMetadata.linkedLinearIssueWorkspaceId,
+        linkedSourceCreateMetadata.linkedLinearIssueOrganizationUrlKey,
         undefined,
         undefined,
         undefined,
-        submitCompareBaseRef
+        submitCompareBaseRef,
+        linkedSourceCreateMetadata.linkedLocalTask !== undefined
+          ? { linkedLocalTask: linkedSourceCreateMetadata.linkedLocalTask }
+          : undefined
       )
       const worktree = result.worktree
 
@@ -3942,21 +3964,7 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
             ? 'skip'
             : ((submitResolvedSetupDecision ?? 'inherit') as SetupDecision)
 
-        const submitLinkedWorkItemProvider = submitLinkedWorkItem
-          ? getLinkedWorkItemProvider(submitLinkedWorkItem)
-          : null
-        const linkedLinearIssue =
-          submitLinkedWorkItem && submitLinkedWorkItemProvider === 'linear'
-            ? submitLinkedWorkItem.linearIdentifier
-            : undefined
-        const linkedLinearIssueWorkspaceId =
-          submitLinkedWorkItem && submitLinkedWorkItemProvider === 'linear'
-            ? submitLinkedWorkItem.linearWorkspaceId
-            : undefined
-        const linkedLinearIssueOrganizationUrlKey =
-          submitLinkedWorkItem && submitLinkedWorkItemProvider === 'linear'
-            ? submitLinkedWorkItem.linearOrganizationUrlKey
-            : undefined
+        const linkedSourceCreateMetadata = getWorkspaceSourceCreateMetadata(submitLinkedWorkItem)
         const effectiveBranchNameOverride = resolveComposerBranchNameOverrideForCreate({
           branchNameOverride: submitBranchNameOverride,
           branchAutoName: branchAutoNameRef.current,
@@ -4128,11 +4136,7 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
           ...(submitLinkedPR != null ? { linkedPR: submitLinkedPR } : {}),
           ...(submitPushTarget ? { pushTarget: submitPushTarget } : {}),
           agent,
-          ...(linkedLinearIssue ? { linkedLinearIssue } : {}),
-          ...(linkedLinearIssueWorkspaceId !== undefined ? { linkedLinearIssueWorkspaceId } : {}),
-          ...(linkedLinearIssueOrganizationUrlKey !== undefined
-            ? { linkedLinearIssueOrganizationUrlKey }
-            : {}),
+          ...linkedSourceCreateMetadata,
           ...(effectiveBranchNameOverride
             ? { branchNameOverride: effectiveBranchNameOverride }
             : {}),
@@ -4282,6 +4286,7 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
     onSmartBranchSelect: isProjectGroupTarget ? () => {} : handleSmartBranchSelect,
     onSmartNameModeChange: setSmartNameMode,
     onSmartLinearIssueSelect: handleSmartLinearIssueSelect,
+    onSmartLocalTaskSelect: handleSmartLocalTaskSelect,
     smartNameGitHubSourceContext: selectedRepoGitHubSourceContext,
     smartNameSelection,
     onClearSmartNameSelection: handleClearSmartNameSelection,

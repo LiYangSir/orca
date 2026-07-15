@@ -80,6 +80,7 @@ export const WorktreeCreate = z
     linkedAzureDevOpsPR: TriStateLinkedIssue,
     linkedGiteaPR: TriStateLinkedIssue,
     linkedCodeMR: TriStateLinkedIssue,
+    linkedLocalTask: z.union([z.string(), z.null()]).optional(),
     comment: OptionalString,
     displayName: OptionalString,
     telemetrySource: z
@@ -191,6 +192,7 @@ export const WorktreeSet = WorktreeSelector.extend({
   linkedAzureDevOpsPR: TriStateLinkedIssue,
   linkedGiteaPR: TriStateLinkedIssue,
   linkedCodeMR: TriStateLinkedIssue,
+  linkedLocalTask: z.union([z.string(), z.null()]).optional(),
   isArchived: OptionalBoolean,
   isUnread: OptionalBoolean,
   isPinned: OptionalBoolean,

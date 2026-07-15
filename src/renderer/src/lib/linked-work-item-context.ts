@@ -82,6 +82,24 @@ function isLinearWorkItemReference(
   )
 }
 
+function buildLinkedWorkItemLaunchContext(args: {
+  provider?: TaskProvider
+  linearIdentifier?: string
+  title?: string
+  url?: string
+  linkedContext?: LinkedWorkItemContext
+}): string | null {
+  if (isLinearWorkItemReference(args)) {
+    return buildLinearLaunchContextBlock({
+      provider: args.provider,
+      identifier: args.linearIdentifier,
+      title: args.title,
+      url: args.url
+    })
+  }
+  return buildContainedLinkedContextBlock(args.linkedContext)
+}
+
 // Why: Linear ticket prose is third-party source data; terminal drafts may
 // carry only stable identity/link fields from the selected issue.
 export function buildLinearLaunchContextBlock(args: LinearLaunchContextArgs): string | null {
@@ -159,16 +177,9 @@ export function getLinkedWorkItemPromptContext(
     | null
     | undefined
 ): { linkedUrls: string[]; linkedContextBlocks: string[] } {
-  if (isLinearWorkItemReference(linkedWorkItem)) {
-    const linearBlock = buildLinearLaunchContextBlock({
-      provider: linkedWorkItem?.provider,
-      identifier: linkedWorkItem?.linearIdentifier,
-      title: linkedWorkItem?.title,
-      url: linkedWorkItem?.url
-    })
-    return linearBlock
-      ? { linkedUrls: [], linkedContextBlocks: [linearBlock] }
-      : { linkedUrls: [], linkedContextBlocks: [] }
+  const contextBlock = linkedWorkItem ? buildLinkedWorkItemLaunchContext(linkedWorkItem) : null
+  if (contextBlock) {
+    return { linkedUrls: [], linkedContextBlocks: [contextBlock] }
   }
   const linkedUrl = linkedWorkItem?.url?.trim()
   return linkedUrl
@@ -187,16 +198,8 @@ export function getLaunchableWorkItemDraftContent(args: {
   if (args.pasteContent?.trim()) {
     return args.pasteContent
   }
-  if (isLinearWorkItemReference(args)) {
-    const linearBlock = buildLinearLaunchContextBlock({
-      provider: args.provider,
-      identifier: args.linearIdentifier,
-      title: args.title,
-      url: args.url
-    })
-    return linearBlock ? formatDraftContextBlock(linearBlock) : ''
-  }
-  return args.url
+  const contextBlock = buildLinkedWorkItemLaunchContext(args)
+  return contextBlock ? formatDraftContextBlock(contextBlock) : args.url
 }
 
 export function resolveQuickCreateLinkedWorkItemPrompt(
@@ -216,18 +219,11 @@ export function resolveQuickCreateLinkedWorkItemPrompt(
   note: string
 ): { prompt: string; draftPrompt: string | null } {
   const trimmedNote = note.trim()
-  const linearBlock = isLinearWorkItemReference(linkedWorkItem)
-    ? buildLinearLaunchContextBlock({
-        provider: linkedWorkItem?.provider,
-        identifier: linkedWorkItem?.linearIdentifier,
-        title: linkedWorkItem?.title,
-        url: linkedWorkItem?.url
-      })
-    : null
-  const linearDraft = linearBlock ? formatDraftContextBlock(linearBlock) : null
+  const contextBlock = linkedWorkItem ? buildLinkedWorkItemLaunchContext(linkedWorkItem) : null
+  const contextDraft = contextBlock ? formatDraftContextBlock(contextBlock) : null
   const linkedUrl = linkedWorkItem?.url?.trim() || null
-  const draftPrompt = linearDraft
-    ? [trimmedNote, linearDraft].filter(Boolean).join('\n\n')
+  const draftPrompt = contextDraft
+    ? [trimmedNote, contextDraft].filter(Boolean).join('\n\n')
     : linkedUrl
       ? [trimmedNote, linkedUrl].filter(Boolean).join('\n\n')
       : null

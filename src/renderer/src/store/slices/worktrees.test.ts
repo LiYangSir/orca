@@ -2827,6 +2827,7 @@ describe('createWorktree base status merge', () => {
       linkedPR: 456,
       createdWithAgent: 'codex',
       linkedLinearIssue: 'ENG-123',
+      linkedLocalTask: 'task-1',
       workspaceStatus: 'in-review',
       pendingFirstAgentMessageRename: true
     })
@@ -2852,7 +2853,15 @@ describe('createWorktree base status merge', () => {
         undefined,
         undefined,
         undefined,
-        true
+        true,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        { linkedLocalTask: 'task-1' }
       )
 
     expect(mockApi.worktrees.create).toHaveBeenCalledWith(
@@ -2863,6 +2872,7 @@ describe('createWorktree base status merge', () => {
         linkedPR: 456,
         createdWithAgent: 'codex',
         linkedLinearIssue: 'ENG-123',
+        linkedLocalTask: 'task-1',
         workspaceStatus: 'in-review',
         pendingFirstAgentMessageRename: true
       })
@@ -2872,6 +2882,7 @@ describe('createWorktree base status merge', () => {
       linkedPR: 456,
       createdWithAgent: 'codex',
       linkedLinearIssue: 'ENG-123',
+      linkedLocalTask: 'task-1',
       workspaceStatus: 'in-review',
       pendingFirstAgentMessageRename: true
     })

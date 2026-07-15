@@ -20,6 +20,7 @@ export function folderWorkspaceToWorktree(folderWorkspace: FolderWorkspace): Wor
     linkedAzureDevOpsPR: null,
     linkedGiteaPR: null,
     linkedCodeMR: null,
+    linkedLocalTask: linkedTask?.provider === 'local' ? (linkedTask.localIdentifier ?? null) : null,
     isArchived: folderWorkspace.isArchived,
     isUnread: folderWorkspace.isUnread,
     isPinned: folderWorkspace.isPinned,

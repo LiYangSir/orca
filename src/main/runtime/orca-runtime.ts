@@ -14767,6 +14767,7 @@ export class OrcaRuntimeService {
     linkedAzureDevOpsPR?: number | null
     linkedGiteaPR?: number | null
     linkedCodeMR?: number | null
+    linkedLocalTask?: string | null
     comment?: string
     displayName?: string
     telemetrySource?: WorkspaceCreateTelemetrySource
@@ -14865,6 +14866,7 @@ export class OrcaRuntimeService {
           : {}),
         ...(args.linkedGiteaPR !== undefined ? { linkedGiteaPR: args.linkedGiteaPR } : {}),
         ...(args.linkedCodeMR !== undefined ? { linkedCodeMR: args.linkedCodeMR } : {}),
+        ...(args.linkedLocalTask !== undefined ? { linkedLocalTask: args.linkedLocalTask } : {}),
         ...(effectiveCreatedWithAgent ? { createdWithAgent: effectiveCreatedWithAgent } : {}),
         ...(args.comment !== undefined ? { comment: args.comment } : {}),
         ...(args.manualOrder !== undefined ? { manualOrder: args.manualOrder } : {}),
@@ -15443,6 +15445,7 @@ export class OrcaRuntimeService {
         : {}),
       ...(args.linkedGiteaPR !== undefined ? { linkedGiteaPR: args.linkedGiteaPR } : {}),
       ...(args.linkedCodeMR !== undefined ? { linkedCodeMR: args.linkedCodeMR } : {}),
+      ...(args.linkedLocalTask !== undefined ? { linkedLocalTask: args.linkedLocalTask } : {}),
       ...(effectiveCreatedWithAgent ? { createdWithAgent: effectiveCreatedWithAgent } : {}),
       ...(args.pendingFirstAgentMessageRename === true && effectiveCreatedWithAgent
         ? { pendingFirstAgentMessageRename: true }
@@ -15761,6 +15764,7 @@ export class OrcaRuntimeService {
       linkedAzureDevOpsPR?: number | null
       linkedGiteaPR?: number | null
       linkedCodeMR?: number | null
+      linkedLocalTask?: string | null
       comment?: string
       displayName?: string
       workspaceStatus?: string
@@ -15818,6 +15822,7 @@ export class OrcaRuntimeService {
           : {}),
         ...(args.linkedGiteaPR != null ? { linkedGiteaPR: args.linkedGiteaPR } : {}),
         ...(args.linkedCodeMR != null ? { linkedCodeMR: args.linkedCodeMR } : {}),
+        ...(args.linkedLocalTask != null ? { linkedLocalTask: args.linkedLocalTask } : {}),
         ...(args.pushTarget ? { pushTarget: args.pushTarget } : {}),
         ...(args.workspaceStatus ? { workspaceStatus: args.workspaceStatus as never } : {}),
         ...(args.manualOrder !== undefined ? { manualOrder: args.manualOrder } : {}),

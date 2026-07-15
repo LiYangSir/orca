@@ -249,6 +249,7 @@ function areWorktreesEqual(current: Worktree[] | undefined, next: Worktree[]): b
       worktree.linkedAzureDevOpsPR === candidate.linkedAzureDevOpsPR &&
       worktree.linkedGiteaPR === candidate.linkedGiteaPR &&
       worktree.linkedCodeMR === candidate.linkedCodeMR &&
+      worktree.linkedLocalTask === candidate.linkedLocalTask &&
       worktree.isArchived === candidate.isArchived &&
       worktree.isUnread === candidate.isUnread &&
       worktree.isPinned === candidate.isPinned &&
@@ -2963,6 +2964,7 @@ export const createWorktreeSlice: StateCreator<AppState, [], [], WorktreeSlice> 
     linkedCodeMR
   ) => {
     const automationProvenanceRequest = options?.automationProvenanceRequest
+    const linkedLocalTask = options?.linkedLocalTask
     try {
       for (let attempt = 0; attempt < CLIENT_WORKTREE_CREATE_MAX_ATTEMPTS; attempt += 1) {
         const candidateName = getClientWorktreeCreateCandidate(name, attempt)
@@ -3013,6 +3015,7 @@ export const createWorktreeSlice: StateCreator<AppState, [], [], WorktreeSlice> 
             ...(linkedAzureDevOpsPR !== undefined ? { linkedAzureDevOpsPR } : {}),
             ...(linkedGiteaPR !== undefined ? { linkedGiteaPR } : {}),
             ...(linkedCodeMR !== undefined ? { linkedCodeMR } : {}),
+            ...(linkedLocalTask !== undefined ? { linkedLocalTask } : {}),
             ...(startup ? { startup } : {}),
             ...(creationId ? { creationId } : {}),
             ...(automationProvenanceRequest ? { automationProvenanceRequest } : {})
@@ -3059,6 +3062,7 @@ export const createWorktreeSlice: StateCreator<AppState, [], [], WorktreeSlice> 
                     ...(linkedAzureDevOpsPR !== undefined ? { linkedAzureDevOpsPR } : {}),
                     ...(linkedGiteaPR !== undefined ? { linkedGiteaPR } : {}),
                     ...(linkedCodeMR !== undefined ? { linkedCodeMR } : {}),
+                    ...(linkedLocalTask !== undefined ? { linkedLocalTask } : {}),
                     ...(automationProvenanceRequest ? { automationProvenanceRequest } : {}),
                     ...(startup
                       ? {

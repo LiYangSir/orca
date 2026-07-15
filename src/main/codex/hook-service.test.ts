@@ -124,6 +124,8 @@ function localManagedCodexEvents(): string[] {
     'PreToolUse',
     'SessionStart',
     'Stop',
+    'SubagentStart',
+    'SubagentStop',
     'UserPromptSubmit'
   ]
 }
@@ -406,6 +408,34 @@ describe('CodexHookService', () => {
       rmSync(devUserDataDir, { recursive: true, force: true })
       rmSync(prodUserDataDir, { recursive: true, force: true })
     }
+  })
+
+  it('keeps managed hooks when a legacy runtime home symlinks to system ~/.codex', () => {
+    const systemCodexHome = join(tmpHome, '.codex')
+    const systemHooksPath = join(systemCodexHome, 'hooks.json')
+    const managedHomeParent = join(userDataDir, 'codex-runtime-home')
+    mkdirSync(systemCodexHome, { recursive: true })
+    mkdirSync(managedHomeParent, { recursive: true })
+    writeFileSync(
+      systemHooksPath,
+      '{"hooks":{"Stop":[{"hooks":[{"command":"user-hook"}]}]}}\n',
+      'utf-8'
+    )
+    symlinkSync(
+      systemCodexHome,
+      join(managedHomeParent, 'home'),
+      process.platform === 'win32' ? 'junction' : 'dir'
+    )
+
+    const service = new CodexHookService()
+
+    expect(service.install().state).toBe('installed')
+    const hooksConfig = JSON.parse(readFileSync(systemHooksPath, 'utf-8')) as {
+      hooks: Record<string, { hooks?: { command?: string }[] }[]>
+    }
+    expect(Object.keys(hooksConfig.hooks).sort()).toEqual(localManagedCodexEvents())
+    expect(hooksConfig.hooks.Stop?.[1]?.hooks?.[0]?.command).toBe('user-hook')
+    expect(service.getStatus().state).toBe('installed')
   })
 
   it('mirrors trusted system user hook approvals into the runtime CODEX_HOME', () => {

@@ -27,6 +27,7 @@ import type {
   LocalTaskOrderBy,
   LocalTaskViewMode
 } from './local-task-view-state'
+import { useLocalTaskWorkspaceLinks } from './use-local-task-workspace-links'
 
 const EMPTY_TASKS: LocalTask[] = []
 const EMPTY_LABELS: LocalTaskLabel[] = []
@@ -63,6 +64,9 @@ export function LocalTaskList({
   const [groupBy, setGroupBy] = useState<LocalTaskGroupBy>(DEFAULT_GROUP_BY)
   const [orderBy, setOrderBy] = useState<LocalTaskOrderBy>(DEFAULT_ORDER_BY)
   const [filter, setFilter] = useState<LocalTaskFilterState>(DEFAULT_FILTER_STATE)
+  const selectedTaskId = taskNavStack.at(-1) ?? null
+  const { linkableWorktrees, linkedWorkspaces, linkWorktree, unlinkWorkspace, clearTaskTreeLinks } =
+    useLocalTaskWorkspaceLinks(selectedTaskId)
 
   const load = useCallback(async () => {
     if (!window.api?.localTasks || !window.api?.localTaskLabels) {
@@ -138,6 +142,8 @@ export function LocalTaskList({
 
   const handleDelete = useCallback(
     async (id: string) => {
+      const tasks = state.kind === 'ready' ? state.items : []
+      await clearTaskTreeLinks(tasks, id)
       await window.api.localTasks.delete({ id })
       const currentId = taskNavStack.at(-1)
       if (currentId === id) {
@@ -145,7 +151,7 @@ export function LocalTaskList({
       }
       void load()
     },
-    [load, taskNavStack]
+    [clearTaskTreeLinks, load, state, taskNavStack]
   )
 
   const handleCycleStatus = useCallback(
@@ -228,7 +234,6 @@ export function LocalTaskList({
   )
   const groups = useMemo(() => groupLocalTasks(sortedTasks, groupBy), [sortedTasks, groupBy])
 
-  const selectedTaskId = taskNavStack.at(-1) ?? null
   const selectedTask = selectedTaskId ? (items.find((t) => t.id === selectedTaskId) ?? null) : null
 
   const breadcrumbs = useMemo(() => {
@@ -262,6 +267,10 @@ export function LocalTaskList({
           onUpdateLabel={handleUpdateLabel}
           onDeleteLabel={handleDeleteLabel}
           onStartWorkspace={onStartWorkspace}
+          linkedWorktrees={linkedWorkspaces}
+          allWorktrees={linkableWorktrees}
+          onLinkWorktree={(worktreeId) => linkWorktree(selectedTask.id, worktreeId)}
+          onUnlinkWorktree={unlinkWorkspace}
         />
       </div>
     )

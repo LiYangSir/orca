@@ -240,6 +240,8 @@ describe('remote hook service installers', () => {
       'PreToolUse',
       'PermissionRequest',
       'PostToolUse',
+      'SubagentStart',
+      'SubagentStop',
       'Stop'
     ]) {
       const command = hooks.hooks[eventName]?.[0]?.hooks?.[0]?.command
