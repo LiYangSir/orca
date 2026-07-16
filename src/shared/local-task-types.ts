@@ -115,6 +115,10 @@ export function isLocalTaskPriority(value: unknown): value is LocalTaskPriority 
   return PRIORITY_SET.has(value as LocalTaskPriority)
 }
 
+export function getLocalTaskDisplayId(id: string): string {
+  return `LT-${id.slice(0, 6)}`
+}
+
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/
 
 export function isValidHexColor(value: unknown): value is string {

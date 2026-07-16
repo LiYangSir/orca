@@ -7,6 +7,7 @@ import type {
 } from '../../../../shared/local-task-types'
 import { StatusIcon, getStatusLabel } from './local-task-status-priority'
 import { LocalTaskBoardCard } from './local-task-board-card'
+import { useLocalTaskAgentActivityCounts } from './local-task-agent-activity'
 import { useLocalTaskBoardPointerDrag } from './use-local-task-board-pointer-drag'
 
 const BOARD_COLUMNS: LocalTaskStatus[] = ['backlog', 'todo', 'in-progress', 'in-review', 'done']
@@ -26,6 +27,7 @@ export function LocalTaskBoardView({
   onSelectTask: (id: string | null) => void
   onUpdateStatus: (id: string, status: LocalTaskStatus) => void
 }): React.JSX.Element {
+  const agentActivityCounts = useLocalTaskAgentActivityCounts()
   const { registerColumn, onCardPointerDown } = useLocalTaskBoardPointerDrag({
     onUpdateStatus
   })
@@ -79,6 +81,7 @@ export function LocalTaskBoardView({
                     task={task}
                     labels={labels}
                     allTasks={allTasks}
+                    agentActivityCount={agentActivityCounts.get(task.id) ?? 0}
                     selected={selectedTaskId === task.id}
                     onSelect={() => onSelectTask(selectedTaskId === task.id ? null : task.id)}
                     onPointerDown={(e) => onCardPointerDown(task.id, e)}

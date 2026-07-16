@@ -42,6 +42,7 @@ type NormalizedNestedRepoScanOptions = {
   maxDepth: number
   maxRepos: number
   timeoutMs: number | null
+  descendIntoGitRepoRoot: boolean
 }
 
 const DEFAULT_MAX_DEPTH = 3
@@ -77,7 +78,8 @@ function normalizeScanOptions(options: unknown): NormalizedNestedRepoScanOptions
         ? null
         : typeof raw.timeoutMs === 'number' && Number.isFinite(raw.timeoutMs)
           ? Math.max(500, Math.min(30_000, Math.floor(raw.timeoutMs)))
-          : null
+          : null,
+    descendIntoGitRepoRoot: Boolean(raw.descendIntoGitRepoRoot)
   }
 }
 
@@ -250,11 +252,26 @@ export async function scanNestedRepos(args: {
     args.onProgress?.(buildResult('non_git_folder'))
   }
 
-  if (await filesystem.isSelectedPathGitRepo(args.path)) {
+  const selectedPathIsGitRepo = await filesystem.isSelectedPathGitRepo(args.path)
+  // Why: by default a git-repo selection is imported as one repo. Workspace mode
+  // (descendIntoGitRepoRoot) instead treats the parent repo as a member and
+  // surfaces the independent git repos nested inside it, so a "parent + nested
+  // children" workspace imports as one ProjectGroup.
+  if (selectedPathIsGitRepo && !options.descendIntoGitRepoRoot) {
     return buildResult('git_repo')
   }
   if (noteAbort()) {
-    return buildResult('non_git_folder')
+    return buildResult(selectedPathIsGitRepo ? 'git_repo' : 'non_git_folder')
+  }
+  if (selectedPathIsGitRepo) {
+    // Why: the root repo is a workspace member too; seed it before descending so
+    // the normal traversal only needs to discover its nested children.
+    repos.push({
+      path: args.path,
+      displayName: filesystem.basename(args.path),
+      depth: 0
+    })
+    emitProgress()
   }
 
   const foldersToTraverse: TraversalFolder[] = [
@@ -349,5 +366,15 @@ export async function scanNestedRepos(args: {
     }
   }
 
+  if (selectedPathIsGitRepo) {
+    if (repos.length > 1) {
+      return buildResult('git_repo_with_nested')
+    }
+    // Why: no nested members were found — drop the seeded root so a childless
+    // git-repo root behaves exactly like a plain git-repo selection (empty repos,
+    // single-repo import path).
+    repos.length = 0
+    return buildResult('git_repo')
+  }
   return buildResult('non_git_folder')
 }

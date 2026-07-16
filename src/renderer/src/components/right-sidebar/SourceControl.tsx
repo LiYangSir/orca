@@ -241,6 +241,7 @@ import {
 } from './source-control-pull-policy-error-notice'
 import { SourceControlTextGenerationDialog } from './SourceControlTextGenerationDialog'
 import { CreateHostedReviewComposer } from './CreateHostedReviewComposer'
+import { CreatePrWorkspaceRepoPicker } from './CreatePrWorkspaceRepoPicker'
 import {
   hasConfiguredCommitMessageGenerationDefaults,
   hasConfiguredSourceControlTextGenerationDefaults
@@ -5863,40 +5864,48 @@ function SourceControlInner(): React.JSX.Element {
 
           {shouldRenderCommitArea(unresolvedConflicts.length, conflictOperation) &&
             (directCreatePrAction ? (
-              <CreateHostedReviewComposer
-                provider={hostedReviewCreateProvider}
-                branch={branchName}
-                base={prBase}
-                setBase={setPrBase}
-                title={prTitle}
-                setTitle={setPrTitle}
-                body={prBody}
-                setBody={setPrBody}
-                draft={prDraft}
-                setDraft={setPrDraft}
-                baseQuery={prBaseQuery}
-                setBaseQuery={setPrBaseQuery}
-                baseResults={prBaseResults}
-                setBaseResults={setPrBaseResults}
-                baseSearchError={prBaseSearchError}
-                aiGenerationEnabled={sourceControlAiActionsVisible && prAiGenerationEnabled}
-                generating={prGenerating}
-                generateDisabled={prGenerateDisabled}
-                generateDisabledReason={prGenerateDisabledReason}
-                generateError={prGenerateError}
-                createError={
-                  createPrIntentNotice?.tone === 'destructive' ? createPrIntentNotice.message : null
-                }
-                isCreating={isCreatingPr}
-                primaryAction={directCreatePrAction}
-                dropdownItems={dropdownItems}
-                onGenerate={handleGeneratePullRequestFieldsClick}
-                onCancelGenerate={handleCancelGeneratePullRequestFields}
-                onPrimaryAction={() => {
-                  void handleCreatePullRequest()
-                }}
-                onDropdownAction={handleActionInvoke}
-              />
+              <>
+                <CreatePrWorkspaceRepoPicker
+                  activeWorktreeId={activeWorktreeId}
+                  activeRepo={activeRepo ?? null}
+                />
+                <CreateHostedReviewComposer
+                  provider={hostedReviewCreateProvider}
+                  branch={branchName}
+                  base={prBase}
+                  setBase={setPrBase}
+                  title={prTitle}
+                  setTitle={setPrTitle}
+                  body={prBody}
+                  setBody={setPrBody}
+                  draft={prDraft}
+                  setDraft={setPrDraft}
+                  baseQuery={prBaseQuery}
+                  setBaseQuery={setPrBaseQuery}
+                  baseResults={prBaseResults}
+                  setBaseResults={setPrBaseResults}
+                  baseSearchError={prBaseSearchError}
+                  aiGenerationEnabled={sourceControlAiActionsVisible && prAiGenerationEnabled}
+                  generating={prGenerating}
+                  generateDisabled={prGenerateDisabled}
+                  generateDisabledReason={prGenerateDisabledReason}
+                  generateError={prGenerateError}
+                  createError={
+                    createPrIntentNotice?.tone === 'destructive'
+                      ? createPrIntentNotice.message
+                      : null
+                  }
+                  isCreating={isCreatingPr}
+                  primaryAction={directCreatePrAction}
+                  dropdownItems={dropdownItems}
+                  onGenerate={handleGeneratePullRequestFieldsClick}
+                  onCancelGenerate={handleCancelGeneratePullRequestFields}
+                  onPrimaryAction={() => {
+                    void handleCreatePullRequest()
+                  }}
+                  onDropdownAction={handleActionInvoke}
+                />
+              </>
             ) : (
               <CommitArea
                 worktreeId={activeWorktreeId}

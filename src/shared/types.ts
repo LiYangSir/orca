@@ -352,6 +352,10 @@ export type NestedRepoScanOptions = {
   maxDepth?: number
   maxRepos?: number
   timeoutMs?: number | null
+  // Why: when true, a selected git-repo root is treated as a workspace member and
+  // the scan descends into it to surface independent nested git repos, enabling a
+  // "parent repo + nested children" ProjectGroup import.
+  descendIntoGitRepoRoot?: boolean
 }
 
 export type NestedRepoCandidate = {
@@ -362,7 +366,9 @@ export type NestedRepoCandidate = {
 
 export type NestedRepoScanResult = {
   selectedPath: string
-  selectedPathKind: 'git_repo' | 'non_git_folder'
+  // Why: 'git_repo_with_nested' marks a git-repo root whose scan surfaced nested
+  // member repos — the renderer routes it through the nested-import flow.
+  selectedPathKind: 'git_repo' | 'git_repo_with_nested' | 'non_git_folder'
   repos: NestedRepoCandidate[]
   truncated: boolean
   timedOut: boolean

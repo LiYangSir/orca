@@ -240,6 +240,10 @@ import {
 import { findTaskPageJiraIssue } from '@/components/task-page-jira-cache-selectors'
 import { getRepoBackedTaskEmptyState } from '@/components/task-page-empty-state'
 import {
+  groupGitHubWorkItems,
+  type GitHubWorkItemListRow
+} from '@/components/task-page-github-grouping'
+import {
   getDefaultTaskRepoSelection,
   getTaskProjectPickerGroups,
   normalizeTaskRepoSelection
@@ -353,6 +357,7 @@ import {
   getGitHubTaskKindPresets,
   getGitLabIssueFilters,
   getGitLabMRFilters,
+  getGitHubGroupOptions,
   getJiraPresets,
   getLinearDisplayProperties,
   getLinearGroupOptions,
@@ -361,6 +366,7 @@ import {
   getLinearPriorityLabel,
   getLinearViewOptions,
   getSourceOptions,
+  type GitHubGroupBy,
   type GitHubTaskKind,
   type GitLabIssueFilter,
   type GitLabTaskFilter,
@@ -4422,6 +4428,7 @@ export default function TaskPage(): React.JSX.Element {
   const previousLinearWorkspaceIdForFiltersRef = useRef<string | null | undefined>(undefined)
   const [linearViewMode, setLinearViewMode] = useState<LinearViewMode>('list')
   const [linearGroupBy, setLinearGroupBy] = useState<LinearGroupBy>('none')
+  const [githubGroupBy, setGithubGroupBy] = useState<GitHubGroupBy>('repo')
   const [linearOrderBy, setLinearOrderBy] = useState<LinearOrderBy>('priority')
   const [linearDisplayProperties, setLinearDisplayProperties] = useState<
     ReadonlySet<LinearDisplayProperty>
@@ -6158,6 +6165,31 @@ export default function TaskPage(): React.JSX.Element {
   const filteredWorkItems = useMemo(
     () => applyTypeFilter(currentPageItems),
     [applyTypeFilter, currentPageItems]
+  )
+  // Why: grouping is only meaningful across multiple repos; force 'none' for a
+  // single-repo scope so the list stays flat and the toggle stays hidden.
+  const effectiveGithubGroupBy = selectedRepos.length > 1 ? githubGroupBy : 'none'
+  const githubWorkItemListRows = useMemo<GitHubWorkItemListRow[]>(
+    () =>
+      groupGitHubWorkItems(filteredWorkItems, effectiveGithubGroupBy, repoMap).flatMap(
+        (section) => {
+          const itemRows = section.items.map((item) => ({ type: 'item' as const, item }))
+          if (effectiveGithubGroupBy === 'none') {
+            return itemRows
+          }
+          return [
+            {
+              type: 'section' as const,
+              key: section.key,
+              label: section.label,
+              color: section.color,
+              count: section.items.length
+            },
+            ...itemRows
+          ]
+        }
+      ),
+    [filteredWorkItems, effectiveGithubGroupBy, repoMap]
   )
   const showGitHubTaskSkeletons = tasksFiltering || (tasksLoading && filteredWorkItems.length === 0)
   const loadedGitHubAuthorLogins = useMemo(() => {
@@ -8551,6 +8583,32 @@ export default function TaskPage(): React.JSX.Element {
                         settings={settings}
                         onChange={(change) => applyPRFilterChange(change)}
                       />
+                      {selectedRepos.length > 1 ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="xs"
+                              className="gap-1 border-border/50 bg-background/70 text-[11px]"
+                            >
+                              <SlidersHorizontal className="size-3.5" />
+                              {translate('auto.components.TaskPage.5659da12fc', 'Grouping')}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="w-48">
+                            <DropdownMenuRadioGroup
+                              value={githubGroupBy}
+                              onValueChange={(value) => setGithubGroupBy(value as GitHubGroupBy)}
+                            >
+                              {getGitHubGroupOptions().map((option) => (
+                                <DropdownMenuRadioItem key={option.id} value={option.id}>
+                                  {option.label}
+                                </DropdownMenuRadioItem>
+                              ))}
+                            </DropdownMenuRadioGroup>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : null}
                       <div className="relative min-w-0 flex-1 basis-64">
                         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
                         <Input
@@ -9490,7 +9548,31 @@ export default function TaskPage(): React.JSX.Element {
 
                 <div className="divide-y divide-border/50">
                   {!showGitHubTaskSkeletons &&
-                    filteredWorkItems.map((item) => {
+                    githubWorkItemListRows.map((row) => {
+                      if (row.type === 'section') {
+                        return (
+                          <div
+                            key={row.key}
+                            className="flex h-9 items-center gap-2 bg-muted/35 px-3"
+                          >
+                            <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
+                            {row.color ? (
+                              <span
+                                className="size-2 shrink-0 rounded-full"
+                                style={{ backgroundColor: row.color }}
+                                aria-hidden="true"
+                              />
+                            ) : null}
+                            <span className="min-w-0 truncate text-[13px] font-medium text-foreground">
+                              {row.label}
+                            </span>
+                            <span className="shrink-0 text-[11px] text-muted-foreground">
+                              {row.count}
+                            </span>
+                          </div>
+                        )
+                      }
+                      const item = row.item
                       const itemRepo = repoMap.get(item.repoId) ?? null
                       const attachedWorkspace = findGithubWorkItemWorkspaceAttachment(
                         allWorktrees,

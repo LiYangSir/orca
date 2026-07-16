@@ -5,6 +5,7 @@ import { translate } from '@/i18n/i18n'
 import type { LocalTask, LocalTaskLabel } from '../../../../shared/local-task-types'
 import type { LocalTaskGroupSection } from './local-task-group-sort'
 import { LocalTaskRow, LIST_GRID_CLASS } from './local-task-row'
+import { useLocalTaskAgentActivityCounts } from './local-task-agent-activity'
 
 export function LocalTaskListView({
   groups,
@@ -27,6 +28,7 @@ export function LocalTaskListView({
   onEditTask: (id: string) => void
   onDeleteTask: (id: string) => void
 }): React.JSX.Element {
+  const agentActivityCounts = useLocalTaskAgentActivityCounts()
   if (groups.every((g) => g.tasks.length === 0)) {
     return (
       <div className="flex h-32 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
@@ -65,6 +67,7 @@ export function LocalTaskListView({
           group={group}
           labels={labels}
           allTasks={allTasks}
+          agentActivityCounts={agentActivityCounts}
           showHeader={showGroupHeaders}
           selectedTaskId={selectedTaskId}
           onSelectTask={onSelectTask}
@@ -81,6 +84,7 @@ function TaskGroup({
   group,
   labels,
   allTasks,
+  agentActivityCounts,
   showHeader,
   selectedTaskId,
   onSelectTask,
@@ -91,6 +95,7 @@ function TaskGroup({
   group: LocalTaskGroupSection
   labels: LocalTaskLabel[]
   allTasks: LocalTask[]
+  agentActivityCounts: ReadonlyMap<string, number>
   showHeader: boolean
   selectedTaskId: string | null
   onSelectTask: (id: string | null) => void
@@ -124,6 +129,7 @@ function TaskGroup({
             task={task}
             labels={labels}
             allTasks={allTasks}
+            agentActivityCount={agentActivityCounts.get(task.id) ?? 0}
             selected={selectedTaskId === task.id}
             onSelect={() => onSelectTask(selectedTaskId === task.id ? null : task.id)}
             onCycleStatus={() => onCycleStatus(task)}

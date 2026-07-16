@@ -1,19 +1,21 @@
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
-import type { LocalTask, LocalTaskLabel } from '../../../../shared/local-task-types'
+import {
+  getLocalTaskDisplayId,
+  type LocalTask,
+  type LocalTaskLabel
+} from '../../../../shared/local-task-types'
 import { PriorityIcon, StatusIcon } from './local-task-status-priority'
 import { SubtaskRing } from './local-task-subtask-ring'
 import { DueDateChip } from './local-task-due-date'
 import { LabelChip } from './local-task-label-chip'
-
-function shortId(id: string): string {
-  return `LT-${id.slice(0, 6)}`
-}
+import { LocalTaskAgentActivityIndicator } from './local-task-agent-activity'
 
 export function LocalTaskBoardCard({
   task,
   labels,
   allTasks,
+  agentActivityCount = 0,
   selected,
   onSelect,
   onPointerDown
@@ -21,6 +23,7 @@ export function LocalTaskBoardCard({
   task: LocalTask
   labels: LocalTaskLabel[]
   allTasks: LocalTask[]
+  agentActivityCount?: number
   selected: boolean
   onSelect: () => void
   onPointerDown: (e: React.PointerEvent) => void
@@ -54,7 +57,10 @@ export function LocalTaskBoardCard({
       <div className="px-3 pb-2 pt-2.5">
         <div className="mb-1.5 flex items-center gap-1.5">
           <StatusIcon status={task.status} className="size-2.5" />
-          <span className="font-mono text-[10px] text-muted-foreground/50">{shortId(task.id)}</span>
+          <span className="font-mono text-[10px] text-muted-foreground/50">
+            {getLocalTaskDisplayId(task.id)}
+          </span>
+          <LocalTaskAgentActivityIndicator count={agentActivityCount} />
           <span className="flex-1" />
           {task.priority !== 'none' && (
             <PriorityIcon priority={task.priority} className="size-3.5" />

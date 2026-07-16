@@ -1,5 +1,5 @@
 import { mkdtemp, mkdir, writeFile, rm, symlink } from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { scanNestedRepos } from './nested-repo-discovery'
@@ -378,6 +378,43 @@ describe('scanNestedRepos', () => {
 
     const result = await scanNestedRepos({ path: root })
 
+    expect(result.selectedPathKind).toBe('git_repo')
+    expect(result.repos).toEqual([])
+  })
+
+  it('surfaces nested repos inside a selected git repo in workspace mode', async () => {
+    const root = await tempRoot()
+    await makeGitRepo(root)
+    await mkdir(join(root, 'svc-a'), { recursive: true })
+    await makeGitRepo(join(root, 'svc-a'))
+    await mkdir(join(root, 'svc-b'), { recursive: true })
+    await makeGitRepo(join(root, 'svc-b'))
+    // Why: a plain subfolder that is not its own repo is not a workspace member.
+    await mkdir(join(root, 'docs'), { recursive: true })
+
+    const result = await scanNestedRepos({
+      path: root,
+      options: { descendIntoGitRepoRoot: true }
+    })
+
+    expect(result.selectedPathKind).toBe('git_repo_with_nested')
+    // Why: the parent repo is seeded at depth 0; its nested children follow.
+    expect(result.repos.map((repo) => repo.displayName)).toEqual([basename(root), 'svc-a', 'svc-b'])
+    expect(result.repos[0]?.depth).toBe(0)
+  })
+
+  it('keeps a childless git-repo root as a plain repo in workspace mode', async () => {
+    const root = await tempRoot()
+    await makeGitRepo(root)
+    await mkdir(join(root, 'docs'), { recursive: true })
+
+    const result = await scanNestedRepos({
+      path: root,
+      options: { descendIntoGitRepoRoot: true }
+    })
+
+    // Why: no nested member repos were found, so the root falls back to the plain
+    // single-repo import path (empty repos, 'git_repo' kind).
     expect(result.selectedPathKind).toBe('git_repo')
     expect(result.repos).toEqual([])
   })

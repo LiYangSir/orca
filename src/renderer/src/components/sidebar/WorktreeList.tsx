@@ -285,7 +285,11 @@ import {
   getFolderWorkspaceExecutionHostIdForRows,
   getProjectGroupExecutionHostIdForRows
 } from './worktree-list-host-filtering'
-import { getFolderWorkspaceCardPrDisplay } from './folder-workspace-card-pr-display'
+import {
+  getFolderWorkspaceCardPrDisplay,
+  getFolderWorkspacePrListDisplay
+} from './folder-workspace-card-pr-display'
+import { FolderWorkspacePrList } from './FolderWorkspacePrList'
 
 export {
   getScrollTopToRevealBounds,
@@ -5033,6 +5037,20 @@ const VirtualizedWorktreeViewport = React.memo(function VirtualizedWorktreeViewp
                 prCache,
                 settings
               })
+              // Why: a multi-repo folder workspace lists one row per member
+              // repo's open review; with 2+ rows the list subsumes the single
+              // worst-status icon to avoid showing the same PR twice.
+              const folderPrList = getFolderWorkspacePrListDisplay({
+                folderWorkspaceId: folderWorkspaceRow.folderWorkspace.id,
+                workspaceLineageByChildKey,
+                worktreeLineageById,
+                worktreeMap,
+                repoMap,
+                hostedReviewCache,
+                prCache,
+                settings
+              })
+              const showFolderPrList = folderPrList.length >= 2
               const isFolderBackedWorkspaceChild =
                 groupBy === 'repo' && folderWorkspaceRow.projectGroup.createdFrom === 'folder-scan'
               const { surfaceInset, cardContentIndent } = getFolderWorkspaceRowGeometry({
@@ -5083,8 +5101,9 @@ const VirtualizedWorktreeViewport = React.memo(function VirtualizedWorktreeViewp
                       activationRowKey={folderWorktree.id}
                       onSelectionGesture={onSelectionGesture}
                       onContextMenuSelect={onContextMenuSelect}
-                      statusPrDisplay={folderPrDisplay}
+                      statusPrDisplay={showFolderPrList ? null : folderPrDisplay}
                     />
+                    {showFolderPrList ? <FolderWorkspacePrList rows={folderPrList} /> : null}
                     <div className="pointer-events-auto absolute right-3 top-1.5">
                       <FolderPathStatusIndicator status={folderWorkspacePathStatus} />
                     </div>

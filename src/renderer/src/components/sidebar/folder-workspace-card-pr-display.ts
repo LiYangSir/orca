@@ -152,3 +152,55 @@ function compareReviewDisplays(left: WorktreeCardPrDisplay, right: WorktreeCardP
 function getReviewDisplayPriority(review: WorktreeCardPrDisplay): number {
   return review.status ? REVIEW_STATUS_PRIORITY[review.status] : 4
 }
+
+export type FolderWorkspacePrListRow = {
+  repoDisplayName: string
+  repoBadgeColor: string | null
+  display: WorktreeCardPrDisplay
+}
+
+/**
+ * Why: a multi-repo folder workspace can have one open review per member repo.
+ * Unlike getFolderWorkspaceCardPrDisplay (which collapses to the worst-status
+ * icon), this keeps every member repo's review so the card can list them.
+ */
+export function getFolderWorkspacePrListDisplay({
+  folderWorkspaceId,
+  workspaceLineageByChildKey,
+  worktreeLineageById,
+  worktreeMap,
+  repoMap,
+  hostedReviewCache,
+  prCache,
+  settings
+}: FolderWorkspaceCardPrDisplayArgs): FolderWorkspacePrListRow[] {
+  const attachedWorktrees = getAttachedWorktreesForFolderWorkspaceCard({
+    folderWorkspaceId,
+    workspaceLineageByChildKey,
+    worktreeLineageById,
+    worktreeMap
+  })
+
+  const rows = buildParentPrChecksRows({
+    worktrees: attachedWorktrees,
+    repoById: repoMap,
+    settings: settings ?? null,
+    hostedReviewCache: hostedReviewCache ?? {},
+    prCache: prCache ?? {},
+    checksCache: {}
+  })
+
+  const result: FolderWorkspacePrListRow[] = []
+  for (const row of rows) {
+    const display = parentPrChecksRowToCardDisplay(row)
+    if (!display) {
+      continue
+    }
+    result.push({
+      repoDisplayName: row.repo?.displayName ?? row.worktree.repoId,
+      repoBadgeColor: row.repo?.badgeColor ?? null,
+      display
+    })
+  }
+  return result
+}

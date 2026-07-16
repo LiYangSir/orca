@@ -16,6 +16,7 @@ import type {
   FolderWorkspace,
   ProjectGroupImportResult,
   NestedRepoScanResult,
+  NestedRepoScanOptions,
   ProjectHostSetupCloneArgs,
   ProjectHostSetupCreateArgs,
   ProjectHostSetupCreateResult,
@@ -123,6 +124,9 @@ type ProjectUpdate = ProjectUpdateArgs['updates']
 type NestedRepoScanControls = {
   scanId?: string
   onProgress?: (scan: NestedRepoScanResult) => void
+  // Why: forwarded to the scan so the renderer can request workspace mode
+  // (descendIntoGitRepoRoot) and other scan limits.
+  options?: NestedRepoScanOptions
 }
 
 export type FolderWorkspacePathStatusCacheEntry = {
@@ -1955,7 +1959,8 @@ export const createRepoSlice: StateCreator<AppState, [], [], RepoSlice> = (set, 
             await window.api.projectGroups.scanNested({
               path,
               connectionId,
-              scanId: controls?.scanId
+              scanId: controls?.scanId,
+              options: controls?.options
             })
           )
         } finally {
@@ -1966,7 +1971,7 @@ export const createRepoSlice: StateCreator<AppState, [], [], RepoSlice> = (set, 
         await callRuntimeRpc<NestedRepoScanResult>(
           target,
           'projectGroup.scanNested',
-          { path },
+          { path, options: controls?.options },
           // Why: older runtime servers cannot stream or cancel scans, so the
           // renderer must retain a bounded failure path for large folders.
           { timeoutMs: 20_000 }

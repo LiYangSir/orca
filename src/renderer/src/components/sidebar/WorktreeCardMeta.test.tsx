@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { WorktreeCardDetailsHover } from './WorktreeCardMeta'
+import { hasWorktreeCardDetails, WorktreeCardDetailsHover } from './WorktreeCardMeta'
 
 vi.mock('@/components/ui/hover-card', () => ({
   HoverCard: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -27,6 +27,25 @@ vi.mock('@/components/ui/dropdown-menu', () => ({
 }))
 
 describe('WorktreeCardDetailsHover', () => {
+  it('shows the linked local task card identifier', () => {
+    const details = {
+      issue: null,
+      linearIssue: null,
+      localTaskId: '12345678-full-task-id',
+      review: null,
+      comment: null
+    }
+    const markup = renderToStaticMarkup(
+      <WorktreeCardDetailsHover {...details}>
+        <span>Linked local task</span>
+      </WorktreeCardDetailsHover>
+    )
+
+    expect(hasWorktreeCardDetails(details)).toBe(true)
+    expect(markup).toContain('Local task')
+    expect(markup).toContain('LT-123456')
+  })
+
   it('wraps workspace and branch identity so long names stay readable in the hover panel', () => {
     const markup = renderToStaticMarkup(
       <WorktreeCardDetailsHover

@@ -16,6 +16,7 @@ import { SubtaskRing } from './local-task-subtask-ring'
 import { formatTimestamp } from './local-task-time-format'
 import { DueDateChip } from './local-task-due-date'
 import { LabelChip } from './local-task-label-chip'
+import { LocalTaskAgentActivityIndicator } from './local-task-agent-activity'
 
 export const LIST_GRID_CLASS =
   'grid grid-cols-[32px_minmax(120px,1fr)_50px_80px_120px_80px_100px_60px] items-center gap-1 px-3'
@@ -24,6 +25,7 @@ export function LocalTaskRow({
   task,
   labels,
   allTasks,
+  agentActivityCount = 0,
   selected,
   onSelect,
   onCycleStatus,
@@ -33,6 +35,7 @@ export function LocalTaskRow({
   task: LocalTask
   labels: LocalTaskLabel[]
   allTasks: LocalTask[]
+  agentActivityCount?: number
   selected: boolean
   onSelect: () => void
   onCycleStatus: () => void
@@ -75,15 +78,16 @@ export function LocalTaskRow({
         <StatusIcon status={task.status} className="size-4" />
       </button>
 
-      <div className="min-w-0">
+      <div className="flex min-w-0 items-center gap-1.5">
         <p
           className={cn(
-            'truncate text-sm',
+            'min-w-0 flex-1 truncate text-sm',
             task.status === 'done' ? 'text-muted-foreground line-through' : 'text-foreground'
           )}
         >
           {task.title}
         </p>
+        <LocalTaskAgentActivityIndicator count={agentActivityCount} />
       </div>
 
       <SubtaskRing done={subtaskStats.done} total={subtaskStats.total} />

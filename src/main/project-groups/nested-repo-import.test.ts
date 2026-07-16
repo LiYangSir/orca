@@ -310,6 +310,38 @@ describe('createNestedProjectGroupResolver', () => {
     expect(selection.rejectedPaths).toEqual(['D:/other/repo'])
   })
 
+  it('accepts the workspace parent repo as a member when it appears in the scan', () => {
+    // Why: in workspace mode the parent git repo is seeded into scan.repos at
+    // depth 0 alongside its nested children, so it must import as a group member
+    // (not be rejected as the scan's selectedPath).
+    const selection = resolveNestedRepoSelection({
+      scan: {
+        selectedPath: '/workspace/parent',
+        selectedPathKind: 'git_repo_with_nested',
+        repos: [
+          { path: '/workspace/parent', displayName: 'parent', depth: 0 },
+          { path: '/workspace/parent/svc-a', displayName: 'svc-a', depth: 1 },
+          { path: '/workspace/parent/svc-b', displayName: 'svc-b', depth: 1 }
+        ],
+        truncated: false,
+        timedOut: false,
+        stopped: false,
+        durationMs: 1,
+        maxDepth: 3,
+        maxRepos: 100,
+        timeoutMs: null
+      },
+      projectPaths: ['/workspace/parent', '/workspace/parent/svc-a', '/workspace/parent/svc-b']
+    })
+
+    expect(selection.selectedPaths).toEqual([
+      '/workspace/parent',
+      '/workspace/parent/svc-a',
+      '/workspace/parent/svc-b'
+    ])
+    expect(selection.rejectedPaths).toEqual([])
+  })
+
   it('accepts stopped-scan import paths inside the selected parent without rescanning', () => {
     const selection = resolveNestedRepoImportPaths({
       parentPath: '/workspace/platform',

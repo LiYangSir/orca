@@ -11806,11 +11806,16 @@ export class OrcaRuntimeService {
     return { deleted }
   }
 
-  async scanNestedRepos(path: string): Promise<NestedRepoScanResult> {
+  async scanNestedRepos(path: string, options?: unknown): Promise<NestedRepoScanResult> {
     if (!isAbsolute(path)) {
       throw new Error('Project path must be an absolute path')
     }
-    return scanNestedRepos({ path, options: { timeoutMs: 15_000 } })
+    // Why: merge caller-provided options (e.g. workspace descendIntoGitRepoRoot)
+    // over the runtime's bounded default timeout.
+    return scanNestedRepos({
+      path,
+      options: { timeoutMs: 15_000, ...((options ?? {}) as Record<string, unknown>) }
+    })
   }
 
   async browseServerDir(pathValue: string): Promise<{ resolvedPath: string; entries: DirEntry[] }> {

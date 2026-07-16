@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/store'
 import { useMountedRef } from '@/hooks/useMountedRef'
-import type { NestedRepoScanResult } from '../../../../shared/types'
+import type { NestedRepoScanOptions, NestedRepoScanResult } from '../../../../shared/types'
 import type { SshTarget, SshConnectionState } from '../../../../shared/ssh-types'
 import { createNestedRepoTelemetryAttemptId } from '../../../../shared/nested-repo-telemetry'
+import { isNestedRepoScanReviewKind } from '../../../../shared/nested-repo-scan'
 import { translate } from '@/i18n/i18n'
 import { extractIpcErrorMessage } from '@/lib/ipc-error'
 import { upsertAddedRepoWithProjectHostSetup } from './add-repo-store-upsert'
@@ -22,7 +23,11 @@ export function useRemoteRepo(
   scanNestedRepos?: (
     path: string,
     connectionId?: string,
-    controls?: { scanId?: string; onProgress?: (scan: NestedRepoScanResult) => void }
+    controls?: {
+      scanId?: string
+      onProgress?: (scan: NestedRepoScanResult) => void
+      options?: NestedRepoScanOptions
+    }
   ) => Promise<NestedRepoScanResult | null>,
   showNestedRepoReview?: (
     scan: NestedRepoScanResult,
@@ -146,11 +151,14 @@ export function useRemoteRepo(
       setRemoteNestedScanId(scanId)
       const scan = await scanNestedRepos?.(trimmedRemotePath, selectedTargetId, {
         scanId,
+        // Why: descend into a selected git-repo root so a "parent + nested
+        // children" workspace is detected on remote hosts too.
+        options: { descendIntoGitRepoRoot: true },
         onProgress: (progressScan) => {
           if (
             gen !== remoteGenRef.current ||
             !mountedRef.current ||
-            progressScan.selectedPathKind !== 'non_git_folder' ||
+            !isNestedRepoScanReviewKind(progressScan.selectedPathKind) ||
             progressScan.repos.length === 0
           ) {
             return
@@ -169,7 +177,7 @@ export function useRemoteRepo(
         return
       }
       onNestedScanResult?.(scan ?? null, attemptId)
-      if (scan?.selectedPathKind === 'non_git_folder' && scan.repos.length > 0) {
+      if (scan && isNestedRepoScanReviewKind(scan.selectedPathKind) && scan.repos.length > 0) {
         showNestedRepoReview?.(scan, trimmedRemotePath, selectedTargetId, attemptId, false, scanId)
         setRemoteNestedScanId(null)
         return

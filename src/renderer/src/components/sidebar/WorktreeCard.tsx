@@ -475,6 +475,7 @@ const WorktreeCard = React.memo(function WorktreeCard({
   const linkedAzureDevOpsPR = worktree.linkedAzureDevOpsPR ?? null
   const linkedGiteaPR = worktree.linkedGiteaPR ?? null
   const linkedCodeMR = worktree.linkedCodeMR ?? null
+  const linkedLocalTaskId = worktree.linkedLocalTask ?? null
   const hasNonGitHubLinkedReview =
     linkedGitLabMR !== null ||
     linkedBitbucketPR !== null ||
@@ -1185,6 +1186,7 @@ const WorktreeCard = React.memo(function WorktreeCard({
   const hasDetails = hasWorktreeCardDetails({
     issue: metaIssue,
     linearIssue: metaLinearIssue,
+    localTaskId: linkedLocalTaskId,
     review: newCardStyle ? null : metaReview,
     comment: metaComment,
     automationProvenance: metaAutomationProvenance
@@ -1264,6 +1266,7 @@ const WorktreeCard = React.memo(function WorktreeCard({
     (hasWorktreeCardDetails({
       issue: hoverIssue,
       linearIssue: hoverLinearIssue,
+      localTaskId: linkedLocalTaskId,
       review: hoverReview,
       comment: hoverComment,
       automationProvenance: metaAutomationProvenance
@@ -1281,6 +1284,7 @@ const WorktreeCard = React.memo(function WorktreeCard({
           <WorktreeCardDetailsHover
             issue={metaIssue}
             linearIssue={metaLinearIssue}
+            localTaskId={linkedLocalTaskId}
             review={metaReview}
             comment={metaComment}
             automationProvenance={metaAutomationProvenance}
@@ -1337,6 +1341,7 @@ const WorktreeCard = React.memo(function WorktreeCard({
           <WorktreeCardMetaBadges
             issue={metaIssue}
             linearIssue={metaLinearIssue}
+            localTaskId={linkedLocalTaskId}
             review={newCardStyle ? null : metaReview}
             comment={metaComment}
             automationProvenance={metaAutomationProvenance}
@@ -1350,6 +1355,7 @@ const WorktreeCard = React.memo(function WorktreeCard({
       <WorktreeCardDetailsHover
         issue={metaIssue}
         linearIssue={metaLinearIssue}
+        localTaskId={linkedLocalTaskId}
         review={metaReview}
         comment={metaComment}
         automationProvenance={metaAutomationProvenance}
@@ -1838,6 +1844,7 @@ const WorktreeCard = React.memo(function WorktreeCard({
       <WorktreeCardDetailsHover
         issue={hoverIssue}
         linearIssue={hoverLinearIssue}
+        localTaskId={linkedLocalTaskId}
         review={hoverReview}
         comment={hoverComment}
         automationProvenance={metaAutomationProvenance}

@@ -18,6 +18,7 @@ import {
   shouldEmitNestedRepoImportSubmitTelemetry,
   type NestedRepoTelemetryRuntimeKind
 } from '../../../../shared/nested-repo-telemetry'
+import { isNestedRepoScanReviewKind } from '../../../../shared/nested-repo-scan'
 import type { EventProps } from '../../../../shared/telemetry-events'
 import type {
   GlobalSettings,
@@ -786,7 +787,11 @@ export function useOnboardingFlow(
         try {
           if (kind === 'git') {
             const attemptId = createNestedRepoTelemetryAttemptId()
-            const scan = await scanNestedRepos(path)
+            // Why: descend into a selected git-repo root so a "parent + nested
+            // children" workspace is detected during onboarding.
+            const scan = await scanNestedRepos(path, undefined, {
+              options: { descendIntoGitRepoRoot: true }
+            })
             track(
               'add_repo_nested_scan_result',
               buildNestedRepoScanTelemetry({
@@ -796,7 +801,11 @@ export function useOnboardingFlow(
                 scan
               })
             )
-            if (scan?.selectedPathKind === 'non_git_folder' && scan.repos.length > 0) {
+            if (
+              scan &&
+              isNestedRepoScanReviewKind(scan.selectedPathKind) &&
+              scan.repos.length > 0
+            ) {
               showNestedRepoReview(scan, attemptId, 'runtime')
               return
             }
@@ -835,10 +844,13 @@ export function useOnboardingFlow(
           setNestedScanInProgress(true)
           const scan = await scanNestedRepos(path, undefined, {
             scanId,
+            // Why: descend into a selected git-repo root so a "parent + nested
+            // children" workspace is detected during onboarding.
+            options: { descendIntoGitRepoRoot: true },
             onProgress: (progressScan) => {
               if (
                 nestedScanIdRef.current !== scanId ||
-                progressScan.selectedPathKind !== 'non_git_folder' ||
+                !isNestedRepoScanReviewKind(progressScan.selectedPathKind) ||
                 progressScan.repos.length === 0
               ) {
                 return
@@ -860,7 +872,7 @@ export function useOnboardingFlow(
               scan
             })
           )
-          if (scan?.selectedPathKind === 'non_git_folder' && scan.repos.length > 0) {
+          if (scan && isNestedRepoScanReviewKind(scan.selectedPathKind) && scan.repos.length > 0) {
             showNestedRepoReview(scan, attemptId, 'local', false, scanId)
             return
           }

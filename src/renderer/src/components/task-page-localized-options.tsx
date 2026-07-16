@@ -18,6 +18,10 @@ export type TaskQueryPreset = {
 
 export type GitHubTaskKind = 'issues' | 'prs'
 
+// Why: mirrors LinearGroupBy so the GitHub PR/issue list can group by repository
+// for multi-repo workspaces (parent + nested member repos in one ProjectGroup).
+export type GitHubGroupBy = 'none' | 'repo'
+
 export type SourceOption = {
   id: TaskProvider
   label: string
@@ -149,6 +153,13 @@ export const getGitHubModeButtons = createLocalizedCatalog((): GitHubModeButton[
   { id: 'prs', label: translate('auto.components.TaskPage.137e2a8a01', 'PRs') },
   { id: 'project', label: translate('auto.components.TaskPage.727069bee5', 'Projects') }
 ])
+
+export const getGitHubGroupOptions = createLocalizedCatalog(
+  (): { id: GitHubGroupBy; label: string }[] => [
+    { id: 'none', label: translate('auto.components.TaskPage.50387522d7', 'No grouping') },
+    { id: 'repo', label: translate('auto.components.TaskPage.81f14d9924', 'Repository') }
+  ]
+)
 
 export const getLinearModeOptions = createLocalizedCatalog(
   (): { id: LinearMode; label: string }[] => [

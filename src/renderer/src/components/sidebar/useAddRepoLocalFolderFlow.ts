@@ -8,7 +8,8 @@ import {
   type NestedRepoTelemetryRuntimeKind
 } from '../../../../shared/nested-repo-telemetry'
 import type { AddRepoExistingWorkspaceSource } from '../../../../shared/telemetry-events'
-import type { NestedRepoScanResult, Repo } from '../../../../shared/types'
+import { isNestedRepoScanReviewKind } from '../../../../shared/nested-repo-scan'
+import type { NestedRepoScanOptions, NestedRepoScanResult, Repo } from '../../../../shared/types'
 import { createNestedRepoScanId } from './add-repo-dialog-types'
 import { translate } from '@/i18n/i18n'
 
@@ -52,7 +53,11 @@ export function useAddRepoLocalFolderFlow({
   scanNestedRepos: (
     path: string,
     connectionId?: string,
-    controls?: { scanId?: string; onProgress?: (scan: NestedRepoScanResult) => void }
+    controls?: {
+      scanId?: string
+      onProgress?: (scan: NestedRepoScanResult) => void
+      options?: NestedRepoScanOptions
+    }
   ) => Promise<NestedRepoScanResult | null>
   setActiveNestedScanId: (scanId: string | null) => void
   setNestedScanInProgress: (inProgress: boolean) => void
@@ -102,11 +107,14 @@ export function useAddRepoLocalFolderFlow({
         setNestedScanInProgress(true)
         const scan = await scanNestedRepos(path, undefined, {
           scanId,
+          // Why: descend into a selected git-repo root so a "parent + nested
+          // children" workspace is detected and routed through the review UI.
+          options: { descendIntoGitRepoRoot: true },
           onProgress: (progressScan) => {
             if (
               gen !== localAddGenRef.current ||
               mode === 'batch' ||
-              progressScan.selectedPathKind !== 'non_git_folder' ||
+              !isNestedRepoScanReviewKind(progressScan.selectedPathKind) ||
               progressScan.repos.length === 0
             ) {
               return
@@ -135,10 +143,10 @@ export function useAddRepoLocalFolderFlow({
             scan
           })
         )
-        if (scan?.selectedPathKind === 'non_git_folder' && mode === 'batch') {
+        if (scan && isNestedRepoScanReviewKind(scan.selectedPathKind) && mode === 'batch') {
           return { status: 'skipped' }
         }
-        if (scan?.selectedPathKind === 'non_git_folder' && scan.repos.length > 0) {
+        if (scan && isNestedRepoScanReviewKind(scan.selectedPathKind) && scan.repos.length > 0) {
           // Why: the existing nested-repo review is a single-folder decision point.
           // Pause batch imports here instead of queueing competing review states.
           showNestedRepoReview({
