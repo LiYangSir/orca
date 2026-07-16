@@ -191,6 +191,27 @@ export const getAccountsMiniMaxSearchEntries = createLocalizedCatalog(() => [
   }
 ])
 
+export const getAccountsZaiSearchEntries = createLocalizedCatalog(() => [
+  {
+    title: translate('auto.components.settings.appearance.search.zaiUsageTitle', 'Z.ai Usage'),
+    description: translate(
+      'auto.components.settings.appearance.search.zaiUsageDescription',
+      'Show Z.ai coding-plan quota usage in the status bar.'
+    ),
+    keywords: [
+      ...translateSearchKeyword('auto.components.settings.appearance.search.zai', 'z.ai'),
+      ...translateSearchKeyword('auto.components.settings.appearance.search.glm', 'glm'),
+      ...translateSearchKeyword('auto.components.settings.voice.pane.search.2d206de105', 'api key'),
+      ...translateSearchKeyword(
+        'auto.components.settings.accounts.search.e949b08ffb',
+        'rate limit'
+      ),
+      ...translateSearchKeyword('auto.components.settings.accounts.search.c759741d77', 'quota'),
+      ...translateSearchKeyword('auto.components.settings.accounts.search.86edc96bc9', 'status bar')
+    ]
+  }
+])
+
 export const getAccountsGrokSearchEntries = createLocalizedCatalog(() => [
   {
     title: translate('auto.components.settings.accounts.search.f4a8c2e1b7', 'Grok (xAI) Usage'),
@@ -218,6 +239,7 @@ export const getAccountsPaneSearchEntries = createLocalizedCatalog((): SettingsS
   ...getAccountsCodexSearchEntries(),
   ...getAccountsGeminiSearchEntries(),
   ...getAccountsOpencodeSearchEntries(),
+  ...getAccountsZaiSearchEntries(),
   ...getAccountsMiniMaxSearchEntries(),
   ...getAccountsGrokSearchEntries()
 ])

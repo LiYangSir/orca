@@ -62,6 +62,7 @@ type MiniMaxResolvedConfig = {
 
 type GeminiCliOAuthEnabledResolver = () => boolean
 type IdealabUsageEnabledResolver = () => boolean
+type ZaiApiKeyResolver = () => string
 type ActiveRateLimitProvider = ProviderRateLimits['provider']
 type ActiveProviderState = {
   provider: ActiveRateLimitProvider
@@ -190,6 +191,7 @@ export class RateLimitService {
   private miniMaxConfigResolver: (() => MiniMaxRateLimitConfig) | null = null
   private geminiCliOAuthEnabledResolver: GeminiCliOAuthEnabledResolver | null = null
   private idealabUsageEnabledResolver: IdealabUsageEnabledResolver | null = null
+  private zaiApiKeyResolver: ZaiApiKeyResolver | null = null
   private inactiveClaudeAccountsResolver: (() => InactiveClaudeAccountInfo[]) | null = null
   private inactiveCodexAccountsResolver: (() => InactiveCodexAccountInfo[]) | null = null
   private networkProxySettingsResolver: (() => NetworkProxySettings) | null = null
@@ -242,6 +244,10 @@ export class RateLimitService {
 
   setIdealabUsageEnabledResolver(resolver: IdealabUsageEnabledResolver): void {
     this.idealabUsageEnabledResolver = resolver
+  }
+
+  setZaiApiKeyResolver(resolver: ZaiApiKeyResolver): void {
+    this.zaiApiKeyResolver = resolver
   }
 
   setNetworkProxySettingsResolver(resolver: () => NetworkProxySettings): void {
@@ -1300,6 +1306,7 @@ export class RateLimitService {
     const miniMaxModels = miniMaxConfigResult.config.models
     const geminiCliOAuthEnabled = this.geminiCliOAuthEnabledResolver?.() ?? false
     const idealabUsageEnabled = this.idealabUsageEnabledResolver?.() ?? false
+    const zaiApiKey = this.zaiApiKeyResolver?.() ?? ''
     // Why: getState() is used by renderer pushes and mobile snapshots; keep
     // Grok's sync auth-file probe on fetch cycles instead of every state read.
     const grokAuthReadResult = readGrokAuthSession()
@@ -1381,7 +1388,7 @@ export class RateLimitService {
       fetchGeminiRateLimits(geminiCliOAuthEnabled),
       fetchOpenCodeGoRateLimits(cookie, workspaceIdOverride || undefined),
       fetchKimiRateLimits(),
-      fetchZaiRateLimits(),
+      fetchZaiRateLimits(zaiApiKey),
       fetchIdealabRateLimits(idealabUsageEnabled),
       miniMaxConfigResult.error
         ? Promise.resolve(this.getMiniMaxCredentialError(miniMaxConfigResult.error))

@@ -1767,6 +1767,7 @@ app.whenReady().then(async () => {
   })
   rateLimits.setGeminiCliOAuthEnabledResolver(() => store!.getSettings().geminiCliOAuthEnabled)
   rateLimits.setIdealabUsageEnabledResolver(() => store!.getSettings().idealabUsageEnabled === true)
+  rateLimits.setZaiApiKeyResolver(() => store!.getSettings().zaiApiKey)
   rateLimits.setNetworkProxySettingsResolver(() => store!.getSettings())
   keybindings = new KeybindingService({
     homePath: app.getPath('home'),

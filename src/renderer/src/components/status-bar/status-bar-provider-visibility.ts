@@ -6,6 +6,7 @@ export type UsageProviderSettings = Pick<
   | 'codexManagedAccounts'
   | 'claudeManagedAccounts'
   | 'opencodeSessionCookie'
+  | 'zaiApiKey'
   | 'geminiCliOAuthEnabled'
   | 'idealabUsageEnabled'
 > & {
@@ -75,6 +76,7 @@ export function hasUsageProviderSettings(
     (settings?.claudeManagedAccounts?.length ?? 0) > 0 ||
     settings?.geminiCliOAuthEnabled === true ||
     Boolean(settings?.opencodeSessionCookie?.trim()) ||
+    Boolean(settings?.zaiApiKey?.trim()) ||
     settings?.idealabUsageEnabled === true ||
     // Antigravity's durable signal requires geminiCliOAuthEnabled, so it is
     // already covered by the gemini term above.
@@ -101,6 +103,9 @@ export function hasUsageProviderSettingsForProvider(
   }
   if (providerId === 'opencode-go') {
     return Boolean(settings.opencodeSessionCookie?.trim())
+  }
+  if (providerId === 'zai') {
+    return Boolean(settings.zaiApiKey?.trim())
   }
   if (providerId === 'idealab') {
     return settings.idealabUsageEnabled === true

@@ -15,7 +15,11 @@ vi.mock('./settings-search-keywords', () => ({
   translateSearchKeyword: (_key: string, fallback: string) => [fallback]
 }))
 
-import { getAccountsMiniMaxSearchEntries, getAccountsPaneSearchEntries } from './accounts-search'
+import {
+  getAccountsMiniMaxSearchEntries,
+  getAccountsPaneSearchEntries,
+  getAccountsZaiSearchEntries
+} from './accounts-search'
 
 describe('getAccountsMiniMaxSearchEntries', () => {
   it('returns a single entry that targets the MiniMax session cookie flow', () => {
@@ -40,5 +44,17 @@ describe('getAccountsMiniMaxSearchEntries', () => {
     const allEntries = getAccountsPaneSearchEntries()
     const titles = allEntries.map((entry) => entry.title)
     expect(titles).toContain('MiniMax Usage')
+  })
+})
+
+describe('getAccountsZaiSearchEntries', () => {
+  it('indexes the settings-backed API key flow', () => {
+    const [entry] = getAccountsZaiSearchEntries()
+
+    expect(entry.title).toBe('Z.ai Usage')
+    expect(entry.keywords).toEqual(
+      expect.arrayContaining(['z.ai', 'glm', 'api key', 'rate limit', 'quota', 'status bar'])
+    )
+    expect(getAccountsPaneSearchEntries().map((item) => item.title)).toContain('Z.ai Usage')
   })
 })

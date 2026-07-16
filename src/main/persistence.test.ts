@@ -5819,6 +5819,20 @@ describe('Store', () => {
     expect(reloaded.getUI().browserKagiSessionLink).toBe(sessionLink)
   })
 
+  it('encrypts the Z.ai API key on disk and decrypts it on load', async () => {
+    const apiKey = 'zai-secret-key'
+    const store = await createStore()
+
+    store.updateSettings({ zaiApiKey: apiKey })
+    store.flush()
+
+    const persisted = readDataFile() as { settings: { zaiApiKey: string } }
+    expect(persisted.settings.zaiApiKey).not.toBe(apiKey)
+
+    const reloaded = await createStore()
+    expect(reloaded.getSettings().zaiApiKey).toBe(apiKey)
+  })
+
   it('keeps plaintext Kagi session links readable for migration from older builds', async () => {
     const sessionLink = 'https://kagi.com/search?token=secret'
     writeDataFile({

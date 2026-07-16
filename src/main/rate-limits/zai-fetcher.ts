@@ -24,15 +24,6 @@ type ZaiQuotaResponse = {
   limits?: ZaiLimit[]
 }
 
-function getApiKey(): string | null {
-  const zai = process.env.ZAI_API_KEY?.trim()
-  if (zai) {
-    return zai
-  }
-  const glm = process.env.GLM_API_KEY?.trim()
-  return glm || null
-}
-
 function result(status: ProviderRateLimits['status'], error: string | null): ProviderRateLimits {
   return {
     provider: 'zai',
@@ -135,10 +126,12 @@ function mapQuotaResponse(data: unknown): ProviderRateLimits {
   }
 }
 
-export async function fetchZaiRateLimits(): Promise<ProviderRateLimits> {
-  const apiKey = getApiKey()
-  if (!apiKey) {
-    return result('unavailable', 'No ZAI_API_KEY found. Set ZAI_API_KEY or GLM_API_KEY first.')
+// Why: Settings is the sole credential source so dev and packaged launches
+// behave identically; shell environment variables must not shadow saved state.
+export async function fetchZaiRateLimits(apiKey: string): Promise<ProviderRateLimits> {
+  const normalizedApiKey = apiKey.trim()
+  if (!normalizedApiKey) {
+    return result('unavailable', 'Add your Z.ai API key in Settings > Accounts.')
   }
 
   const controller = new AbortController()
@@ -146,7 +139,7 @@ export async function fetchZaiRateLimits(): Promise<ProviderRateLimits> {
   try {
     const res = await net.fetch(ZAI_QUOTA_URL, {
       method: 'GET',
-      headers: { Authorization: `Bearer ${apiKey}`, Accept: 'application/json' },
+      headers: { Authorization: `Bearer ${normalizedApiKey}`, Accept: 'application/json' },
       signal: controller.signal
     })
     if (res.status === 401 || res.status === 403) {

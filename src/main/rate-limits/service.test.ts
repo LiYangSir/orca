@@ -799,6 +799,7 @@ describe('RateLimitService', () => {
       workspaceIdOverride: ''
     }))
     service.setGeminiCliOAuthEnabledResolver(() => true)
+    service.setZaiApiKeyResolver(() => 'settings-zai-key')
 
     vi.mocked(fetchClaudeRateLimits).mockResolvedValueOnce(okProvider('claude', 10, Date.now()))
     vi.mocked(fetchCodexRateLimits).mockResolvedValueOnce(okProvider('codex', 20, Date.now()))
@@ -823,6 +824,7 @@ describe('RateLimitService', () => {
     expect(fetchGeminiRateLimits).toHaveBeenCalledWith(true)
     expect(fetchOpenCodeGoRateLimits).toHaveBeenCalledTimes(1)
     expect(fetchOpenCodeGoRateLimits).toHaveBeenCalledWith('session=abc123', undefined)
+    expect(fetchZaiRateLimits).toHaveBeenCalledWith('settings-zai-key')
     expect(fetchGrokRateLimits).toHaveBeenCalledWith({
       signal: expect.any(AbortSignal),
       authReadResult: { status: 'missing' }

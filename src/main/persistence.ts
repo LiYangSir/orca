@@ -2881,6 +2881,9 @@ export class Store {
         if (parsed.settings?.opencodeSessionCookie) {
           parsed.settings.opencodeSessionCookie = decrypt(parsed.settings.opencodeSessionCookie)
         }
+        if (parsed.settings?.zaiApiKey) {
+          parsed.settings.zaiApiKey = decrypt(parsed.settings.zaiApiKey)
+        }
         if (parsed.settings?.httpProxyUrl) {
           parsed.settings.httpProxyUrl = decrypt(parsed.settings.httpProxyUrl)
         }
@@ -3691,6 +3694,7 @@ export class Store {
       settings: {
         ...this.state.settings,
         opencodeSessionCookie: encrypt(this.state.settings.opencodeSessionCookie),
+        zaiApiKey: encrypt(this.state.settings.zaiApiKey),
         httpProxyUrl: encrypt(this.state.settings.httpProxyUrl ?? '')
       },
       ui: {

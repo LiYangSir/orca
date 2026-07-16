@@ -25,7 +25,7 @@
         "geminiToggleDescription": "Show Gemini token and cost usage for the active workspace.",
         "opencodeGoToggleDescription": "Show OpenCode Go token and cost usage for the active workspace.",
         "kimiToggleDescription": "Show Kimi subscription usage for the active workspace.",
-        "zaiToggleDescription": "Show Z.ai coding-plan quota usage when ZAI_API_KEY or GLM_API_KEY is available.",
+        "zaiToggleDescription": "Show Z.ai coding-plan quota usage when an API key is configured in Accounts.",
         "minimaxToggleDescription": "Show MiniMax subscription usage for the active workspace.",
         "sshToggleDescription": "Show configured SSH and remote Orca hosts when any are available.",
         "resourceUsageToggleDescription": "Show the Resource Manager. Click it for CPU, memory, sessions, daemon controls, and workspace disk scans.",

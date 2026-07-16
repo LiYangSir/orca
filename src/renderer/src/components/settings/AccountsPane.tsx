@@ -46,9 +46,11 @@ import {
   getAccountsGrokSearchEntries,
   getAccountsMiniMaxSearchEntries,
   getAccountsOpencodeSearchEntries,
-  getAccountsPaneSearchEntries
+  getAccountsPaneSearchEntries,
+  getAccountsZaiSearchEntries
 } from './accounts-search'
 import { GrokAccountsSection } from './GrokAccountsSection'
+import { ZaiAccountsSection } from './ZaiAccountsSection'
 import { SearchableSetting } from './SearchableSetting'
 import { SettingsRow, SettingsSegmentedControl } from './SettingsFormControls'
 import { matchesSettingsSearch } from './settings-search'
@@ -151,7 +153,7 @@ function MiniMaxCookieHelpPopover(): React.JSX.Element {
 
 type AccountsPaneProps = {
   settings: GlobalSettings
-  updateSettings: (updates: Partial<GlobalSettings>) => void
+  updateSettings: (updates: Partial<GlobalSettings>) => void | Promise<void>
   wslSupportedPlatform?: boolean
   wslAvailable?: boolean
   wslDistros?: string[]
@@ -301,7 +303,9 @@ export function AccountsPane({
   const searchQuery = useAppStore((s) => s.settingsSearchQuery)
   const codexRateLimits = useAppStore((s) => s.rateLimits.codex)
   const codexRateLimitTarget = useAppStore((s) => s.rateLimits.codexTarget)
+  const zaiRateLimits = useAppStore((s) => s.rateLimits.zai)
   const miniMaxRateLimits = useAppStore((s) => s.rateLimits.minimax)
+  const refreshRateLimits = useAppStore((s) => s.refreshRateLimits)
   const recordFeatureInteraction = useAppStore((s) => s.recordFeatureInteraction)
   const fetchSettings = useAppStore((s) => s.fetchSettings)
   const runtimeEnvironments = useAppStore((s) => s.runtimeEnvironments)
@@ -1578,6 +1582,15 @@ export function AccountsPane({
           </p>
         </SearchableSetting>
       </section>
+    ) : null,
+    matchesSettingsSearch(searchQuery, getAccountsZaiSearchEntries()) ? (
+      <ZaiAccountsSection
+        key="zai"
+        apiKey={settings.zaiApiKey}
+        usageError={zaiRateLimits?.status === 'error' ? zaiRateLimits.error : null}
+        updateSettings={updateSettings}
+        refreshRateLimits={refreshRateLimits}
+      />
     ) : null,
     matchesSettingsSearch(searchQuery, getAccountsMiniMaxSearchEntries()) ? (
       <section key="minimax" id="accounts-minimax" className="space-y-4 scroll-mt-6">

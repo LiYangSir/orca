@@ -186,7 +186,7 @@ export function getProviderUsageToggles(): StatusBarToggleEntry[] {
       ],
       toggleDescription: translate(
         'settings.appearance.statusBar.zaiToggleDescription',
-        'Show Z.ai coding-plan quota usage when ZAI_API_KEY or GLM_API_KEY is available.'
+        'Show Z.ai coding-plan quota usage when an API key is configured in Accounts.'
       )
     },
     {

@@ -61,10 +61,11 @@ describe('fetchZaiRateLimits', () => {
   })
 
   it('returns unavailable when no API key is configured', async () => {
-    vi.stubEnv('ZAI_API_KEY', '')
-    vi.stubEnv('GLM_API_KEY', '')
+    // Why: production credentials now come only from Settings; a legacy shell
+    // variable must not silently override an empty saved configuration.
+    vi.stubEnv('ZAI_API_KEY', 'legacy-env-key')
 
-    const result = await fetchZaiRateLimits()
+    const result = await fetchZaiRateLimits('')
 
     expect(result.provider).toBe('zai')
     expect(result.status).toBe('unavailable')
@@ -73,10 +74,9 @@ describe('fetchZaiRateLimits', () => {
   })
 
   it('maps session, weekly, and web search quota windows', async () => {
-    vi.stubEnv('ZAI_API_KEY', 'zai-key')
     netFetchMock.mockResolvedValueOnce(jsonResponse(QUOTA_RESPONSE))
 
-    const result = await fetchZaiRateLimits()
+    const result = await fetchZaiRateLimits(' zai-key ')
 
     expect(result.status).toBe('ok')
     expect(result.session).toMatchObject({
@@ -100,42 +100,28 @@ describe('fetchZaiRateLimits', () => {
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer zai-key')
   })
 
-  it('falls back to GLM_API_KEY when ZAI_API_KEY is not set', async () => {
-    vi.stubEnv('ZAI_API_KEY', '')
-    vi.stubEnv('GLM_API_KEY', 'glm-key')
-    netFetchMock.mockResolvedValueOnce(jsonResponse(QUOTA_RESPONSE))
-
-    await fetchZaiRateLimits()
-
-    const [, init] = netFetchMock.mock.calls[0]
-    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer glm-key')
-  })
-
   it('reports invalid API keys as errors', async () => {
-    vi.stubEnv('ZAI_API_KEY', 'bad-key')
     netFetchMock.mockResolvedValueOnce(jsonResponse({}, 401))
 
-    const result = await fetchZaiRateLimits()
+    const result = await fetchZaiRateLimits('bad-key')
 
     expect(result.status).toBe('error')
     expect(result.error).toMatch(/invalid/i)
   })
 
   it('reports invalid JSON as a parse error', async () => {
-    vi.stubEnv('ZAI_API_KEY', 'zai-key')
     netFetchMock.mockResolvedValueOnce(badJsonResponse())
 
-    const result = await fetchZaiRateLimits()
+    const result = await fetchZaiRateLimits('zai-key')
 
     expect(result.status).toBe('error')
     expect(result.error).toMatch(/invalid/i)
   })
 
   it('reports empty quota payloads as errors', async () => {
-    vi.stubEnv('ZAI_API_KEY', 'zai-key')
     netFetchMock.mockResolvedValueOnce(jsonResponse({ data: { limits: [] } }))
 
-    const result = await fetchZaiRateLimits()
+    const result = await fetchZaiRateLimits('zai-key')
 
     expect(result.status).toBe('error')
     expect(result.error).toMatch(/quota limits/i)

@@ -69,6 +69,7 @@ function usageSettings(overrides: Partial<UsageProviderSettings> = {}): UsagePro
     codexManagedAccounts: [],
     claudeManagedAccounts: [],
     opencodeSessionCookie: '',
+    zaiApiKey: '',
     geminiCliOAuthEnabled: false,
     idealabUsageEnabled: false,
     antigravityUsageConfigured: false,
@@ -121,6 +122,7 @@ describe('hasUsageProviderSettings', () => {
     expect(
       hasUsageProviderSettings(usageSettings({ opencodeSessionCookie: ' session=abc ' }))
     ).toBe(true)
+    expect(hasUsageProviderSettings(usageSettings({ zaiApiKey: ' zai-key ' }))).toBe(true)
     expect(hasUsageProviderSettings(usageSettings({ idealabUsageEnabled: true }))).toBe(true)
     // Why: antigravity durability requires the Gemini OAuth opt-in; the
     // checked item alone must not suppress the usage setup CTA.
@@ -158,6 +160,10 @@ describe('hasUsageProviderSettingsForProvider', () => {
     ).toBe(true)
     expect(hasUsageProviderSettingsForProvider('claude', usageSettings())).toBe(false)
     expect(hasUsageProviderSettingsForProvider('kimi', usageSettings())).toBe(false)
+    expect(
+      hasUsageProviderSettingsForProvider('zai', usageSettings({ zaiApiKey: 'zai-key' }))
+    ).toBe(true)
+    expect(hasUsageProviderSettingsForProvider('zai', usageSettings())).toBe(false)
     expect(
       hasUsageProviderSettingsForProvider('idealab', usageSettings({ idealabUsageEnabled: true }))
     ).toBe(true)
@@ -290,6 +296,16 @@ describe('getVisibleUsageProvider', () => {
     )
     expect(visible).toMatchObject({
       provider: 'grok',
+      status: 'fetching',
+      session: null,
+      weekly: null
+    })
+  })
+
+  it('keeps Z.ai visible while the snapshot is pending when an API key is configured', () => {
+    const visible = getVisibleUsageProvider('zai', null, usageSettings({ zaiApiKey: 'zai-key' }))
+    expect(visible).toMatchObject({
+      provider: 'zai',
       status: 'fetching',
       session: null,
       weekly: null

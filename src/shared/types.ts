@@ -2845,6 +2845,8 @@ export type GlobalSettings = {
   defaultLinearTeamSelection: string[] | null
   /** Session cookie for OpenCode Go rate-limit fetching. Stored encrypted. */
   opencodeSessionCookie: string
+  /** Z.ai API key for coding-plan quota fetching. Stored encrypted. */
+  zaiApiKey: string
   /** Optional workspace ID override for OpenCode Go. When set, skips the
    *  workspaces lookup and fetches usage directly for this workspace. */
   opencodeWorkspaceId: string
