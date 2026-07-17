@@ -27,6 +27,20 @@ describe('AgentStateDot', () => {
     expect(markup).not.toContain('animate-spin')
   })
 
+  it('renders the sidebar working variant as an activity orbit', () => {
+    const markup = renderToStaticMarkup(
+      React.createElement(AgentStateDot, {
+        state: 'working',
+        workingVariant: 'activity-orbit',
+        phaseKey: 'pane-1'
+      })
+    )
+
+    expect(markup).toContain('working-activity-indicator')
+    expect(markup).toContain('data-size="sm"')
+    expect(markup).not.toContain('border-yellow-500')
+  })
+
   it('renders done as an emerald check icon', () => {
     const markup = renderMarkup('done')
 

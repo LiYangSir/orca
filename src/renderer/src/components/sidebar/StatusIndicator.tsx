@@ -1,6 +1,7 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
 import { getWorktreeStatusLabel, type WorktreeStatus } from '@/lib/worktree-status'
+import { WorkingActivityIndicator } from '@/components/WorkingActivityIndicator'
 
 // Why: re-export WorktreeStatus under the existing `Status` alias so the
 // sidebar component and the canonical lib share one source of truth — the
@@ -10,10 +11,12 @@ export type Status = WorktreeStatus
 
 type StatusIndicatorProps = React.ComponentProps<'span'> & {
   status: Status
+  phaseKey?: string
 }
 
 const StatusIndicator = React.memo(function StatusIndicator({
   status,
+  phaseKey,
   className,
   title,
   ...rest
@@ -28,15 +31,13 @@ const StatusIndicator = React.memo(function StatusIndicator({
 
   if (status === 'working') {
     return (
-      <span
-        className={cn('inline-flex h-3 w-3 shrink-0 items-center justify-center', className)}
+      <WorkingActivityIndicator
+        size="md"
+        phaseKey={phaseKey}
+        className={className}
         title={resolvedTitle}
         {...rest}
-      >
-        {/* Why: a stepped spin preserves the worker-is-running affordance while
-            avoiding a full-refresh-rate compositor loop for long agent runs. */}
-        <span className="block size-2 rounded-full border-2 border-yellow-500 border-t-transparent [animation:spin_1s_steps(12,end)_infinite]" />
-      </span>
+      />
     )
   }
 

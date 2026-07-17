@@ -109,6 +109,8 @@ type Props = {
    * slot presence, so default stays 'md'.
    */
   stateDotSize?: 'sm' | 'md'
+  /** Why: sidebar rows need a quieter long-running marker than full dashboards. */
+  workingVariant?: 'spinner' | 'activity-orbit'
   /**
    * Why: the inline-in-card variant lives next to a worktree card that the
    * user clicks to jump directly to the agent — a separate expand chevron
@@ -142,6 +144,7 @@ const DashboardAgentRow = React.memo(function DashboardAgentRow({
   now,
   isUnvisited = false,
   stateDotSize = 'md',
+  workingVariant = 'spinner',
   hideIdentityIcon = false,
   hideExpand = false,
   isFocusedPane = false,
@@ -328,7 +331,12 @@ const DashboardAgentRow = React.memo(function DashboardAgentRow({
               className="inline-flex shrink-0 items-center justify-center"
               aria-label={dotTooltipLabel}
             >
-              <AgentStateDot state={dotState} size={stateDotSize} />
+              <AgentStateDot
+                state={dotState}
+                size={stateDotSize}
+                workingVariant={workingVariant}
+                phaseKey={agent.paneKey}
+              />
             </span>
           </TooltipTrigger>
           <TooltipContent side="top" sideOffset={4}>

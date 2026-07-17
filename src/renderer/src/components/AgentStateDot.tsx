@@ -1,10 +1,12 @@
 import React from 'react'
 import { CircleCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { WorkingActivityIndicator } from '@/components/WorkingActivityIndicator'
 
 // Why: shared state-indicator primitive so the dashboard and the sidebar's
 // agent hover share a single state vocabulary. Most states render as a dot;
-// 'working' renders a spinner. 'done' intentionally diverges from the
+// 'working' uses a spinner by default while the sidebar opts into a quieter
+// activity orbit. 'done' intentionally diverges from the
 // sidebar's StatusIndicator: the dashboard uses a check icon so completion
 // is visually distinct from 'idle' (grey dot) and the sidebar's 'active'
 // (emerald dot), while the sidebar collapses 'done'/'active' to the same
@@ -56,19 +58,34 @@ type Props = {
   state: AgentDotState
   size?: 'sm' | 'md'
   className?: string
+  workingVariant?: 'spinner' | 'activity-orbit'
+  phaseKey?: string
 }
 
 /** Render the compact state glyph used by agent rows and terminal tabs. */
 export const AgentStateDot = React.memo(function AgentStateDot({
   state,
   size = 'sm',
-  className
+  className,
+  workingVariant = 'spinner',
+  phaseKey
 }: Props): React.JSX.Element {
   const box = size === 'md' ? 'h-3 w-3' : 'h-2.5 w-2.5'
   const inner = size === 'md' ? 'size-2' : 'size-1.5'
   const icon = size === 'md' ? 'size-3' : 'size-2.5'
 
   if (state === 'working') {
+    if (workingVariant === 'activity-orbit') {
+      return (
+        <WorkingActivityIndicator
+          size={size}
+          phaseKey={phaseKey}
+          className={className}
+          aria-label={agentStateLabel(state)}
+        />
+      )
+    }
+
     return (
       <span
         className={cn('inline-flex shrink-0 items-center justify-center', box, className)}
@@ -76,8 +93,8 @@ export const AgentStateDot = React.memo(function AgentStateDot({
       >
         <span
           className={cn(
-            // Why: match the sidebar worktree spinner's stepped cadence so
-            // long-running visible agents do not keep a full-frame-rate loop.
+            // Why: non-sidebar surfaces keep the established compact spinner;
+            // sidebar rows opt into the quieter activity orbit above.
             'block rounded-full border-2 border-yellow-500 border-t-transparent [animation:spin_1s_steps(12,end)_infinite] motion-reduce:animate-none',
             inner
           )}

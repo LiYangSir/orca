@@ -133,6 +133,7 @@ vi.mock('@/components/dashboard/DashboardAgentRow', () => ({
     childAgentsExpanded,
     onToggleChildAgents,
     reserveDisclosureGutter,
+    workingVariant,
     onActivate
   }: {
     agent: { paneKey: string }
@@ -144,6 +145,7 @@ vi.mock('@/components/dashboard/DashboardAgentRow', () => ({
     childAgentsExpanded?: boolean
     onToggleChildAgents?: () => void
     reserveDisclosureGutter?: boolean
+    workingVariant?: 'spinner' | 'activity-orbit'
     onActivate: (tabId: string, paneKey: string) => void
   }) => {
     capturedRowActivations.push({ paneKey: agent.paneKey, onActivate })
@@ -153,6 +155,7 @@ vi.mock('@/components/dashboard/DashboardAgentRow', () => ({
         data-focused={isFocusedPane ? 'true' : 'false'}
         data-agent-send-target={sendTargetStatus}
         data-disabled-reason={sendTargetDisabledReason}
+        data-working-variant={workingVariant}
         data-has-send-handler={typeof onSendTargetClick === 'function' ? 'true' : 'false'}
         data-pane-key={agent.paneKey}
         data-reserve-disclosure-gutter={reserveDisclosureGutter ? 'true' : 'false'}
@@ -206,6 +209,7 @@ describe('WorktreeCardAgents', () => {
     expect(markup).toContain('role="group"')
     expect(markup).toContain('aria-label="Agents"')
     expect(markup).toContain('data-testid="agent-row"')
+    expect(markup).toContain('data-working-variant="activity-orbit"')
     expect(markup).not.toContain('<button')
     expect(markup).not.toContain('aria-expanded')
   }, 30_000)
@@ -355,6 +359,24 @@ describe('WorktreeCardAgents', () => {
 
     expect(markup).toContain('Collapsed child')
     expect(markup).not.toContain('Prompt cache expires')
+  })
+
+  it('uses the activity orbit for compact sidebar agent rows', async () => {
+    const paneKey = makePaneKey('tab-1', LEAF_A)
+    const { CompactAgentRow } = await import('./worktree-card-compact-agents')
+
+    const markup = renderToStaticMarkup(
+      <CompactAgentRow
+        agent={
+          mockAgent({ paneKey, tabId: 'tab-1', prompt: 'Refine loader' }) as DashboardAgentRowData
+        }
+        now={2000}
+        onActivate={vi.fn()}
+      />
+    )
+
+    expect(markup).toContain('working-activity-indicator')
+    expect(markup).toContain('--working-activity-phase:')
   })
 
   it('marks only the focused agent row', async () => {

@@ -1906,7 +1906,7 @@ export default function WorktreeJumpPalette(): React.JSX.Element | null {
                     )}
                   >
                     <div className="flex w-4 shrink-0 items-center justify-center self-start pt-0.5">
-                      <StatusIndicator status={status} aria-hidden="true" />
+                      <StatusIndicator status={status} phaseKey={worktree.id} aria-hidden="true" />
                       <span className="sr-only">{statusLabel}</span>
                     </div>
                     <div className="min-w-0 flex-1">

@@ -199,7 +199,12 @@ export const CompactAgentRow = React.memo(function CompactAgentRow({
       ) : reserveDisclosureGutter ? (
         <span className="size-4 shrink-0" aria-hidden />
       ) : null}
-      <AgentStateDot state={dotState} size="sm" />
+      <AgentStateDot
+        state={dotState}
+        size="sm"
+        workingVariant="activity-orbit"
+        phaseKey={agent.paneKey}
+      />
       {!hideIcon && (
         <span className="inline-flex shrink-0" title={formatAgentTypeLabel(agent.agentType)}>
           <AgentIcon agent={agentTypeToIconAgent(agent.agentType)} size={13} />

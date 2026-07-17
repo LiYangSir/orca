@@ -14,7 +14,12 @@ export function WorktreeActivityStatusIndicator({
 
   return (
     <>
-      <StatusIndicator status={status} aria-hidden="true" className={className} />
+      <StatusIndicator
+        status={status}
+        phaseKey={worktreeId}
+        aria-hidden="true"
+        className={className}
+      />
       <span className="sr-only">{getWorktreeStatusLabel(status)}</span>
     </>
   )

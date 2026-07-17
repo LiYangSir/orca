@@ -38,4 +38,11 @@ describe('WorktreeActivityStatusIndicator', () => {
     expect(markup).toContain('Active')
     expect(markup).toContain('bg-emerald-500')
   })
+
+  it('keys working activity motion to the worktree', () => {
+    const markup = renderMarkup('working')
+
+    expect(markup).toContain('working-activity-indicator')
+    expect(markup).toContain('--working-activity-phase:')
+  })
 })

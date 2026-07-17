@@ -101,7 +101,8 @@ describe('WorktreeCardStatusSlot', () => {
     )
 
     expect(markup).toContain('Working · Unread')
-    expect(markup).toContain('border-yellow-500')
+    expect(markup).toContain('working-activity-indicator')
+    expect(markup).toContain('data-size="md"')
     expect(markup).not.toContain('data-worktree-status-lane-unread=""')
     expect(markup).not.toContain('data-worktree-unread-alert=""')
     expect(markup).not.toContain('aria-label="Mark as read"')
@@ -357,7 +358,8 @@ describe('WorktreeCardStatusSlot', () => {
 
     expect(markup).toContain('Working')
     expect(markup).toContain('inline-flex size-5 items-center justify-center')
-    expect(markup).toContain('border-yellow-500')
+    expect(markup).toContain('working-activity-indicator')
+    expect(markup).toContain('data-size="md"')
     expect(markup).not.toContain('PR checks: Failed')
   })
 

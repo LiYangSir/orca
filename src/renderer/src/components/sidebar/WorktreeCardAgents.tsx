@@ -323,6 +323,7 @@ const WorktreeCardAgentsBody = React.memo(function WorktreeCardAgentsBody({
           // agent identity icon right next to it. 'sm' keeps the two
           // distinguishable at a glance.
           stateDotSize="sm"
+          workingVariant="activity-orbit"
           // Why: in the per-card inline list clicking the row jumps
           // directly to the agent, so the expand chevron is redundant.
           // Keep the identity glyph (Claude/Gemini/…) so users can tell

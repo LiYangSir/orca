@@ -17,13 +17,13 @@ function renderDotClassNames(status: Status): string[] {
 }
 
 describe('StatusIndicator', () => {
-  it('renders working as a stepped yellow spinner', () => {
-    const classNames = renderDotClassNames('working')
+  it('renders working as the quiet activity orbit', () => {
+    const markup = renderMarkup('working')
 
-    expect(classNames).toContain('border-yellow-500')
-    expect(classNames).toContain('border-t-transparent')
-    expect(classNames).toContain('[animation:spin_1s_steps(12,end)_infinite]')
-    expect(classNames).not.toContain('animate-spin')
+    expect(markup).toContain('working-activity-indicator')
+    expect(markup).toContain('data-size="md"')
+    expect(markup).not.toContain('border-yellow-500')
+    expect(markup).not.toContain('[animation:spin_1s_steps(12,end)_infinite]')
   })
 
   it('renders permission as an amber attention dot', () => {

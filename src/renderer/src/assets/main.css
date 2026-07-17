@@ -425,6 +425,78 @@
   }
 }
 
+/* Why: sidebar agents can run for minutes, so their activity marker keeps a
+   stable center while only the segmented track moves at a low, staggered cadence. */
+.working-activity-indicator {
+  position: relative;
+  display: inline-flex;
+  width: 12px;
+  height: 12px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--annotation-highlight) 18%, transparent);
+}
+
+.working-activity-indicator[data-size='sm'] {
+  width: 10px;
+  height: 10px;
+}
+
+.working-activity-indicator::before {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  animation: working-activity-orbit 1.8s steps(18, end) infinite;
+  animation-delay: var(--working-activity-phase, 0ms);
+  background: conic-gradient(
+    from 4deg,
+    color-mix(in srgb, var(--annotation-highlight) 96%, transparent) 0deg 42deg,
+    transparent 42deg 118deg,
+    color-mix(in srgb, var(--annotation-highlight) 58%, transparent) 118deg 148deg,
+    transparent 148deg 238deg,
+    color-mix(in srgb, var(--annotation-highlight) 28%, transparent) 238deg 258deg,
+    transparent 258deg 360deg
+  );
+  content: '';
+  mask: radial-gradient(farthest-side, transparent calc(100% - 1.35px), #000 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 1.35px), #000 0);
+}
+
+.working-activity-indicator::after {
+  width: 3px;
+  height: 3px;
+  border-radius: inherit;
+  background: var(--annotation-highlight);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--annotation-highlight) 12%, transparent);
+  content: '';
+}
+
+.working-activity-indicator[data-size='sm']::before {
+  mask: radial-gradient(farthest-side, transparent calc(100% - 1px), #000 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 1px), #000 0);
+}
+
+.working-activity-indicator[data-size='sm']::after {
+  width: 2px;
+  height: 2px;
+  box-shadow: none;
+}
+
+@keyframes working-activity-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .working-activity-indicator::before {
+    animation: none;
+    transform: rotate(20deg);
+  }
+}
+
 /* ── Sleek scrollbar (VS Code-like) ─────────────────── */
 
 .scrollbar-sleek {
