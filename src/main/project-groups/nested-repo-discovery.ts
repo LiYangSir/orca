@@ -198,14 +198,20 @@ async function hasGitMarker(dirPath: string): Promise<boolean> {
 }
 
 async function readLocalDirectory(dirPath: string): Promise<NestedRepoDirectoryEntry[]> {
-  // Why: Dirent data avoids one stat per child and keeps symlinked directories
-  // from expanding the scan outside the selected folder.
   const entries = await readdir(dirPath, { withFileTypes: true })
-  return entries.map((entry) => ({
-    name: entry.name,
-    isDirectory: entry.isDirectory(),
-    isSymlink: entry.isSymbolicLink()
-  }))
+  return Promise.all(
+    entries.map(async (entry) => {
+      const isSymlink = entry.isSymbolicLink()
+      // Why: workspace manifests commonly expose member repos as directory
+      // symlinks; stat only links so regular scans retain cheap Dirent checks.
+      const isDirectory = isSymlink
+        ? await stat(join(dirPath, entry.name))
+            .then((target) => target.isDirectory())
+            .catch(() => false)
+        : entry.isDirectory()
+      return { name: entry.name, isDirectory, isSymlink }
+    })
+  )
 }
 
 export async function scanNestedRepos(args: {
@@ -273,6 +279,10 @@ export async function scanNestedRepos(args: {
     })
     emitProgress()
   }
+  // Why: nested repositories are normally ignored by their parent repository;
+  // explicit workspace mode must still discover them while hard skip rules
+  // continue to exclude metadata, build output, and hidden directories.
+  const ignoreSelectedRepoRules = selectedPathIsGitRepo && options.descendIntoGitRepoRoot
 
   const foldersToTraverse: TraversalFolder[] = [
     { path: args.path, depth: 0, segments: [], ignoreRules: [] }
@@ -307,16 +317,18 @@ export async function scanNestedRepos(args: {
     }
     const currentIgnoreRules = [
       ...currentFolder.ignoreRules,
-      ...(await readGitignoreRules({
-        folderPath: currentFolder.path,
-        entries,
-        filesystem,
-        baseSegments: currentFolder.segments
-      }))
+      ...(!ignoreSelectedRepoRules || currentFolder.depth > 0
+        ? await readGitignoreRules({
+            folderPath: currentFolder.path,
+            entries,
+            filesystem,
+            baseSegments: currentFolder.segments
+          })
+        : [])
     ]
 
     const dirs = entries
-      .filter((entry) => entry.isDirectory && !entry.isSymlink)
+      .filter((entry) => entry.isDirectory)
       .sort((left, right) => left.name.localeCompare(right.name))
     for (const entry of dirs) {
       const name = entry.name
@@ -351,6 +363,11 @@ export async function scanNestedRepos(args: {
         emitProgress()
         // Project Groups organize sibling repos; nested repos stay hidden until a
         // later UI can explain and select submodule-style layouts explicitly.
+        continue
+      }
+      // Why: a direct symlink may represent a workspace member repo, but an
+      // arbitrary linked directory must not expand scanning outside the root.
+      if (entry.isSymlink) {
         continue
       }
       // Why: group import should prefer nearby sibling repos over spending the

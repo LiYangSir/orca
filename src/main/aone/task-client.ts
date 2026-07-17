@@ -40,6 +40,10 @@ export type A1OkResult = { ok: true }
 export type A1ErrResult = { ok: false; code: string; error: string }
 export type A1MutationResult = A1OkResult | A1ErrResult
 
+function isEmptyA1JsonOutput(error: unknown): boolean {
+  return error instanceof A1Error && error.code === 'invalid_output' && error.stderr === ''
+}
+
 function pushFlag(args: string[], flag: string, value: string | number | undefined | null): void {
   if (value === undefined || value === null) {
     return
@@ -72,7 +76,7 @@ export async function listMergeRequestComments(
   try {
     return await a1ExecJson<A1MergeRequestComment[]>(args, options)
   } catch (error) {
-    if (error instanceof A1Error && error.code === 'invalid_output') {
+    if (isEmptyA1JsonOutput(error)) {
       return []
     }
     throw error

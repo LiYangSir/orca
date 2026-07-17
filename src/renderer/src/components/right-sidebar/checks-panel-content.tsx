@@ -2332,6 +2332,7 @@ export function PRCommentsList({
   reviewKind = 'PR',
   commentsDisabled,
   commentsDisabledReason,
+  commentFileRootPath,
   selectionContextKey,
   selectionClearRequest,
   resolveCommentsWithAIDisabled,
@@ -2348,6 +2349,7 @@ export function PRCommentsList({
   reviewKind?: 'PR' | 'MR'
   commentsDisabled?: boolean
   commentsDisabledReason?: string
+  commentFileRootPath?: string | null
   selectionContextKey?: string
   selectionClearRequest?: PRCommentsListSelectionClearRequest | null
   resolveCommentsWithAIDisabled?: boolean
@@ -2361,6 +2363,8 @@ export function PRCommentsList({
 }): React.JSX.Element {
   const presentation = React.useMemo(() => getPRCommentPresentationClasses(), [])
   const activeWorktree = useActiveWorktree()
+  const resolvedCommentFileRootPath =
+    commentFileRootPath === undefined ? activeWorktree?.path : commentFileRootPath
   const openFile = useAppStore((s) => s.openFile)
   const [commentFilter, setCommentFilter] = useState<PRCommentAudienceFilter>('all')
   const [resolutionFilter, setResolutionFilter] = useState<PRCommentsListResolutionFilter>('all')
@@ -2438,12 +2442,12 @@ export function PRCommentsList({
   const selectedCommentQueueCount = selectedGroups.length
   const openCommentContext = useCallback(
     (comment: PRComment): void => {
-      if (!activeWorktree?.path || !comment.path) {
+      if (!activeWorktree?.id || !resolvedCommentFileRootPath || !comment.path) {
         return
       }
       openFile(
         {
-          filePath: joinPath(activeWorktree.path, comment.path),
+          filePath: joinPath(resolvedCommentFileRootPath, comment.path),
           relativePath: comment.path,
           worktreeId: activeWorktree.id,
           language: detectLanguage(comment.path),
@@ -2452,7 +2456,7 @@ export function PRCommentsList({
         { preview: true }
       )
     },
-    [activeWorktree?.id, activeWorktree?.path, openFile]
+    [activeWorktree?.id, openFile, resolvedCommentFileRootPath]
   )
   const selectVisibleCommentsForAI = useCallback((): void => {
     clearSelection()
@@ -2547,7 +2551,7 @@ export function PRCommentsList({
         onReply={onReply}
         onEditComment={onEditComment}
         onDeleteComment={onDeleteComment}
-        onOpenCommentContext={activeWorktree?.path ? openCommentContext : undefined}
+        onOpenCommentContext={resolvedCommentFileRootPath ? openCommentContext : undefined}
         onQueueForAgent={canQueue ? () => addGroupToSelection(groupId) : undefined}
       />
     )
@@ -2954,7 +2958,7 @@ export function PRCommentsList({
                 onReply={onReply}
                 onEditComment={onEditComment}
                 onDeleteComment={onDeleteComment}
-                onOpenCommentContext={activeWorktree?.path ? openCommentContext : undefined}
+                onOpenCommentContext={resolvedCommentFileRootPath ? openCommentContext : undefined}
               />
             </>
           )}

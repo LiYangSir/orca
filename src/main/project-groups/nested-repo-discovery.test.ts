@@ -209,6 +209,23 @@ describe('scanNestedRepos', () => {
     expect(result.repos.map((repo) => repo.path)).toEqual(['/workspace/api'])
   })
 
+  it.skipIf(process.platform === 'win32')(
+    'includes direct symlinked repos without traversing linked directories',
+    async () => {
+      const root = await tempRoot()
+      const external = await tempRoot()
+      await makeGitRepo(join(external, 'linked-repo'))
+      await mkdir(join(external, 'linked-folder', 'nested-repo'), { recursive: true })
+      await makeGitRepo(join(external, 'linked-folder', 'nested-repo'))
+      await symlink(join(external, 'linked-repo'), join(root, 'linked-repo'))
+      await symlink(join(external, 'linked-folder'), join(root, 'linked-folder'))
+
+      const result = await scanNestedRepos({ path: root })
+
+      expect(result.repos.map((repo) => repo.displayName)).toEqual(['linked-repo'])
+    }
+  )
+
   it('prefers shallow sibling repos before descending into non-repo folders', async () => {
     const directories = new Map([
       ['/workspace', ['archive', 'z-web-client']],
@@ -402,6 +419,27 @@ describe('scanNestedRepos', () => {
     expect(result.repos.map((repo) => repo.displayName)).toEqual([basename(root), 'svc-a', 'svc-b'])
     expect(result.repos[0]?.depth).toBe(0)
   })
+
+  it.skipIf(process.platform === 'win32')(
+    'discovers gitignored symlinked members in workspace mode',
+    async () => {
+      const root = await tempRoot()
+      const external = await tempRoot()
+      await makeGitRepo(root)
+      await mkdir(join(root, 'repos'), { recursive: true })
+      await makeGitRepo(join(external, 'child'))
+      await symlink(join(external, 'child'), join(root, 'repos', 'child'))
+      await writeFile(join(root, '.gitignore'), '/repos/\n')
+
+      const result = await scanNestedRepos({
+        path: root,
+        options: { descendIntoGitRepoRoot: true }
+      })
+
+      expect(result.selectedPathKind).toBe('git_repo_with_nested')
+      expect(result.repos.map((repo) => repo.displayName)).toEqual([basename(root), 'child'])
+    }
+  )
 
   it('keeps a childless git-repo root as a plain repo in workspace mode', async () => {
     const root = await tempRoot()

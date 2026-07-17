@@ -6,7 +6,7 @@ import { ipcMain } from 'electron'
 import {
   getA1LinkStatus,
   getMergeRequest,
-  getMergeRequestForBranch,
+  getMergeRequestForBranchWithMergedFallback,
   getWorkItem,
   isAoneAvailable,
   listMergeRequests,
@@ -146,7 +146,7 @@ export function registerAoneHandlers(): void {
       try {
         const branch = typeof args?.branch === 'string' ? args.branch : ''
         const cwd = typeof args?.repoPath === 'string' ? args.repoPath : undefined
-        const data = await getMergeRequestForBranch(branch, { cwd })
+        const data = await getMergeRequestForBranchWithMergedFallback(branch, { cwd })
         return { ok: true, data }
       } catch (error) {
         return toFailure(error)

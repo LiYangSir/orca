@@ -12659,6 +12659,28 @@
           "onePending": "1 个等待中",
           "pendingCount": "{{value0}} 个等待中"
         },
+        "AoneWorkspaceMergeRequests": {
+          "workspaceTitle": "工作区评审",
+          "workspaceSummary": "{{value0}} 个仓库 · 评论分别查看",
+          "mergeRequests": "合并请求",
+          "openCount": "{{value0}} 个打开",
+          "loading": "正在检查子仓库…",
+          "lookupFailed": "MR 查询失败",
+          "noReview": "分支 {{value0}} 没有 MR",
+          "open": "在外部打开合并请求",
+          "view": "查看 {{value0}} 的合并请求",
+          "viewRepository": "查看 {{value0}} 的评审操作",
+          "refresh": "刷新工作区评审",
+          "refreshComments": "刷新评论",
+          "back": "返回",
+          "retry": "重试",
+          "scanFailed": "无法扫描子仓库",
+          "commentsFailed": "无法加载评论",
+          "rateLimited": "Aone 正在限制 MR 查询，请稍后重试",
+          "authRequired": "请先登录 a1，然后重试",
+          "notLinked": "仓库尚未关联到 a1",
+          "binaryMissing": "尚未安装 a1 CLI"
+        },
         "parentPrChecks": {
           "rowSummary": {
             "failingCount": "{{value0}} 个失败",

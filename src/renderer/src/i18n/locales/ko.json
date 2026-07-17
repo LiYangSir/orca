@@ -12652,6 +12652,28 @@
           "onePending": "1개 대기 중",
           "pendingCount": "{{value0}}개 대기 중"
         },
+        "AoneWorkspaceMergeRequests": {
+          "workspaceTitle": "워크스페이스 리뷰",
+          "workspaceSummary": "저장소 {{value0}}개 · 댓글은 각각 따로 표시됩니다",
+          "mergeRequests": "병합 요청",
+          "openCount": "{{value0}}개 열림",
+          "loading": "하위 저장소 확인 중…",
+          "lookupFailed": "MR 조회 실패",
+          "noReview": "{{value0}}에 대한 MR 없음",
+          "open": "병합 요청을 외부에서 열기",
+          "view": "{{value0}} 병합 요청 보기",
+          "viewRepository": "{{value0}}의 리뷰 작업 보기",
+          "refresh": "워크스페이스 리뷰 새로 고침",
+          "refreshComments": "댓글 새로 고침",
+          "back": "뒤로",
+          "retry": "다시 시도",
+          "scanFailed": "하위 저장소를 검색할 수 없습니다",
+          "commentsFailed": "댓글을 불러올 수 없습니다",
+          "rateLimited": "Aone에서 MR 조회를 제한하고 있습니다. 잠시 후 다시 시도하세요.",
+          "authRequired": "a1에 로그인한 후 다시 시도하세요",
+          "notLinked": "저장소가 a1에 연결되어 있지 않습니다",
+          "binaryMissing": "a1 CLI가 설치되어 있지 않습니다"
+        },
         "parentPrChecks": {
           "rowSummary": {
             "failingCount": "{{value0}}개 실패",

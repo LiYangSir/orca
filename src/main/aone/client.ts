@@ -46,6 +46,10 @@ function mergeRequestFromPayload(payload: A1MergeRequestViewPayload): A1MergeReq
   return 'mergeRequest' in payload ? (payload.mergeRequest ?? null) : payload
 }
 
+function isEmptyA1JsonOutput(error: unknown): boolean {
+  return error instanceof A1Error && error.code === 'invalid_output' && error.stderr === ''
+}
+
 export async function getA1LinkStatus(options: A1ExecOptions = {}): Promise<A1LinkStatus> {
   // a1 link status -f json returns {} when nothing is linked.
   return a1ExecJson<A1LinkStatus>(['link', 'status'], options)
@@ -117,7 +121,7 @@ export async function listMergeRequests(
   try {
     return await a1ExecJson<A1MergeRequest[]>(args, options)
   } catch (error) {
-    if (error instanceof A1Error && error.code === 'invalid_output') {
+    if (isEmptyA1JsonOutput(error)) {
       return []
     }
     throw error
@@ -136,7 +140,7 @@ export async function getMergeRequest(
       await a1ExecJson<A1MergeRequestViewPayload>(['repo', 'mr', 'view', String(mrId)], options)
     )
   } catch (error) {
-    if (error instanceof A1Error && error.code === 'invalid_output') {
+    if (isEmptyA1JsonOutput(error)) {
       return null
     }
     throw error
@@ -161,6 +165,33 @@ export async function getMergeRequestForBranch(
   }
   // Why: a1's list payload omits detailUrl/webUrl for some Code hosts; view
   // returns the canonical /codereview/<id> URL used by browser links.
+  return (await getMergeRequest(listed.id, options)) ?? listed
+}
+
+export async function getMergeRequestForBranchWithMergedFallback(
+  branch: string,
+  options: A1ExecOptions = {}
+): Promise<A1MergeRequest | null> {
+  const opened = await getMergeRequestForBranch(branch, options)
+  if (opened) {
+    return opened
+  }
+  const trimmed = branch.trim()
+  if (!trimmed) {
+    return null
+  }
+  // Why: completed workspace work still needs its MR surfaced in the review
+  // overview, while creation checks must continue to consider only open MRs.
+  const merged = await listMergeRequests({ state: 'merged', source: trimmed }, options)
+  const listed = merged
+    .filter((mr) => mr.sourceBranch === trimmed)
+    .sort(
+      (left, right) =>
+        Date.parse(right.updatedAt ?? '') - Date.parse(left.updatedAt ?? '') || right.id - left.id
+    )[0]
+  if (!listed) {
+    return null
+  }
   return (await getMergeRequest(listed.id, options)) ?? listed
 }
 

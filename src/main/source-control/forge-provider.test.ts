@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type * as AoneClient from '../aone/client'
 
 const {
   createGitHubPullRequestMock,
@@ -7,6 +8,7 @@ const {
   createGiteaPullRequestMock,
   createAoneMergeRequestMock,
   getAoneMergeRequestForBranchMock,
+  getAoneMergeRequestMock,
   getAzureDevOpsRepoSlugMock,
   getBitbucketRepoSlugMock,
   getGiteaRepoSlugMock,
@@ -24,6 +26,7 @@ const {
   createGiteaPullRequestMock: vi.fn(),
   createAoneMergeRequestMock: vi.fn(),
   getAoneMergeRequestForBranchMock: vi.fn(),
+  getAoneMergeRequestMock: vi.fn(),
   getAzureDevOpsRepoSlugMock: vi.fn(),
   getBitbucketRepoSlugMock: vi.fn(),
   getGiteaRepoSlugMock: vi.fn(),
@@ -83,11 +86,11 @@ vi.mock('../gitea/pull-request-creation', () => ({
 }))
 
 vi.mock('../aone/client', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../aone/client')>()
+  const actual = await importOriginal<typeof AoneClient>()
   return {
     ...actual,
     getMergeRequestForBranch: getAoneMergeRequestForBranchMock,
-    getMergeRequest: vi.fn(),
+    getMergeRequest: getAoneMergeRequestMock,
     resolveAoneCodeRepoSlug: resolveAoneCodeRepoSlugMock
   }
 })
@@ -115,6 +118,7 @@ describe('forge provider interface', () => {
     createGiteaPullRequestMock.mockReset()
     createAoneMergeRequestMock.mockReset()
     getAoneMergeRequestForBranchMock.mockReset()
+    getAoneMergeRequestMock.mockReset()
     getAzureDevOpsRepoSlugMock.mockReset()
     getBitbucketRepoSlugMock.mockReset()
     getGiteaRepoSlugMock.mockReset()
@@ -266,6 +270,71 @@ describe('forge provider interface', () => {
       },
       null
     )
+  })
+
+  it('uses linked Aone Code reviews without an extra branch search', async () => {
+    getAoneMergeRequestMock.mockResolvedValue({
+      id: 28612989,
+      iid: 12,
+      title: 'Support listener queries',
+      state: 'merged',
+      sourceBranch: 'feature/listener_influence',
+      targetBranch: 'master',
+      detailUrl: 'https://code.alibaba-inc.com/team/repo/codereview/28612989',
+      updatedAt: '2026-07-15T10:00:00.000Z'
+    })
+
+    await expect(
+      getForgeProviderById('code').getReviewForBranch({
+        repoPath: '/repo',
+        branch: 'feature/listener_influence',
+        linkedReviewNumber: 28612989
+      })
+    ).resolves.toMatchObject({
+      provider: 'code',
+      number: 28612989,
+      state: 'merged'
+    })
+    expect(getAoneMergeRequestMock).toHaveBeenCalledWith(28612989, { cwd: '/repo' })
+    expect(getAoneMergeRequestForBranchMock).not.toHaveBeenCalled()
+  })
+
+  it('uses open-branch discovery when an Aone review is not linked', async () => {
+    getAoneMergeRequestForBranchMock.mockResolvedValue(null)
+
+    await expect(
+      getForgeProviderById('code').getReviewForBranch({
+        repoPath: '/repo',
+        branch: 'feature/listener_influence'
+      })
+    ).resolves.toBeNull()
+    expect(getAoneMergeRequestForBranchMock).toHaveBeenCalledWith('feature/listener_influence', {
+      cwd: '/repo'
+    })
+    expect(getAoneMergeRequestMock).not.toHaveBeenCalled()
+  })
+
+  it('falls back to branch discovery when a linked Aone review is stale', async () => {
+    getAoneMergeRequestMock.mockResolvedValue(null)
+    getAoneMergeRequestForBranchMock.mockResolvedValue({
+      id: 28613303,
+      title: 'Current branch review',
+      state: 'opened',
+      sourceBranch: 'feature/listener_influence',
+      targetBranch: 'master'
+    })
+
+    await expect(
+      getForgeProviderById('code').getReviewForBranch({
+        repoPath: '/repo',
+        branch: 'feature/listener_influence',
+        linkedReviewNumber: 28500000
+      })
+    ).resolves.toMatchObject({ number: 28613303, state: 'open' })
+    expect(getAoneMergeRequestMock).toHaveBeenCalledWith(28500000, { cwd: '/repo' })
+    expect(getAoneMergeRequestForBranchMock).toHaveBeenCalledWith('feature/listener_influence', {
+      cwd: '/repo'
+    })
   })
 
   it('routes GitLab review creation through the shared provider contract', async () => {

@@ -12732,6 +12732,28 @@
           "onePending": "1 pending",
           "pendingCount": "{{value0}} pending"
         },
+        "AoneWorkspaceMergeRequests": {
+          "workspaceTitle": "Workspace reviews",
+          "workspaceSummary": "{{value0}} repositories · comments are viewed separately",
+          "mergeRequests": "Merge requests",
+          "openCount": "{{value0}} open",
+          "loading": "Checking child repositories…",
+          "lookupFailed": "MR lookup failed",
+          "noReview": "No MR for {{value0}}",
+          "open": "Open merge request externally",
+          "view": "View {{value0}} merge request",
+          "viewRepository": "View review actions for {{value0}}",
+          "refresh": "Refresh workspace reviews",
+          "refreshComments": "Refresh comments",
+          "back": "Back",
+          "retry": "Retry",
+          "scanFailed": "Could not scan child repositories",
+          "commentsFailed": "Could not load comments",
+          "rateLimited": "Aone is rate limiting MR queries. Retry in a moment.",
+          "authRequired": "Sign in to a1, then retry",
+          "notLinked": "Repository is not linked in a1",
+          "binaryMissing": "a1 CLI is not installed"
+        },
         "parentPrChecks": {
           "rowSummary": {
             "failingCount": "{{value0}} failing",

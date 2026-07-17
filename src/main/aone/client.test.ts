@@ -20,7 +20,14 @@ vi.mock('./a1-runner', () => ({
   isA1Installed: vi.fn()
 }))
 
-import { getMergeRequest, getMergeRequestForBranch, isAoneCodeRemoteUrl } from './client'
+import {
+  getMergeRequest,
+  getMergeRequestForBranch,
+  getMergeRequestForBranchWithMergedFallback,
+  isAoneCodeRemoteUrl,
+  listMergeRequests
+} from './client'
+import { A1Error } from './a1-runner'
 
 describe('Aone client remote detection', () => {
   it('detects Alibaba-hosted code remotes by host suffix', () => {
@@ -102,5 +109,72 @@ describe('Aone client merge request lookup', () => {
     expect(a1ExecJsonMock).toHaveBeenNthCalledWith(2, ['repo', 'mr', 'view', '28280121'], {
       cwd: '/repo'
     })
+  })
+
+  it('falls back to the latest merged MR when a branch has no open MR', async () => {
+    a1ExecJsonMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: 28280120,
+          iid: 1,
+          title: 'Older merged review',
+          state: 'merged',
+          sourceBranch: 'docs/init',
+          targetBranch: 'master',
+          updatedAt: '2026-01-01T00:00:00.000Z'
+        },
+        {
+          id: 28280121,
+          iid: 2,
+          title: 'Latest merged review',
+          state: 'merged',
+          sourceBranch: 'docs/init',
+          targetBranch: 'master',
+          updatedAt: '2026-01-02T00:00:00.000Z'
+        }
+      ])
+      .mockResolvedValueOnce({
+        mergeRequest: {
+          id: 28280121,
+          iid: 2,
+          title: 'Latest merged review',
+          state: 'merged',
+          sourceBranch: 'docs/init',
+          targetBranch: 'master',
+          updatedAt: '2026-01-02T00:00:00.000Z',
+          detailUrl: 'https://code.alibaba-inc.com/team/repo/codereview/28280121'
+        }
+      })
+
+    await expect(
+      getMergeRequestForBranchWithMergedFallback('docs/init', { cwd: '/repo' })
+    ).resolves.toMatchObject({ id: 28280121, state: 'merged' })
+    expect(a1ExecJsonMock).toHaveBeenNthCalledWith(
+      1,
+      ['repo', 'mr', 'list', '--state', 'opened', '--source', 'docs/init'],
+      { cwd: '/repo' }
+    )
+    expect(a1ExecJsonMock).toHaveBeenNthCalledWith(
+      2,
+      ['repo', 'mr', 'list', '--state', 'merged', '--source', 'docs/init'],
+      { cwd: '/repo' }
+    )
+    expect(a1ExecJsonMock).toHaveBeenNthCalledWith(3, ['repo', 'mr', 'view', '28280121'], {
+      cwd: '/repo'
+    })
+  })
+
+  it('distinguishes an empty MR list from malformed JSON output', async () => {
+    a1ExecJsonMock.mockRejectedValueOnce(
+      new A1Error('invalid_output', 'a1 returned an empty response')
+    )
+
+    await expect(listMergeRequests({ state: 'opened' }, { cwd: '/repo' })).resolves.toEqual([])
+
+    const malformed = new A1Error('invalid_output', 'Failed to parse a1 JSON output', '{broken')
+    a1ExecJsonMock.mockRejectedValueOnce(malformed)
+
+    await expect(listMergeRequests({ state: 'opened' }, { cwd: '/repo' })).rejects.toBe(malformed)
   })
 })

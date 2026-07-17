@@ -23,6 +23,7 @@ import {
 import { getGitHubPRCacheKey, getGitHubRepoCacheKey } from '@/store/slices/github-cache-key'
 import { useActiveWorktree, useRepoById } from '@/store/selectors'
 import { useChecksPanelTerminalWorktree } from './use-checks-panel-terminal-worktree'
+import { AoneWorkspaceMergeRequests } from './AoneWorkspaceMergeRequests'
 import { cn } from '@/lib/utils'
 import { openHttpLink } from '@/lib/http-link-routing'
 import { Button } from '@/components/ui/button'
@@ -83,6 +84,7 @@ import type {
 } from '../../../../shared/hosted-review'
 import { resolveHostedReviewCreationProvider } from '../../../../shared/hosted-review-creation-providers'
 import { normalizeHostedReviewHeadRef } from '../../../../shared/hosted-review-refs'
+import { getRepoExecutionHostId, LOCAL_EXECUTION_HOST_ID } from '../../../../shared/execution-host'
 import { getHostedReviewCacheKey, refreshHostedReviewCard } from '@/store/slices/hosted-review'
 import { toast } from 'sonner'
 import { useConfirmationDialog } from '@/components/confirmation-dialog'
@@ -457,6 +459,7 @@ export default function ChecksPanel(): React.JSX.Element {
   const commentsSelectionClearTokenRef = useRef(0)
   const [emptyRefreshing, setEmptyRefreshing] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [aoneWorkspaceRefreshGeneration, setAoneWorkspaceRefreshGeneration] = useState(0)
   const refreshInFlightRef = useRef(false)
   const [conflictDetailsRefreshing, setConflictDetailsRefreshing] = useState(false)
   const createPrInFlightRef = useRef<string | null>(null)
@@ -2070,6 +2073,7 @@ export default function ChecksPanel(): React.JSX.Element {
           console.warn('[ChecksPanel] pre-refresh git identity refresh failed', error)
         }
       }
+      setAoneWorkspaceRefreshGeneration((generation) => generation + 1)
       if (isGitLabReviewContext) {
         const refreshedReview = await refreshHostedReviewCard(fetchHostedReviewForBranch, {
           repoPath: repo.path,
@@ -3655,6 +3659,41 @@ export default function ChecksPanel(): React.JSX.Element {
     updatePullRequestGenerationRecord
   ])
 
+  // Why: nested Aone lookup currently executes the desktop a1 binary; remote
+  // paths stay on the existing provider flow until runtime IPC supports them.
+  const aoneWorkspaceReviewsEnabled =
+    activeWorktreePath &&
+    branch &&
+    repo &&
+    getRepoExecutionHostId(repo) === LOCAL_EXECUTION_HOST_ID &&
+    !settings?.activeRuntimeEnvironmentId &&
+    (activeReview?.provider === 'code' ||
+      linkedCodeMR !== null ||
+      hostedReviewCreation?.provider === 'code')
+
+  const wrapAoneWorkspaceReviews = (parentContent: React.ReactNode): React.JSX.Element =>
+    aoneWorkspaceReviewsEnabled && activeWorktreePath && repo ? (
+      <AoneWorkspaceMergeRequests
+        parentWorktreePath={activeWorktreePath}
+        parentRepoName={repo.displayName}
+        branch={branch}
+        parentReview={
+          activeCodeReview
+            ? {
+                number: activeCodeReview.number,
+                title: activeCodeReview.title,
+                state: activeCodeReview.state,
+                url: activeCodeReview.url
+              }
+            : null
+        }
+        parentContent={parentContent}
+        refreshGeneration={aoneWorkspaceRefreshGeneration}
+      />
+    ) : (
+      <>{parentContent}</>
+    )
+
   // ── Empty state ──
   if (!activeWorktree) {
     return (
@@ -3731,7 +3770,7 @@ export default function ChecksPanel(): React.JSX.Element {
       reviewShortLabel: emptyReviewShortLabel,
       hasAmbiguousGitHubHostedReview
     })
-    return (
+    const parentEmptyState = (
       <div className="px-4 py-6">
         {detachedHeadDisplay && (
           <div className="mb-3">
@@ -3827,6 +3866,7 @@ export default function ChecksPanel(): React.JSX.Element {
         )}
       </div>
     )
+    return wrapAoneWorkspaceReviews(parentEmptyState)
   }
 
   const reviewShortLabel = isMergeRequestChecksPanelReview(activeReview) ? 'MR' : 'PR'
@@ -3838,7 +3878,7 @@ export default function ChecksPanel(): React.JSX.Element {
     Boolean(activeWorktreeId) &&
     settings?.openLinksInApp === true &&
     !settings.activeRuntimeEnvironmentId
-  return (
+  const parentReviewDetail = (
     <div ref={setChecksPanelContentRef} className="flex-1 overflow-auto scrollbar-sleek">
       {/* Hosted review header */}
       <div className="px-3 py-3 border-b border-border space-y-2.5">
@@ -4057,4 +4097,5 @@ export default function ChecksPanel(): React.JSX.Element {
       />
     </div>
   )
+  return wrapAoneWorkspaceReviews(parentReviewDetail)
 }

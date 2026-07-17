@@ -12652,6 +12652,28 @@
           "onePending": "1 件保留中",
           "pendingCount": "{{value0}} 件保留中"
         },
+        "AoneWorkspaceMergeRequests": {
+          "workspaceTitle": "ワークスペースのレビュー",
+          "workspaceSummary": "{{value0}} 個のリポジトリ · コメントは個別に表示されます",
+          "mergeRequests": "マージリクエスト",
+          "openCount": "{{value0}} 件がオープン",
+          "loading": "子リポジトリを確認中…",
+          "lookupFailed": "MR の取得に失敗しました",
+          "noReview": "{{value0}} の MR はありません",
+          "open": "マージリクエストを外部で開く",
+          "view": "{{value0}} のマージリクエストを表示",
+          "viewRepository": "{{value0}} のレビュー操作を表示",
+          "refresh": "ワークスペースのレビューを更新",
+          "refreshComments": "コメントを更新",
+          "back": "戻る",
+          "retry": "再試行",
+          "scanFailed": "子リポジトリをスキャンできませんでした",
+          "commentsFailed": "コメントを読み込めませんでした",
+          "rateLimited": "Aone が MR クエリを制限しています。少し待ってから再試行してください。",
+          "authRequired": "a1 にサインインして再試行してください",
+          "notLinked": "リポジトリが a1 にリンクされていません",
+          "binaryMissing": "a1 CLI がインストールされていません"
+        },
         "parentPrChecks": {
           "rowSummary": {
             "failingCount": "{{value0}} 件失敗",

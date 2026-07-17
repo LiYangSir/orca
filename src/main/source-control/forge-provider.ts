@@ -2,7 +2,7 @@ import type {
   CreateHostedReviewInput,
   CreateHostedReviewResult,
   HostedReviewInfo,
-  HostedReviewProvider
+  HostedReviewProvider as ReviewProvider
 } from '../../shared/hosted-review'
 import {
   getMergeRequest as getAoneMergeRequest,
@@ -47,7 +47,7 @@ import {
   type HostedReviewExecutionOptions
 } from './hosted-review-git-options'
 
-export type ForgeProviderId = Exclude<HostedReviewProvider, 'unsupported'>
+export type ForgeProviderId = Exclude<ReviewProvider, 'unsupported'>
 
 export type ForgeProviderRepositoryContext = HostedReviewExecutionOptions & {
   repoPath: string
@@ -62,10 +62,7 @@ export type ForgeReviewForBranchInput = ForgeProviderRepositoryContext & {
   // the inspected worktree HEAD. Ignored by other providers.
   githubCurrentHeadOid?: string | null
 }
-
-export type ForgeReviewByNumberInput = ForgeProviderRepositoryContext & {
-  number: number
-}
+export type ForgeReviewByNumberInput = ForgeProviderRepositoryContext & { number: number }
 
 export type ForgeProvider = {
   id: ForgeProviderId
@@ -286,15 +283,12 @@ const codeForgeProvider = {
     return resolveAoneCodeRepoSlug(context.repoPath)
   },
   async getReviewForBranch(input) {
-    const mr = await getAoneMergeRequestForBranch(input.branch, { cwd: input.repoPath })
-    if (mr) {
-      return mapCodeReview(mr)
-    }
-    if (input.linkedReviewNumber != null) {
-      const linked = await getAoneMergeRequest(input.linkedReviewNumber, { cwd: input.repoPath })
-      return linked ? mapCodeReview(linked) : null
-    }
-    return null
+    const linked =
+      input.linkedReviewNumber == null
+        ? null
+        : await getAoneMergeRequest(input.linkedReviewNumber, { cwd: input.repoPath })
+    const mr = linked ?? (await getAoneMergeRequestForBranch(input.branch, { cwd: input.repoPath }))
+    return mr ? mapCodeReview(mr) : null
   },
   async getReviewByNumber(input) {
     const mr = await getAoneMergeRequest(input.number, { cwd: input.repoPath })
@@ -329,8 +323,6 @@ export async function getForgeProviderForRepository(
   return null
 }
 
-export async function detectHostedReviewProvider(
-  context: ForgeProviderRepositoryContext
-): Promise<HostedReviewProvider> {
-  return (await getForgeProviderForRepository(context))?.id ?? 'unsupported'
+export async function detectHostedReviewProvider(context: ForgeProviderRepositoryContext) {
+  return ((await getForgeProviderForRepository(context))?.id ?? 'unsupported') as ReviewProvider
 }

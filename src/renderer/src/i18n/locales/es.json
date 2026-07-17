@@ -12675,6 +12675,28 @@
           "onePending": "1 pendiente",
           "pendingCount": "{{value0}} pendientes"
         },
+        "AoneWorkspaceMergeRequests": {
+          "workspaceTitle": "Revisiones del espacio de trabajo",
+          "workspaceSummary": "{{value0}} repositorios · los comentarios se consultan por separado",
+          "mergeRequests": "Solicitudes de fusión",
+          "openCount": "{{value0}} abiertas",
+          "loading": "Comprobando repositorios secundarios…",
+          "lookupFailed": "Error al consultar la MR",
+          "noReview": "No hay ninguna MR para {{value0}}",
+          "open": "Abrir la solicitud de fusión externamente",
+          "view": "Ver la solicitud de fusión de {{value0}}",
+          "viewRepository": "Ver acciones de revisión para {{value0}}",
+          "refresh": "Actualizar revisiones del espacio de trabajo",
+          "refreshComments": "Actualizar comentarios",
+          "back": "Volver",
+          "retry": "Reintentar",
+          "scanFailed": "No se pudieron examinar los repositorios secundarios",
+          "commentsFailed": "No se pudieron cargar los comentarios",
+          "rateLimited": "Aone está limitando las consultas de MR. Vuelve a intentarlo en un momento.",
+          "authRequired": "Inicia sesión en a1 y vuelve a intentarlo",
+          "notLinked": "El repositorio no está vinculado en a1",
+          "binaryMissing": "La CLI de a1 no está instalada"
+        },
         "parentPrChecks": {
           "rowSummary": {
             "failingCount": "{{value0}} fallando",
