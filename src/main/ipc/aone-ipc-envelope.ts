@@ -12,7 +12,13 @@ export type AoneIpcStatus = {
 
 export type AoneIpcFailure = {
   ok: false
-  code: 'binary_missing' | 'auth_required' | 'not_linked' | 'invalid_output' | 'unknown'
+  code:
+    | 'binary_missing'
+    | 'auth_required'
+    | 'not_linked'
+    | 'rate_limited'
+    | 'invalid_output'
+    | 'unknown'
   error: string
 }
 

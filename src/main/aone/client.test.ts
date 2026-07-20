@@ -177,4 +177,31 @@ describe('Aone client merge request lookup', () => {
 
     await expect(listMergeRequests({ state: 'opened' }, { cwd: '/repo' })).rejects.toBe(malformed)
   })
+
+  it('serializes MR list calls and stops queued calls after Sentinel rate limiting', async () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+    let rejectFirst: ((error: Error) => void) | undefined
+    a1ExecJsonMock.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectFirst = reject
+        })
+    )
+
+    const first = listMergeRequests({ state: 'opened', source: 'feature/one' })
+    const queued = listMergeRequests({ state: 'opened', source: 'feature/two' })
+    await vi.waitFor(() => expect(a1ExecJsonMock).toHaveBeenCalledTimes(1))
+
+    const rateLimited = new A1Error('rate_limited', 'Aone is rate limiting requests')
+    rejectFirst?.(rateLimited)
+    await expect(first).rejects.toBe(rateLimited)
+    await expect(queued).rejects.toMatchObject({ code: 'rate_limited' })
+    expect(a1ExecJsonMock).toHaveBeenCalledTimes(1)
+
+    now.mockReturnValue(1_060_001)
+    a1ExecJsonMock.mockResolvedValueOnce([])
+    await expect(listMergeRequests({ state: 'opened' })).resolves.toEqual([])
+    expect(a1ExecJsonMock).toHaveBeenCalledTimes(2)
+    now.mockRestore()
+  })
 })

@@ -28,6 +28,36 @@ export type AoneMergeRequestListFilter = {
   page?: number
 }
 
+const MERGE_REQUEST_RATE_LIMIT_COOLDOWN_MS = 60_000
+let mergeRequestQueryTail: Promise<void> = Promise.resolve()
+let mergeRequestRateLimitedUntil = 0
+
+function runMergeRequestQuery<T>(query: () => Promise<T>): Promise<T> {
+  const result = mergeRequestQueryTail.then(async () => {
+    // Why: one Sentinel rejection applies to the user, so queued repository
+    // lookups must stop spawning a1 processes until the service can recover.
+    if (Date.now() < mergeRequestRateLimitedUntil) {
+      throw new A1Error(
+        'rate_limited',
+        'Aone is temporarily rate limiting merge request queries. Try again shortly.'
+      )
+    }
+    try {
+      return await query()
+    } catch (error) {
+      if (error instanceof A1Error && error.code === 'rate_limited') {
+        mergeRequestRateLimitedUntil = Date.now() + MERGE_REQUEST_RATE_LIMIT_COOLDOWN_MS
+      }
+      throw error
+    }
+  })
+  mergeRequestQueryTail = result.then(
+    () => undefined,
+    () => undefined
+  )
+  return result
+}
+
 function pushArg(args: string[], flag: string, value: string | number | undefined): void {
   if (value === undefined || value === null || value === '') {
     return
@@ -119,7 +149,7 @@ export async function listMergeRequests(
   pushArg(args, '--target', filter.target)
   pushArg(args, '--page', filter.page)
   try {
-    return await a1ExecJson<A1MergeRequest[]>(args, options)
+    return await runMergeRequestQuery(() => a1ExecJson<A1MergeRequest[]>(args, options))
   } catch (error) {
     if (isEmptyA1JsonOutput(error)) {
       return []

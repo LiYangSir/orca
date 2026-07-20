@@ -23,6 +23,7 @@ export type A1ErrorCode =
   | 'binary_missing'
   | 'auth_required'
   | 'not_linked'
+  | 'rate_limited'
   | 'invalid_output'
   | 'unknown'
 
@@ -68,6 +69,13 @@ function classifyA1Error(error: unknown): A1Error {
     return new A1Error(
       'not_linked',
       'No a1 resource is linked in this directory. Run `a1 link` first.',
+      stderr
+    )
+  }
+  if (haystack.includes('flow_control_error') || haystack.includes('sentinel block signature')) {
+    return new A1Error(
+      'rate_limited',
+      'Aone is temporarily rate limiting merge request queries. Try again shortly.',
       stderr
     )
   }

@@ -270,6 +270,24 @@ export function refreshHostedReviewCard(
   })
 }
 
+const AONE_RATE_LIMIT_WARNING_INTERVAL_MS = 60_000
+let lastAoneRateLimitWarningAt = 0
+
+function logHostedReviewFetchFailure(error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error)
+  if (message.includes('Aone is temporarily rate limiting merge request queries')) {
+    // Why: every visible worktree observes the same user-level cooldown; emit
+    // one diagnostic instead of repeating an identical stack for every card.
+    const now = Date.now()
+    if (now - lastAoneRateLimitWarningAt >= AONE_RATE_LIMIT_WARNING_INTERVAL_MS) {
+      lastAoneRateLimitWarningAt = now
+      console.warn(message)
+    }
+    return
+  }
+  console.error('Failed to fetch hosted review:', error)
+}
+
 export const createHostedReviewSlice: StateCreator<AppState, [], [], HostedReviewSlice> = (
   set,
   get
@@ -463,7 +481,7 @@ export const createHostedReviewSlice: StateCreator<AppState, [], [], HostedRevie
           // the sidebar card to branch-only and suppresses retry for the full
           // cache TTL. Preserve the last known review and let the next visible
           // poll retry instead.
-          console.error('Failed to fetch hosted review:', error)
+          logHostedReviewFetchFailure(error)
           const preserved = get().hostedReviewCache[cacheKey]
           // Why: don't preserve a merged GitHub review the worktree has moved
           // off of; that PR is only valid while checked out at its head.

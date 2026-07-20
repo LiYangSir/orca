@@ -103,6 +103,25 @@ describe('hosted review slice', () => {
     })
   })
 
+  it('logs a shared Aone rate-limit cooldown only once per minute', async () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(2_000_000)
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const failure = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    mockApi.hostedReview.forBranch.mockRejectedValue(
+      new Error('Aone is temporarily rate limiting merge request queries. Try again shortly.')
+    )
+    const store = makeStore()
+
+    await store.getState().fetchHostedReviewForBranch('/repo', 'feature/one', { force: true })
+    await store.getState().fetchHostedReviewForBranch('/repo', 'feature/two', { force: true })
+
+    expect(warning).toHaveBeenCalledTimes(1)
+    expect(failure).not.toHaveBeenCalled()
+    warning.mockRestore()
+    failure.mockRestore()
+    now.mockRestore()
+  })
+
   it('clears stale GitHub PR cache when branch review lookup finds a non-GitHub review', async () => {
     mockApi.hostedReview.forBranch.mockResolvedValueOnce(review)
     const store = makeStore()
