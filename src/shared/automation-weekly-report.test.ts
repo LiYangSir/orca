@@ -131,14 +131,15 @@ describe('automation weekly report evidence', () => {
     })
 
     expect(prompt).toContain(
-      '[gitlab MR/PR 7: Weekly report ) ready](https://gitlab.example.com/orca/-/merge_requests/7) · 合并状态 待合并'
+      '[gitlab MR/PR 7: Weekly report ) ready](https://gitlab.example.com/orca/-/merge_requests/7) · 待合并'
     )
-    expect(prompt).toContain('最终报告必须使用简体中文')
+    expect(prompt).toContain('必须使用简体中文')
     expect(prompt).toContain('统计周期: 2026-07-13T00:00:00.000Z 至 2026-07-17T09:00:00.000Z')
-    expect(prompt).toContain('## 二、产品进展')
-    expect(prompt).toContain('例如 Diamond、Sentinel')
-    expect(prompt).toContain('不要列出未提交文件')
-    expect(prompt).toContain('暂无可确认信息')
+    expect(prompt).toContain('### <产品名，例如 Diamond、Sentinel>')
+    expect(prompt).toContain('- 工作：一句话')
+    expect(prompt).toContain('每个产品最多五行')
+    expect(prompt).not.toContain('feature/weekly-report')
+    expect(prompt).not.toContain('工作区: weekly-report')
     expect(prompt.match(/<\/orca_weekly_report_evidence>/g)).toHaveLength(1)
   })
 
@@ -193,10 +194,12 @@ describe('automation weekly report evidence', () => {
       ]
     })
 
-    expect(prompt).toContain('本周工作线索: 支持动态限流规则')
+    expect(prompt).toContain('工作事实: 支持动态限流规则')
     expect(prompt).toContain('a1 MR !218: 支持动态限流规则')
-    expect(prompt).toContain('合并状态 已合并')
+    expect(prompt).toContain('· 已合并')
     expect(prompt).toContain('CR CR-9001: 动态规则发布')
     expect(prompt).toContain('已发布（2026-07-16 18:20:00）')
+    expect(prompt).not.toContain('feature/sentinel-rule')
+    expect(prompt).not.toContain('CI success')
   })
 })

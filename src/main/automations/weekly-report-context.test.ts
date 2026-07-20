@@ -73,9 +73,9 @@ describe('headless weekly report context', () => {
     expect(runtime.getHostedReviewForBranch).toHaveBeenCalledWith(
       expect.objectContaining({ repoSelector: 'id:repo-1', linkedGitHubPR: 17 })
     )
-    expect(prompt).toContain('本周工作线索: Add weekly reports')
+    expect(prompt).toContain('工作事实: Add weekly reports')
     expect(prompt).toContain(
-      '[github MR/PR 17: Add weekly reports](https://github.com/example/orca/pull/17) · 合并状态 待合并'
+      '[github MR/PR 17: Add weekly reports](https://github.com/example/orca/pull/17) · 待合并'
     )
     expect(prompt).toContain('# 本周产品研发周报')
   })
