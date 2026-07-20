@@ -95,6 +95,7 @@ describe('shared agent-hook-listener', () => {
 
   it('routes pathnames to a known source or null', () => {
     expect(resolveHookSource('/hook/claude')).toBe('claude')
+    expect(resolveHookSource('/hook/qoder')).toBe('qoder')
     expect(resolveHookSource('/hook/cursor')).toBe('cursor')
     expect(resolveHookSource('/hook/antigravity')).toBe('antigravity')
     expect(resolveHookSource('/hook/grok')).toBe('grok')
@@ -136,6 +137,26 @@ describe('shared agent-hook-listener', () => {
     expect(event!.payload.state).toBe('working')
     expect(event!.payload.prompt).toBe('hello')
     expect(event!.payload.agentType).toBe('claude')
+  })
+
+  it('normalizes a Qoder UserPromptSubmit body as Qoder activity', () => {
+    const event = normalizeHookPayload(
+      state,
+      'qoder',
+      {
+        paneKey: PANE_KEY,
+        tabId: 'tab-1',
+        worktreeId: 'wt',
+        payload: { hook_event_name: 'UserPromptSubmit', prompt: 'hello from qoder' }
+      },
+      'production'
+    )
+
+    expect(event?.payload).toMatchObject({
+      state: 'working',
+      prompt: 'hello from qoder',
+      agentType: 'qoder'
+    })
   })
 
   it('normalizes Gemini BeforeTool to working with tool fields', () => {

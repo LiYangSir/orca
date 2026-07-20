@@ -1,5 +1,6 @@
 import type { SFTPWrapper } from 'ssh2'
 import type { AgentHookInstallState, AgentHookInstallStatus } from '../../shared/agent-hook-types'
+import type { AgentHookSource } from '../../shared/agent-hook-relay'
 import {
   buildWindowsAgentHookCurlPostCommand,
   readHooksJson,
@@ -36,6 +37,7 @@ type ClaudeHookServiceOptions = {
   agent: AgentHookInstallStatus['agent']
   displayName: string
   settings: ClaudeCompatibleHookSettings
+  hookSource?: AgentHookSource
 }
 
 const DEFAULT_CLAUDE_HOOK_SERVICE_OPTIONS: ClaudeHookServiceOptions = {
@@ -46,8 +48,9 @@ const DEFAULT_CLAUDE_HOOK_SERVICE_OPTIONS: ClaudeHookServiceOptions = {
 
 function getManagedScript(
   target: 'local' | 'posix' = 'local',
-  options: { skipWhenDevinImportsClaude?: boolean } = {}
+  options: { skipWhenDevinImportsClaude?: boolean; hookSource?: AgentHookSource } = {}
 ): string {
+  const hookSource = options.hookSource ?? 'claude'
   if (target === 'local' && process.platform === 'win32') {
     return [
       '@echo off',
@@ -72,7 +75,7 @@ function getManagedScript(
       // spaces); a PowerShell post on top of that meant two interpreter
       // startups per hook. The post runs inside the .cmd (cmd.exe context), so
       // curl works the same here as for the POSIX/Codex hooks.
-      buildWindowsAgentHookCurlPostCommand('claude'),
+      buildWindowsAgentHookCurlPostCommand(hookSource),
       'exit /b 0',
       ...buildWindowsHookStdinDrainEpilogue(),
       ''
@@ -118,7 +121,7 @@ function getManagedScript(
     // Why: pipe payload to curl's stdin (`payload@-`) instead of an inline
     // `payload=$VALUE` arg, so tens-of-KB tool output stays off the curl
     // command line (EDR command-line false positives). Wire body is identical.
-    'printf \'%s\' "$payload" | curl -sS -X POST "http://127.0.0.1:${ORCA_AGENT_HOOK_PORT}/hook/claude" \\',
+    `printf '%s' "$payload" | curl -sS -X POST "http://127.0.0.1:\${ORCA_AGENT_HOOK_PORT}/hook/${hookSource}" \\`,
     '  --connect-timeout 0.5 --max-time 1.5 \\',
     '  -H "Content-Type: application/x-www-form-urlencoded" \\',
     '  -H "X-Orca-Agent-Hook-Token: ${ORCA_AGENT_HOOK_TOKEN}" \\',
@@ -162,7 +165,7 @@ export class ClaudeHookService {
     const command = getManagedCommand(scriptPath)
     const missing: string[] = []
     let presentCount = 0
-    for (const event of CLAUDE_EVENTS) {
+    for (const event of this.options.settings.events ?? CLAUDE_EVENTS) {
       const definitions = Array.isArray(config.hooks?.[event.eventName])
         ? config.hooks![event.eventName]!
         : []
@@ -209,11 +212,15 @@ export class ClaudeHookService {
     const nextConfig = applyManagedHooks(
       config,
       command,
-      getManagedScriptFileName(this.options.settings)
+      getManagedScriptFileName(this.options.settings),
+      this.options.settings.events
     )
     writeManagedScript(
       scriptPath,
-      getManagedScript('local', { skipWhenDevinImportsClaude: this.options.agent === 'claude' })
+      getManagedScript('local', {
+        skipWhenDevinImportsClaude: this.options.agent === 'claude',
+        hookSource: this.options.hookSource
+      })
     )
     writeHooksJson(configPath, nextConfig)
     return this.getStatus()
@@ -252,7 +259,12 @@ export class ClaudeHookService {
       // Why: the POSIX wrapper is identical regardless of where the script
       // lands; only the path differs. Reuse the same wrapper helper.
       const command = getRemoteManagedCommand(remoteScriptPath)
-      const nextConfig = applyManagedHooks(config, command, remoteScriptFileName)
+      const nextConfig = applyManagedHooks(
+        config,
+        command,
+        remoteScriptFileName,
+        this.options.settings.events
+      )
 
       // Why: write the script first, then the settings — settings.json
       // referencing a missing script body would fire `command not found` on
@@ -265,7 +277,10 @@ export class ClaudeHookService {
       await writeManagedScriptRemote(
         sftp,
         remoteScriptPath,
-        getManagedScript('posix', { skipWhenDevinImportsClaude: this.options.agent === 'claude' })
+        getManagedScript('posix', {
+          skipWhenDevinImportsClaude: this.options.agent === 'claude',
+          hookSource: this.options.hookSource
+        })
       )
       await writeHooksJsonRemote(sftp, remoteConfigPath, nextConfig)
 

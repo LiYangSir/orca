@@ -2272,6 +2272,7 @@ function isNewTurnEvent(source: AgentHookSource, eventName: unknown): boolean {
   // typecheck here instead of silently falling through to `false`.
   switch (source) {
     case 'claude':
+    case 'qoder':
     // Why: Kimi Code emits Claude-compatible hook events, so UserPromptSubmit
     // is its new-turn boundary too.
     case 'kimi':
@@ -2376,6 +2377,7 @@ function extractToolFields(
   // typecheck here instead of silently routing through OpenCode's extractor.
   switch (source) {
     case 'claude':
+    case 'qoder':
     // Why: Kimi Code uses Claude's tool_name/tool_input payload fields verbatim.
     case 'kimi':
       return extractClaudeToolFields(eventName, hookPayload)
@@ -3829,8 +3831,13 @@ export function normalizeHookPayload(
   let payload: ParsedAgentStatusPayload | null
   switch (source) {
     case 'claude':
+    case 'qoder': {
       payload = normalizeClaudeEvent(state, eventName, promptText, paneKey, hookPayloadRecord)
+      if (payload && source === 'qoder') {
+        payload = { ...payload, agentType: 'qoder' }
+      }
       break
+    }
     case 'codex':
       payload = normalizeCodexEvent(state, eventName, promptText, paneKey, hookPayloadRecord)
       break
@@ -3993,6 +4000,7 @@ export const HOOK_SOURCE_BY_PATHNAME: Readonly<Record<string, AgentHookSource>> 
   '/hook/claude': 'claude',
   '/hook/codex': 'codex',
   '/hook/gemini': 'gemini',
+  '/hook/qoder': 'qoder',
   '/hook/antigravity': 'antigravity',
   '/hook/amp': 'amp',
   '/hook/opencode': 'opencode',

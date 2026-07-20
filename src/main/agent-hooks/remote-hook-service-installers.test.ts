@@ -30,6 +30,7 @@ import { cursorHookService } from '../cursor/hook-service'
 import { droidHookService } from '../droid/hook-service'
 import { commandCodeHookService } from '../command-code/hook-service'
 import { geminiHookService } from '../gemini/hook-service'
+import { qoderHookService } from '../qoder/hook-service'
 import { devinHookService } from '../devin/hook-service'
 import { grokHookService } from '../grok/hook-service'
 import { hermesHookService } from '../hermes/hook-service'
@@ -693,6 +694,7 @@ describe('remote hook service installers', () => {
       ['openclaude', openClaudeHookService],
       ['codex', codexHookService],
       ['gemini', geminiHookService],
+      ['qoder', qoderHookService],
       ['antigravity', antigravityHookService],
       ['amp', ampHookService],
       ['cursor', cursorHookService],

@@ -12,8 +12,9 @@ import {
 } from '../agent-hooks/installer-utils'
 
 export type ClaudeCompatibleHookSettings = {
-  configDirName: '.claude' | '.openclaude'
-  scriptBaseName: 'claude-hook' | 'openclaude-hook'
+  configDirName: '.claude' | '.openclaude' | '.qoder'
+  scriptBaseName: 'claude-hook' | 'openclaude-hook' | 'qoder-hook'
+  events?: readonly (typeof CLAUDE_EVENTS)[number][]
 }
 
 export const CLAUDE_HOOK_SETTINGS: ClaudeCompatibleHookSettings = {
@@ -60,6 +61,17 @@ export const CLAUDE_EVENTS = [
   }
 ] as const
 
+export const QODER_HOOK_SETTINGS: ClaudeCompatibleHookSettings = {
+  configDirName: '.qoder',
+  scriptBaseName: 'qoder-hook',
+  // Why: Qoder rejects Claude-only StopFailure and TeammateIdle event buckets.
+  events: CLAUDE_EVENTS.filter(
+    ({ eventName }) => eventName !== 'StopFailure' && eventName !== 'TeammateIdle'
+  )
+}
+
+type ClaudeCompatibleHookEvent = (typeof CLAUDE_EVENTS)[number]
+
 export function getConfigPath(settings = CLAUDE_HOOK_SETTINGS): string {
   return join(homedir(), settings.configDirName, 'settings.json')
 }
@@ -95,12 +107,13 @@ export function getRemoteManagedCommand(scriptPath: string): string {
 export function applyManagedHooks(
   config: HooksConfig,
   command: string,
-  scriptFileName = getManagedScriptFileName()
+  scriptFileName = getManagedScriptFileName(),
+  events: readonly ClaudeCompatibleHookEvent[] = CLAUDE_EVENTS
 ): HooksConfig {
   const nextHooks = { ...config.hooks }
   const isManagedCommand = createManagedCommandMatcher(scriptFileName)
 
-  for (const event of CLAUDE_EVENTS) {
+  for (const event of events) {
     const current = Array.isArray(nextHooks[event.eventName]) ? nextHooks[event.eventName] : []
     const cleaned = removeManagedCommands(current, isManagedCommand)
     const definition: HookDefinition = {

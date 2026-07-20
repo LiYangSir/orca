@@ -365,7 +365,8 @@ export function AgentIcon({
         height={size}
         alt=""
         aria-hidden
-        style={{ borderRadius: 2 }}
+        // Why: Qoder's dense rounded-square mark reads smaller than line icons at the same box size.
+        style={{ borderRadius: 2, transform: agent === 'qoder' ? 'scale(1.12)' : undefined }}
       />
     )
   }
