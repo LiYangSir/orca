@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { beforeEach, vi } from 'vitest'
 
-const { a1ExecJsonMock } = vi.hoisted(() => ({
-  a1ExecJsonMock: vi.fn()
+const { a1ExecJsonMock, gitExecFileAsyncMock } = vi.hoisted(() => ({
+  a1ExecJsonMock: vi.fn(),
+  gitExecFileAsyncMock: vi.fn()
 }))
 
 vi.mock('./a1-runner', () => ({
@@ -20,10 +21,15 @@ vi.mock('./a1-runner', () => ({
   isA1Installed: vi.fn()
 }))
 
+vi.mock('../git/runner', () => ({
+  gitExecFileAsync: gitExecFileAsyncMock
+}))
+
 import {
   getMergeRequest,
   getMergeRequestForBranch,
   getMergeRequestForBranchWithMergedFallback,
+  getMergeRequestForRepositoryCurrentBranch,
   isAoneCodeRemoteUrl,
   listMergeRequests
 } from './client'
@@ -47,6 +53,7 @@ describe('Aone client remote detection', () => {
 describe('Aone client merge request lookup', () => {
   beforeEach(() => {
     a1ExecJsonMock.mockReset()
+    gitExecFileAsyncMock.mockReset()
   })
 
   it('unwraps repo mr view payloads', async () => {
@@ -163,6 +170,40 @@ describe('Aone client merge request lookup', () => {
     expect(a1ExecJsonMock).toHaveBeenNthCalledWith(3, ['repo', 'mr', 'view', '28280121'], {
       cwd: '/repo'
     })
+  })
+
+  it('looks up a nested repository MR using its own current branch', async () => {
+    gitExecFileAsyncMock.mockResolvedValue({
+      stdout: 'feature/child-listener\n',
+      stderr: ''
+    })
+    a1ExecJsonMock.mockResolvedValueOnce([]).mockResolvedValueOnce([])
+
+    await expect(
+      getMergeRequestForRepositoryCurrentBranch('/workspace/repos/mw-cli')
+    ).resolves.toEqual({ branch: 'feature/child-listener', mergeRequest: null })
+    expect(gitExecFileAsyncMock).toHaveBeenCalledWith(['branch', '--show-current'], {
+      cwd: '/workspace/repos/mw-cli'
+    })
+    expect(a1ExecJsonMock).toHaveBeenNthCalledWith(
+      1,
+      ['repo', 'mr', 'list', '--state', 'opened', '--source', 'feature/child-listener'],
+      { cwd: '/workspace/repos/mw-cli' }
+    )
+    expect(a1ExecJsonMock).toHaveBeenNthCalledWith(
+      2,
+      ['repo', 'mr', 'list', '--state', 'merged', '--source', 'feature/child-listener'],
+      { cwd: '/workspace/repos/mw-cli' }
+    )
+  })
+
+  it('does not fall back to another branch for a detached nested repository', async () => {
+    gitExecFileAsyncMock.mockResolvedValue({ stdout: '', stderr: '' })
+
+    await expect(
+      getMergeRequestForRepositoryCurrentBranch('/workspace/repos/mw-cli')
+    ).resolves.toEqual({ branch: null, mergeRequest: null })
+    expect(a1ExecJsonMock).not.toHaveBeenCalled()
   })
 
   it('distinguishes an empty MR list from malformed JSON output', async () => {

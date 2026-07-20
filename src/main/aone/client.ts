@@ -10,6 +10,7 @@ import {
   isA1Installed,
   type A1ExecOptions
 } from './a1-runner'
+import { gitExecFileAsync } from '../git/runner'
 import type { A1LinkStatus, A1MergeRequest, A1MergeRequestViewPayload, A1WorkItem } from './types'
 
 export type AoneWorkItemListFilter = {
@@ -223,6 +224,19 @@ export async function getMergeRequestForBranchWithMergedFallback(
     return null
   }
   return (await getMergeRequest(listed.id, options)) ?? listed
+}
+
+export async function getMergeRequestForRepositoryCurrentBranch(
+  repoPath: string
+): Promise<{ branch: string | null; mergeRequest: A1MergeRequest | null }> {
+  const { stdout } = await gitExecFileAsync(['branch', '--show-current'], { cwd: repoPath })
+  const branch = stdout.trim() || null
+  // Why: nested repositories can be linked to a different branch than their
+  // parent workspace, so the MR lookup must use each repository's own HEAD.
+  const mergeRequest = branch
+    ? await getMergeRequestForBranchWithMergedFallback(branch, { cwd: repoPath })
+    : null
+  return { branch, mergeRequest }
 }
 
 // `code` review host detection: Alibaba-hosted code remotes can sit behind

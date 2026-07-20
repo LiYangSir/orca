@@ -15,11 +15,13 @@ describe('AoneWorkspaceMergeRequestOverview', () => {
           entries={[
             {
               repo: { path: '/workspace/repos/diamondops', displayName: 'diamondops', depth: 2 },
+              branch: 'feature/diamond-listener',
               review: { id: 28612989, title: 'Listener queries', state: 'merged' },
               lookupErrorCode: null
             },
             {
               repo: { path: '/workspace/repos/mw-cli', displayName: 'mw-cli', depth: 2 },
+              branch: 'feature/mw-listener',
               review: null,
               lookupErrorCode: null
             }

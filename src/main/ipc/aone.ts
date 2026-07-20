@@ -7,6 +7,7 @@ import {
   getA1LinkStatus,
   getMergeRequest,
   getMergeRequestForBranchWithMergedFallback,
+  getMergeRequestForRepositoryCurrentBranch,
   getWorkItem,
   isAoneAvailable,
   listMergeRequests,
@@ -149,6 +150,22 @@ export function registerAoneHandlers(): void {
         const branch = typeof args?.branch === 'string' ? args.branch : ''
         const cwd = typeof args?.repoPath === 'string' ? args.repoPath : undefined
         const data = await getMergeRequestForBranchWithMergedFallback(branch, { cwd })
+        return { ok: true, data }
+      } catch (error) {
+        return toFailure(error)
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'aone:getMergeRequestForRepositoryCurrentBranch',
+    async (
+      _event,
+      args: { repoPath: string }
+    ): Promise<AoneIpcResult<{ branch: string | null; mergeRequest: A1MergeRequest | null }>> => {
+      try {
+        const repoPath = typeof args?.repoPath === 'string' ? args.repoPath : ''
+        const data = await getMergeRequestForRepositoryCurrentBranch(repoPath)
         return { ok: true, data }
       } catch (error) {
         return toFailure(error)

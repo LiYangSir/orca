@@ -130,7 +130,7 @@ export function AoneWorkspaceMergeRequestOverview({
             <AoneWorkspaceMergeRequestRow
               key={entry.repo.path}
               repoName={entry.repo.displayName}
-              branch={branch}
+              branch={entry.branch}
               review={mapChildReview(entry.review)}
               lookupErrorCode={entry.lookupErrorCode}
               onSelect={entry.review ? () => onSelectChild(entry) : undefined}

@@ -16,7 +16,7 @@ export type AoneWorkspaceMergeRequestRowReview = {
 
 type AoneWorkspaceMergeRequestRowProps = {
   repoName: string
-  branch: string
+  branch: string | null
   review: AoneWorkspaceMergeRequestRowReview | null
   lookupErrorCode?: string | null
   onSelect?: () => void
@@ -62,11 +62,16 @@ export function AoneWorkspaceMergeRequestRow({
           >
             {lookupErrorCode
               ? getLookupErrorLabel(lookupErrorCode)
-              : translate(
-                  'auto.components.rightSidebar.AoneWorkspaceMergeRequests.noReview',
-                  'No MR for {{value0}}',
-                  { value0: branch }
-                )}
+              : !branch
+                ? translate(
+                    'auto.components.right.sidebar.checks.panel.review.detached.title',
+                    'No current branch'
+                  )
+                : translate(
+                    'auto.components.rightSidebar.AoneWorkspaceMergeRequests.noReview',
+                    'No MR for {{value0}}',
+                    { value0: branch }
+                  )}
           </div>
         )}
       </div>
