@@ -30,6 +30,21 @@ export const SYNTHETIC_AGENT_TITLE_PROFILES: Record<string, SyntheticAgentTitleP
     // Why: OpenCode owns semantic OSC session titles; hook status must not replace them.
     synthesizeTerminalTitle: false
   },
+  gemini: {
+    workingLabel: 'Gemini CLI',
+    permissionLabel: 'Gemini CLI - action required',
+    idleLabel: 'Gemini CLI ready',
+    titleIdentityGroup: 'gemini-compatible',
+    synthesizeTerminalTitle: false
+  },
+  qoder: {
+    workingLabel: 'Qoder',
+    permissionLabel: 'Qoder - action required',
+    idleLabel: 'Qoder',
+    // Why: Qoder inherits Gemini hooks and OSC titles; launch ownership is the provider boundary.
+    titleIdentityGroup: 'gemini-compatible',
+    synthesizeTerminalTitle: false
+  },
   pi: {
     workingLabel: 'Pi',
     permissionLabel: 'Pi - action required',

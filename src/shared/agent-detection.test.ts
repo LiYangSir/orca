@@ -171,6 +171,13 @@ describe('Pi-compatible title detection', () => {
     expect(resolveCompatibleAgentTypeForOwner('codex', 'omp')).toBe('codex')
   })
 
+  it('attributes inherited Gemini hook identity to a Qoder launch owner', () => {
+    expect(resolveCompatibleAgentTypeForOwner('gemini', 'qoder')).toBe('qoder')
+    expect(resolveCompatibleAgentTypeForOwner('gemini', 'gemini')).toBe('gemini')
+    expect(normalizeCompatibleAgentTitleForOwner('✦ Gemini CLI', 'qoder')).toBe('⠋ Qoder')
+    expect(normalizeCompatibleAgentTitleForOwner('◇ Gemini CLI', 'qoder')).toBe('Qoder')
+  })
+
   it.each(['~/omp/working', 'omp-harness ready', '~/pi/working', 'pi-scratch ready'])(
     'does not classify path or hyphen false positive %s',
     (title) => {

@@ -314,6 +314,18 @@ Implement task B worker instructions for the next dispatch`,
     expect(tab.generatedTitle).toBe('Fix the flaky status tests')
   })
 
+  it('renders a persisted Gemini title through its Qoder launch owner', () => {
+    const store = createTestStore()
+    seedWorktree(store, false)
+    const tab = store.getState().createTab(WORKTREE_ID, undefined, undefined, {
+      launchAgent: 'qoder'
+    })
+    store.getState().updateTabTitle(tab.id, '✦ Gemini CLI')
+
+    const updatedTab = store.getState().tabsByWorktree[WORKTREE_ID].find(({ id }) => id === tab.id)
+    expect(resolveTerminalTabTitle(updatedTab!, false)).toBe('⠋ Qoder')
+  })
+
   it('does not generate a title for quick command labeled tabs', () => {
     vi.useFakeTimers()
     const store = createTestStore()

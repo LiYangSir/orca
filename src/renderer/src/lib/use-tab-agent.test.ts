@@ -235,6 +235,18 @@ describe('resolveTabAgentFromSignals', () => {
     ).toBe('qoder')
   })
 
+  it('keeps Qoder launch identity when its inherited Gemini hook reports activity', () => {
+    expect(
+      resolveTabAgentFromSignals({
+        hasObservedAgentSignal: true,
+        isRemote: false,
+        title: '✦ Gemini CLI',
+        hookAgent: 'gemini',
+        launchAgent: 'qoder'
+      })
+    ).toBe('qoder')
+  })
+
   it("uses Codex hook identity over Claude's generic task-title heuristic", () => {
     expect(
       resolveTabAgentFromSignals({

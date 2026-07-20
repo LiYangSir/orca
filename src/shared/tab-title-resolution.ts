@@ -1,12 +1,17 @@
 import type { Tab, TerminalTab } from './types'
+import { normalizeCompatibleAgentTitleForOwner } from './agent-title-owner'
 import { isMeaningfulOpenCodeTerminalTitle } from './opencode-terminal-title'
 
 export function resolveTerminalTabTitle(
-  tab: Pick<TerminalTab, 'customTitle' | 'quickCommandLabel' | 'generatedTitle' | 'title'>,
+  tab: Pick<
+    TerminalTab,
+    'customTitle' | 'quickCommandLabel' | 'generatedTitle' | 'title' | 'launchAgent'
+  >,
   generatedTitlesEnabled: boolean,
   fallback = ''
 ): string {
-  const liveTitle = tab.title?.trim() ?? ''
+  // Why: Gemini-derived agents can persist Gemini's raw OSC label; launch ownership names the UI.
+  const liveTitle = normalizeCompatibleAgentTitleForOwner(tab.title?.trim() ?? '', tab.launchAgent)
   return (
     tab.customTitle?.trim() ||
     tab.quickCommandLabel?.trim() ||

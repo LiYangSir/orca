@@ -172,6 +172,22 @@ describe('buildWorktreeAgentRows', () => {
     expect(rows[0].agentType).toBe('omp')
   })
 
+  it('attributes a live Gemini hook row to its launched Qoder tab', () => {
+    const rows = buildWorktreeAgentRows({
+      tabs: [makeTab('tab-1', { launchAgent: 'qoder', title: '✦ Gemini CLI' })],
+      entries: [
+        makeEntry(PANE_KEY_1, 1000, {
+          agentType: 'gemini',
+          terminalTitle: '✦ Gemini CLI'
+        })
+      ],
+      retained: [],
+      now: 2000
+    })
+
+    expect(rows[0].agentType).toBe('qoder')
+  })
+
   it('resolves retained unknown rows from the launched tab agent', () => {
     const retained = makeRetained(ORPHAN_PANE_KEY, 'wt-1', 1000, {
       entry: makeEntry(ORPHAN_PANE_KEY, 1000, {
