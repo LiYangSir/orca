@@ -3886,15 +3886,15 @@ describe('orca cli worktree awareness', () => {
     process.exitCode = priorExitCode
   })
 
-  it('creates an automation for the enclosing worktree by default', async () => {
+  it('creates a weekly-report automation for the enclosing worktree', async () => {
     queueFixtures(
       callMock,
       worktreeListFixture([buildWorktree('/tmp/repo/feature', 'feature/foo', 'abc', 'repo-1')]),
       okFixture('req_automation_create', {
         automation: {
           id: 'auto-1',
-          name: 'Daily review',
-          prompt: 'Review open changes',
+          name: 'Weekly change report',
+          prompt: "Summarize this week's changes",
           agentId: 'codex',
           projectId: 'repo-1',
           executionTargetType: 'local',
@@ -3921,12 +3921,18 @@ describe('orca cli worktree awareness', () => {
       [
         'automations',
         'create',
+        '--kind',
+        'weekly-report',
         '--name',
-        'Daily review',
+        'Weekly change report',
         '--trigger',
-        'daily',
+        'weekly',
+        '--day',
+        '5',
+        '--time',
+        '17:00',
         '--prompt',
-        'Review open changes',
+        "Summarize this week's changes",
         '--provider',
         'codex',
         '--json'
@@ -3938,8 +3944,9 @@ describe('orca cli worktree awareness', () => {
       limit: 10_000
     })
     expect(callMock).toHaveBeenNthCalledWith(2, 'automation.create', {
-      name: 'Daily review',
-      prompt: 'Review open changes',
+      name: 'Weekly change report',
+      prompt: "Summarize this week's changes",
+      kind: 'weekly_report',
       agentId: 'codex',
       repo: undefined,
       workspace: 'id:repo-1::/tmp/repo/feature',
@@ -3949,7 +3956,7 @@ describe('orca cli worktree awareness', () => {
       timezone: undefined,
       enabled: undefined,
       missedRunGraceMinutes: undefined,
-      rrule: 'FREQ=DAILY;BYHOUR=9;BYMINUTE=0',
+      rrule: 'FREQ=WEEKLY;BYDAY=FR;BYHOUR=17;BYMINUTE=0',
       dtstart: expect.any(Number)
     })
   })

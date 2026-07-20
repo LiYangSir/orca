@@ -4687,6 +4687,7 @@ export class Store {
     const contexts = getAutomationContextsForRepo(repo, this.state.projectHostSetups ?? [])
     const automation: Automation = {
       id: randomUUID(),
+      kind: input.kind ?? 'agent_task',
       name: input.name.trim() || 'Untitled automation',
       prompt: input.prompt,
       precheck: normalizeAutomationPrecheck(input.precheck),

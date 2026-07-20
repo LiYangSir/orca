@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { BACKGROUND_MOUNT_TERMINAL_WORKTREE_EVENT } from '@/constants/terminal'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../shared/constants'
 import { createCompatibleRuntimeStatusResponseIfNeeded } from '@/runtime/runtime-compatibility-test-fixture'
 import { clearRuntimeCompatibilityCacheForTests } from '@/runtime/runtime-rpc-client'
 import { resetRemoteRuntimeTerminalMultiplexersForTests } from '@/runtime/remote-runtime-terminal-multiplexer'
@@ -23,6 +24,7 @@ const mockPasteDraftWhenAgentReady = vi.fn()
 const mockMarkTrusted = vi.fn()
 const mockDispatchEvent = vi.fn()
 const mockGetAgentLaunchPlatformForRepo = vi.fn<() => NodeJS.Platform>()
+const mockGetFloatingTerminalCwd = vi.fn()
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 
 function expectStablePaneSpawn(): string {
@@ -42,7 +44,8 @@ const state = {
   settings: {
     agentCmdOverrides: {},
     activeRuntimeEnvironmentId: null as string | null,
-    terminalMainSideEffectAuthority: undefined as boolean | undefined
+    terminalMainSideEffectAuthority: undefined as boolean | undefined,
+    floatingTerminalCwd: ''
   },
   projects: [
     {
@@ -123,7 +126,8 @@ describe('launchAgentBackgroundSession', () => {
     state.settings = {
       agentCmdOverrides: {},
       activeRuntimeEnvironmentId: null,
-      terminalMainSideEffectAuthority: undefined
+      terminalMainSideEffectAuthority: undefined,
+      floatingTerminalCwd: ''
     }
     state.projects = [
       {
@@ -145,6 +149,7 @@ describe('launchAgentBackgroundSession', () => {
     }
     mockCreateTab.mockReturnValue({ id: 'tab-1', title: 'Terminal 1' })
     mockSpawn.mockResolvedValue({ id: 'pty-1' })
+    mockGetFloatingTerminalCwd.mockResolvedValue('/tmp/orca/floating-workspace')
     mockRuntimeEnvironmentCall.mockResolvedValue({
       ok: true,
       result: { terminal: { handle: 'terminal-1', worktreeId: 'wt-1', title: null } }
@@ -158,6 +163,9 @@ describe('launchAgentBackgroundSession', () => {
     vi.stubGlobal('window', {
       dispatchEvent: mockDispatchEvent,
       api: {
+        app: {
+          getFloatingTerminalCwd: mockGetFloatingTerminalCwd
+        },
         pty: {
           spawn: mockSpawn,
           write: mockWrite,
@@ -246,6 +254,40 @@ describe('launchAgentBackgroundSession', () => {
     expect(result).toMatchObject({ tabId: 'tab-1', paneKey, ptyId: 'pty-1' })
   })
 
+  it('launches global automation sessions in the floating workspace directory', async () => {
+    const { launchAgentBackgroundSession } = await import('./launch-agent-background-session')
+
+    await launchAgentBackgroundSession({
+      agent: 'codex',
+      worktreeId: FLOATING_TERMINAL_WORKTREE_ID,
+      prompt: '生成中文周报',
+      title: '本周产品研发周报'
+    })
+
+    expect(mockGetFloatingTerminalCwd).toHaveBeenCalledWith({
+      path: '',
+      requireTrusted: true
+    })
+    expect(mockCreateTab).toHaveBeenCalledWith(
+      FLOATING_TERMINAL_WORKTREE_ID,
+      undefined,
+      undefined,
+      { activate: false, recordInteraction: false }
+    )
+    expect(mockSpawn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cwd: '/tmp/orca/floating-workspace',
+        connectionId: null,
+        worktreeId: FLOATING_TERMINAL_WORKTREE_ID
+      })
+    )
+    expect(mockMarkTrusted).toHaveBeenCalledWith({
+      preset: 'codex',
+      workspacePath: '/tmp/orca/floating-workspace'
+    })
+    expect(mockDispatchEvent).not.toHaveBeenCalled()
+  })
+
   it('does not mount the tab while the explicit PTY spawn is unresolved', async () => {
     let resolveSpawn!: (result: { id: string }) => void
     mockSpawn.mockReturnValueOnce(
@@ -260,9 +302,8 @@ describe('launchAgentBackgroundSession', () => {
       worktreeId: 'wt-1',
       prompt: 'run slowly'
     })
-    await Promise.resolve()
+    await vi.waitFor(() => expect(mockCreateTab).toHaveBeenCalled())
 
-    expect(mockCreateTab).toHaveBeenCalled()
     expect(mockDispatchEvent).not.toHaveBeenCalled()
 
     resolveSpawn({ id: 'pty-slow' })
@@ -627,7 +668,8 @@ describe('launchAgentBackgroundSession', () => {
       state.settings = {
         agentCmdOverrides: { codex: "codex --prefill 'draft from override'" },
         activeRuntimeEnvironmentId: null,
-        terminalMainSideEffectAuthority: undefined
+        terminalMainSideEffectAuthority: undefined,
+        floatingTerminalCwd: ''
       }
       const { launchAgentBackgroundSession } = await import('./launch-agent-background-session')
 
@@ -691,7 +733,8 @@ describe('launchAgentBackgroundSession', () => {
     state.settings = {
       agentCmdOverrides: {},
       activeRuntimeEnvironmentId: 'env-1',
-      terminalMainSideEffectAuthority: undefined
+      terminalMainSideEffectAuthority: undefined,
+      floatingTerminalCwd: ''
     }
     const { launchAgentBackgroundSession } = await import('./launch-agent-background-session')
 
@@ -767,7 +810,8 @@ describe('launchAgentBackgroundSession', () => {
     state.settings = {
       agentCmdOverrides: {},
       activeRuntimeEnvironmentId: 'env-1',
-      terminalMainSideEffectAuthority: undefined
+      terminalMainSideEffectAuthority: undefined,
+      floatingTerminalCwd: ''
     }
     mockRuntimeEnvironmentSubscribe.mockRejectedValueOnce(new Error('subscription failed'))
     const { launchAgentBackgroundSession } = await import('./launch-agent-background-session')

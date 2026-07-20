@@ -591,7 +591,8 @@
         "59718b120b": "대상 워크스페이스를 더 이상 사용할 수 없습니다.",
         "16a21d6413": "SSH 재연결에는 대화형 자격 증명이 필요합니다.",
         "386db94f3e": "대상 프로젝트를 더 이상 사용할 수 없습니다.",
-        "3ad7d77f57": "대상 워크스페이스가 이 자동화 실행 대상과 다른 호스트에 있습니다."
+        "3ad7d77f57": "대상 워크스페이스가 이 자동화 실행 대상과 다른 호스트에 있습니다.",
+        "weeklyReportFloatingWorkspace": "플로팅 워크스페이스"
       },
       "useComposerState": {
         "7eb3f44ff7": "선택한 agent가 비활성화되었습니다. 생성하기 전에 활성화된 agent를 선택하세요.",
@@ -12279,6 +12280,10 @@
           "29baf8f4c2": "소스"
         },
         "AutomationEditorDialog": {
+          "weeklyReportScopeLabel": "보고서 범위",
+          "weeklyReportScope": "이번 주에 변경된 모든 프로젝트",
+          "weeklyReportEvidence": "이번 주 커밋 요약, a1 MR 병합 상태 및 CR 배포 상태",
+          "weeklyReportRuntime": "플로팅 워크스페이스에서 실행",
           "fb1896a5e7": "취소",
           "57b722cbba": "에이전트",
           "6ff66f9012": "새로운 실행",
@@ -12365,6 +12370,8 @@
           "5ad314118e": "세션"
         },
         "AutomationsPage": {
+          "weeklyReportAllProjects": "변경된 모든 프로젝트",
+          "weeklyReportFloatingWorkspace": "플로팅 워크스페이스",
           "2695883141": "삭제",
           "c3a28c9793": "실행을 보려면 자동화를 선택하세요.",
           "295698292f": "재실행",
@@ -12437,6 +12444,9 @@
           "pendingAutomationMissing": "자동화를 더 이상 사용할 수 없습니다.",
           "pendingAutomationRunMissing": "실행 기록을 더 이상 사용할 수 없습니다."
         },
+        "automationRunWorkspaceDisplay": {
+          "floatingWorkspace": "플로팅 워크스페이스"
+        },
         "CreateFromPicker": {
           "f061f49e3f": "repo 브랜치 검색...",
           "dd3841b442": "브랜치 생성 기준",
@@ -12498,6 +12508,13 @@
         },
         "automation": {
           "templates": {
+            "weeklyReport": {
+              "category": "주간 보고서",
+              "label": "이번 주 제품 개발 주간 보고서",
+              "description": "이번 주에 변경된 모든 프로젝트의 제품 진행 상황을 a1 MR 병합 및 배포 상태 중심으로 요약합니다.",
+              "name": "이번 주 제품 개발 주간 보고서",
+              "prompt": "이번 실행에서 제공된 Orca 근거로 간결한 제품 중심 주간 보고서를 작성하세요. 제품별로 작업, 진행 상황, MR 병합 상태, CR/배포 상태, 위험 및 다음 단계만 정리하고 a1 결과를 우선하세요. 커밋하지 않은 파일을 나열하거나 근거 없는 사실을 만들지 마세요."
+            },
             "37571fcb16": "중단된 작업, 오래된 생성 파일, 실패한 로컬 검증을 찾아보세요.",
             "8a0228bea3": "시간별 대기열 확인",
             "3b7281c75f": "최근 작업을 스캔하고 정확성, UX 및 테스트 적용 범위 위험을 알려줍니다.",

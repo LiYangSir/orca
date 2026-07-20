@@ -1,5 +1,6 @@
 import type * as ReactModule from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../shared/constants'
 
 const mockLaunchAgentBackgroundSession = vi.fn()
 const mockLaunchWorktreeBackgroundTerminals = vi.fn()
@@ -10,6 +11,8 @@ const mockCreateWorktree = vi.fn()
 const mockMarkDispatchResult = vi.fn()
 const mockOnDispatchRequested = vi.fn()
 const mockRendererReady = vi.fn()
+const mockCollectWeeklyReportEvidence = vi.fn()
+const mockBuildWeeklyReportPrompt = vi.fn()
 
 const setupLaunch = {
   runnerScriptPath: '/tmp/setup.sh',
@@ -32,6 +35,9 @@ const state = {
   repos: [{ id: 'repo-1', connectionId: null }],
   agentStatusByPaneKey: {},
   allWorktrees: vi.fn<() => TestWorktree[]>(() => []),
+  fetchAllWorktrees: vi.fn(),
+  fetchHostedReviewForBranch: vi.fn(),
+  settings: null,
   createWorktree: mockCreateWorktree,
   subscribe: vi.fn(() => () => {}),
   setActiveView: vi.fn(),
@@ -120,6 +126,11 @@ vi.mock('@/components/automations/automation-run-output-snapshot', () => ({
   selectAutomationRunOutputSnapshot: () => null
 }))
 
+vi.mock('@/components/automations/automation-weekly-report-context', () => ({
+  collectWeeklyReportEvidence: mockCollectWeeklyReportEvidence,
+  buildWeeklyReportPrompt: mockBuildWeeklyReportPrompt
+}))
+
 vi.mock('@/i18n/i18n', () => ({
   translate: (_key: string, fallback: string) => fallback
 }))
@@ -147,6 +158,9 @@ describe('useAutomationDispatchEvents setup launch', () => {
     state.repos = [{ id: 'repo-1', connectionId: null }]
     state.agentStatusByPaneKey = {}
     state.allWorktrees.mockReturnValue([])
+    state.fetchAllWorktrees.mockResolvedValue(undefined)
+    mockCollectWeeklyReportEvidence.mockResolvedValue({ workspaces: [] })
+    mockBuildWeeklyReportPrompt.mockReturnValue('run this with weekly evidence')
     mockCreateWorktree.mockResolvedValue({ worktree: createdWorktree, setup: setupLaunch })
     mockLaunchWorktreeBackgroundTerminals.mockResolvedValue(undefined)
     mockLaunchAgentBackgroundSession.mockResolvedValue({
@@ -257,6 +271,31 @@ describe('useAutomationDispatchEvents setup launch', () => {
 
     expect(mockCreateWorktree.mock.calls[0][3]).toBe('skip')
     expect(mockLaunchAgentBackgroundSession).toHaveBeenCalled()
+  })
+
+  it('enriches weekly-report prompts with cross-project evidence before launch', async () => {
+    await registerAndDispatch(makeAutomation({ kind: 'weekly_report' }))
+
+    expect(state.fetchAllWorktrees).toHaveBeenCalled()
+    expect(mockCollectWeeklyReportEvidence).toHaveBeenCalledWith(
+      expect.objectContaining({ scheduledFor: makeRun().scheduledFor })
+    )
+    expect(mockLaunchAgentBackgroundSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        worktreeId: FLOATING_TERMINAL_WORKTREE_ID,
+        prompt: 'run this with weekly evidence'
+      })
+    )
+    expect(mockCreateWorktree).not.toHaveBeenCalled()
+    expect(mockLaunchWorktreeBackgroundTerminals).not.toHaveBeenCalled()
+    expect(mockMarkDispatchResult).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: 'run-1',
+        status: 'dispatched',
+        workspaceId: FLOATING_TERMINAL_WORKTREE_ID,
+        workspaceDisplayName: 'Floating Workspace'
+      })
+    )
   })
 
   it('keeps launching the agent when background setup terminal launch fails', async () => {

@@ -40,31 +40,27 @@ import { shouldUseShellReadyStartupDelivery } from '../../../shared/codex-startu
 import { isMainTerminalSideEffectAuthorityForPty } from '@/components/terminal-pane/terminal-side-effect-facts-handler'
 import { resolveLocalWindowsAgentStartupShell } from '../../../shared/windows-terminal-shell'
 import { runBestEffortAgentBackgroundCleanups } from '@/lib/agent-background-session-cleanup'
+import {
+  markAgentBackgroundWorkspaceTrusted,
+  resolveAgentBackgroundWorkspaceTarget
+} from '@/lib/agent-background-workspace-target'
 
 export async function launchAgentBackgroundSession(
   args: LaunchAgentBackgroundSessionArgs
 ): Promise<LaunchAgentBackgroundSessionResult | null> {
   const { agent, worktreeId, prompt, launchSource, title, onData, onExit, onAgentStatus } = args
   const store = useAppStore.getState()
-  const worktree = store.allWorktrees().find((entry) => entry.id === worktreeId)
-  const repo = worktree ? store.repos.find((entry) => entry.id === worktree.repoId) : null
-  if (!worktree) {
-    throw new Error('The target workspace is no longer available.')
-  }
-  const preflight = TUI_AGENT_CONFIG[agent].preflightTrust
-  if (preflight && worktree.path && window.api.agentTrust?.markTrusted) {
-    try {
-      await window.api.agentTrust.markTrusted({
-        preset: preflight,
-        workspacePath: worktree.path
-      })
-    } catch {
-      // Best-effort: continue with launch. The user can still accept the trust menu.
-    }
-  }
-  const cmdOverrides = store.settings?.agentCmdOverrides ?? {}
-  const agentArgs = resolveTuiAgentLaunchArgs(agent, store.settings?.agentDefaultArgs)
-  const agentEnv = resolveTuiAgentLaunchEnv(agent, store.settings?.agentDefaultEnv)
+  const {
+    cwd: workspaceCwd,
+    isFloatingWorkspace,
+    repo
+  } = await resolveAgentBackgroundWorkspaceTarget({
+    worktreeId,
+    worktrees: store.allWorktrees(),
+    repos: store.repos,
+    floatingTerminalCwd: store.settings?.floatingTerminalCwd
+  })
+  await markAgentBackgroundWorkspaceTrusted(TUI_AGENT_CONFIG[agent].preflightTrust, workspaceCwd)
   const launchPlatform = repo
     ? getAgentLaunchPlatformForRepo(
         repo,
@@ -87,9 +83,9 @@ export async function launchAgentBackgroundSession(
   const startupPlan = buildAgentStartupPlan({
     agent,
     prompt: hasPrompt && !isFollowupPath ? trimmedPrompt : '',
-    cmdOverrides,
-    agentArgs,
-    agentEnv,
+    cmdOverrides: store.settings?.agentCmdOverrides ?? {},
+    agentArgs: resolveTuiAgentLaunchArgs(agent, store.settings?.agentDefaultArgs),
+    agentEnv: resolveTuiAgentLaunchEnv(agent, store.settings?.agentDefaultEnv),
     platform: launchPlatform,
     shell: startupShell,
     isRemote,
@@ -216,7 +212,7 @@ export async function launchAgentBackgroundSession(
       const result = await window.api.pty.spawn({
         cols: 120,
         rows: 40,
-        cwd: worktree.path,
+        cwd: workspaceCwd,
         command: startupPlan.launchCommand,
         ...(!startupPlan.startupCommandDelivery
           ? {}
@@ -294,7 +290,11 @@ export async function launchAgentBackgroundSession(
     // Why: mount only after the explicit PTY is bound. Mounting at the earlier
     // createTab boundary lets a slow SSH/remote spawn race TerminalPane's fresh
     // spawn path and launch the agent twice.
-    requestBackgroundTerminalWorktreeMount({ worktreeId, tabIds: [tab.id] })
+    // Why: the floating panel owns this tab's TerminalPane; mounting it in the
+    // main workspace host would create a second renderer for the same PTY.
+    if (!isFloatingWorkspace) {
+      requestBackgroundTerminalWorktreeMount({ worktreeId, tabIds: [tab.id] })
+    }
 
     if (pasteDraftAfterLaunch !== null) {
       void pasteDraftWhenAgentReady({

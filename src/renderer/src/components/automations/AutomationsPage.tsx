@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { filterEnabledTuiAgents, isTuiAgentEnabled } from '../../../../shared/tui-agent-selection'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
 import type { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { installWindowVisibilityInterval } from '@/lib/window-visibility-interval'
@@ -44,6 +45,8 @@ import RepoBadgeLabel from '@/components/repo/RepoBadgeLabel'
 import { getAgentCatalog } from '@/lib/agent-catalog'
 import { useRepoMap, useWorktreeMap } from '@/store/selectors'
 import { activateAndRevealWorktree } from '@/lib/worktree-activation'
+import { isFloatingWorkspacePanelVisible } from '@/lib/floating-workspace-terminal-actions'
+import { TOGGLE_FLOATING_TERMINAL_EVENT } from '@/lib/floating-terminal'
 import type {
   Automation,
   ExternalAutomationAction,
@@ -475,6 +478,7 @@ export default function AutomationsPage(): React.JSX.Element {
     Record<string, OrcaHooks | null>
   >({})
   const [draft, setDraft] = useState<AutomationDraft>({
+    kind: 'agent_task',
     name: '',
     prompt: '',
     agentId: defaultAgent,
@@ -1184,7 +1188,7 @@ export default function AutomationsPage(): React.JSX.Element {
   }, [draft.projectId, getDefaultTarget])
 
   useEffect(() => {
-    if (!draft.projectId) {
+    if (!draft.projectId || draft.kind === 'weekly_report') {
       return
     }
     const available = worktreesByRepo[draft.projectId] ?? []
@@ -1192,12 +1196,13 @@ export default function AutomationsPage(): React.JSX.Element {
     if (!draft.workspaceId && defaultWorktree) {
       setDraft((current) => ({ ...current, workspaceId: defaultWorktree.id }))
     }
-  }, [draft.projectId, draft.workspaceId, worktreesByRepo])
+  }, [draft.kind, draft.projectId, draft.workspaceId, worktreesByRepo])
 
   useEffect(() => {
     if (
       !createOpen ||
       createTarget !== 'orca' ||
+      draft.kind === 'weekly_report' ||
       draft.workspaceMode !== 'new_per_run' ||
       !draft.projectId
     ) {
@@ -1207,6 +1212,7 @@ export default function AutomationsPage(): React.JSX.Element {
   }, [
     createOpen,
     createTarget,
+    draft.kind,
     draft.projectId,
     draft.workspaceMode,
     loadAutomationYamlHooksForRepo
@@ -1238,26 +1244,46 @@ export default function AutomationsPage(): React.JSX.Element {
     setDraft((current) => ({ ...current, setupDecision: nextDefault }))
   }, [createOpen, draft, getDraftSetupDecisionDefault, getDraftSetupDecisionDefaultSignature])
 
-  const applyTemplateToDraft = useCallback((template: AutomationTemplate): void => {
-    setDraft((current) => ({
-      ...current,
-      name: template.name,
-      prompt: template.prompt,
-      preset: template.preset,
-      time: template.time ?? current.time,
-      dayOfWeek: template.dayOfWeek ?? current.dayOfWeek,
-      customSchedule: '',
-      agentId: template.agentId ?? current.agentId,
-      missedRunGraceMinutes: template.missedRunGraceMinutes ?? current.missedRunGraceMinutes,
-      scheduleWarning: null
-    }))
-  }, [])
+  const applyTemplateToDraft = useCallback(
+    (template: AutomationTemplate): void => {
+      const isWeeklyReport = template.kind === 'weekly_report'
+      if (isWeeklyReport) {
+        setCreateTarget('orca')
+      }
+      const localProjectId = repos.find((repo) => getRepoExecutionHostId(repo) === 'local')?.id
+      setDraft((current) => ({
+        ...current,
+        kind: template.kind ?? 'agent_task',
+        name: template.name,
+        prompt: template.prompt,
+        preset: template.preset,
+        time: template.time ?? current.time,
+        dayOfWeek: template.dayOfWeek ?? current.dayOfWeek,
+        customSchedule: '',
+        agentId: template.agentId ?? current.agentId,
+        missedRunGraceMinutes: template.missedRunGraceMinutes ?? current.missedRunGraceMinutes,
+        scheduleWarning: null,
+        ...(isWeeklyReport
+          ? {
+              projectId: localProjectId ?? current.projectId,
+              workspaceMode: 'new_per_run' as const,
+              workspaceId: '',
+              baseBranch: '',
+              setupDecision: 'skip' as const,
+              reuseSession: false
+            }
+          : {})
+      }))
+    },
+    [repos]
+  )
 
   const handleCreateTargetChange = useCallback((target: AutomationCreateTarget): void => {
     setCreateTarget(target)
     if (target === 'hermes') {
       setDraft((current) => ({
         ...current,
+        kind: 'agent_task',
         agentId: 'hermes',
         workspaceMode: 'existing',
         setupDecision: undefined,
@@ -1269,18 +1295,22 @@ export default function AutomationsPage(): React.JSX.Element {
   const openCreateDialog = (template?: AutomationTemplate): void => {
     editRequestRef.current += 1
     const target = getDefaultTarget()
+    const isWeeklyReport = template?.kind === 'weekly_report'
+    const weeklyReportProjectId =
+      repos.find((repo) => getRepoExecutionHostId(repo) === 'local')?.id ?? target.projectId
     setEditingAutomationId(null)
     setEditingExternalTarget(null)
     setCreateTarget('orca')
     const baseDraft: AutomationDraft = {
+      kind: template?.kind ?? 'agent_task',
       name: '',
       prompt: '',
       agentId: defaultAgent,
-      projectId: target.projectId,
-      workspaceMode: 'existing',
-      workspaceId: target.workspaceId,
+      projectId: isWeeklyReport ? weeklyReportProjectId : target.projectId,
+      workspaceMode: isWeeklyReport ? 'new_per_run' : 'existing',
+      workspaceId: isWeeklyReport ? '' : target.workspaceId,
       baseBranch: '',
-      setupDecision: undefined,
+      setupDecision: isWeeklyReport ? 'skip' : undefined,
       reuseSession: false,
       precheckCommand: '',
       precheckTimeoutSeconds: '60',
@@ -1328,6 +1358,7 @@ export default function AutomationsPage(): React.JSX.Element {
     const hasCustomSchedule = !schedule && isValidAutomationSchedule(latest.rrule)
     setEditingAutomationId(latest.id)
     const nextDraft: AutomationDraft = {
+      kind: latest.kind ?? 'agent_task',
       name: latest.name,
       prompt: latest.prompt,
       agentId: latest.agentId,
@@ -1379,6 +1410,7 @@ export default function AutomationsPage(): React.JSX.Element {
     const projectId = targetWorktree?.repoId ?? fallbackTarget.projectId
     const workspaceId = targetWorktree?.id ?? fallbackTarget.workspaceId
     const nextDraft: AutomationDraft = {
+      kind: 'agent_task',
       name: job.name,
       prompt: job.prompt ?? job.promptPreview,
       agentId: 'hermes',
@@ -1593,18 +1625,21 @@ export default function AutomationsPage(): React.JSX.Element {
         repos,
         projectHostSetups
       })
-      let setupDecision = resolveAutomationSetupDecisionForSave({
-        createTarget,
-        workspaceMode: draft.workspaceMode,
-        repoId: draft.projectId,
-        repos,
-        projectHostSetups,
-        yamlHooks:
-          createTarget === 'orca' && draft.workspaceMode === 'new_per_run'
-            ? await loadAutomationYamlHooksForRepo(draft.projectId)
-            : null,
-        draftSetupDecision: draft.setupDecision
-      })
+      let setupDecision =
+        draft.kind === 'weekly_report'
+          ? 'skip'
+          : resolveAutomationSetupDecisionForSave({
+              createTarget,
+              workspaceMode: draft.workspaceMode,
+              repoId: draft.projectId,
+              repos,
+              projectHostSetups,
+              yamlHooks:
+                createTarget === 'orca' && draft.workspaceMode === 'new_per_run'
+                  ? await loadAutomationYamlHooksForRepo(draft.projectId)
+                  : null,
+              draftSetupDecision: draft.setupDecision
+            })
       if (setupDecision === 'run') {
         const trustDecision = await ensureHooksConfirmed(
           useAppStore.getState(),
@@ -1638,6 +1673,7 @@ export default function AutomationsPage(): React.JSX.Element {
         }
       }
       const updates: AutomationUpdateInput = {
+        kind: draft.kind,
         name: draft.name,
         prompt: draft.prompt,
         precheck,
@@ -1665,6 +1701,7 @@ export default function AutomationsPage(): React.JSX.Element {
               updates
             })
         : await createAutomationForTarget({
+            kind: draft.kind,
             name: draft.name,
             prompt: draft.prompt,
             precheck,
@@ -2027,6 +2064,7 @@ export default function AutomationsPage(): React.JSX.Element {
 
   const openRunWorkspace = (run: AutomationRun): void => {
     const runWorktree = run.workspaceId ? (worktreeMap.get(run.workspaceId) ?? null) : null
+    const isFloatingWorkspaceRun = run.workspaceId === FLOATING_TERMINAL_WORKTREE_ID
     const store = useAppStore.getState()
     const openTabId = getAutomationRunOpenTabId(run)
     const terminalTabExists = openTabId ? Boolean(store.getTab(openTabId)) : false
@@ -2040,10 +2078,10 @@ export default function AutomationsPage(): React.JSX.Element {
     })
     const runViewState = getAutomationRunViewState({
       run,
-      workspaceExists: Boolean(runWorktree),
+      workspaceExists: Boolean(runWorktree) || isFloatingWorkspaceRun,
       terminalTargetExists: terminalTarget !== null
     })
-    if (!run.workspaceId || !runWorktree || !runViewState.canOpen) {
+    if (!run.workspaceId || (!runWorktree && !isFloatingWorkspaceRun) || !runViewState.canOpen) {
       toast.error(runViewState.statusLabel)
       return
     }
@@ -2059,6 +2097,16 @@ export default function AutomationsPage(): React.JSX.Element {
           currentLayout
         })
       )
+      if (isFloatingWorkspaceRun) {
+        // Why: scheduled reports stay in the background; opening a run is the
+        // explicit signal to reveal its global floating-workspace terminal.
+        store.activateTab(terminalTarget.tabId)
+        store.setActiveTab(terminalTarget.tabId)
+        if (!isFloatingWorkspacePanelVisible()) {
+          window.dispatchEvent(new Event(TOGGLE_FLOATING_TERMINAL_EVENT))
+        }
+        return
+      }
       if (activateAndRevealWorktree(run.workspaceId)) {
         store.setActiveTab(terminalTarget.tabId)
         store.setActiveTabType('terminal')
@@ -2397,6 +2445,7 @@ export default function AutomationsPage(): React.JSX.Element {
               </div>
             ) : null}
             {automations.map((automation) => {
+              const isWeeklyReport = automation.kind === 'weekly_report'
               const automationRepo = repoMap.get(getAutomationRunRepoId(automation))
               const automationWorktree = automation.workspaceId
                 ? worktreeMap.get(automation.workspaceId)
@@ -2411,8 +2460,12 @@ export default function AutomationsPage(): React.JSX.Element {
                 automationHostTarget,
                 sourceHostAvailability: automationSourceHostAvailabilityById.get(automation.id)
               })
-              const workspaceLabel =
-                automation.workspaceMode === 'new_per_run'
+              const workspaceLabel = isWeeklyReport
+                ? translate(
+                    'auto.components.automations.AutomationsPage.weeklyReportFloatingWorkspace',
+                    'Floating Workspace'
+                  )
+                : automation.workspaceMode === 'new_per_run'
                   ? `Create from ${automation.baseBranch ?? automationRepo?.worktreeBaseRef ?? 'project default'}`
                   : (automationWorktree?.displayName ?? 'Missing workspace')
               const usageSummary = summarizeAutomationRunUsage(
@@ -2460,7 +2513,14 @@ export default function AutomationsPage(): React.JSX.Element {
                           {scheduleLabel}
                         </span>
                         <span className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                          {automationRepo ? (
+                          {isWeeklyReport ? (
+                            <span>
+                              {translate(
+                                'auto.components.automations.AutomationsPage.weeklyReportAllProjects',
+                                'All changed projects'
+                              )}
+                            </span>
+                          ) : automationRepo ? (
                             <RepoBadgeLabel
                               name={automationRepo.displayName}
                               color={automationRepo.badgeColor}
@@ -2887,12 +2947,24 @@ export default function AutomationsPage(): React.JSX.Element {
                 <AutomationDetail
                   automation={selected}
                   runs={selectedRuns}
-                  projectName={selectedRepo?.displayName ?? 'Unknown project'}
+                  projectName={
+                    selected?.kind === 'weekly_report'
+                      ? translate(
+                          'auto.components.automations.AutomationsPage.weeklyReportAllProjects',
+                          'All changed projects'
+                        )
+                      : (selectedRepo?.displayName ?? 'Unknown project')
+                  }
                   projectDefaultBaseRef={selectedRepo?.worktreeBaseRef ?? null}
                   workspaceName={
-                    selected?.workspaceMode === 'new_per_run'
-                      ? 'New workspace each run'
-                      : (selectedWorktree?.displayName ?? 'Missing workspace')
+                    selected?.kind === 'weekly_report'
+                      ? translate(
+                          'auto.components.automations.AutomationsPage.weeklyReportFloatingWorkspace',
+                          'Floating Workspace'
+                        )
+                      : selected?.workspaceMode === 'new_per_run'
+                        ? 'New workspace each run'
+                        : (selectedWorktree?.displayName ?? 'Missing workspace')
                   }
                   hostLabelById={hostLabelById}
                   runNowAvailability={selectedRunNowAvailability}

@@ -1,5 +1,7 @@
 import type { AutomationRun } from '../../../../shared/automations-types'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
 import type { Worktree } from '../../../../shared/types'
+import { translate } from '@/i18n/i18n'
 
 export type AutomationRunWorkspaceDisplay = {
   rowLabel: string
@@ -20,6 +22,18 @@ export function getAutomationRunWorkspaceDisplay({
       rowLabel: 'Not launched',
       detailLabel: 'Not launched',
       muted: true
+    }
+  }
+  if (run.workspaceId === FLOATING_TERMINAL_WORKTREE_ID) {
+    const label = translate(
+      'auto.components.automations.automationRunWorkspaceDisplay.floatingWorkspace',
+      'Floating Workspace'
+    )
+    return {
+      rowLabel: label,
+      detailLabel: label,
+      muted: false,
+      title: label
     }
   }
   if (worktree) {

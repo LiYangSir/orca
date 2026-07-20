@@ -1,10 +1,11 @@
-import type { AutomationSchedulePreset } from '../../../../shared/automations-types'
+import type { AutomationKind, AutomationSchedulePreset } from '../../../../shared/automations-types'
 import type { TuiAgent } from '../../../../shared/types'
 import { translate } from '@/i18n/i18n'
 import { createLocalizedCatalog } from '@/i18n/localized-catalog'
 
 export type AutomationTemplate = {
   id: string
+  kind?: AutomationKind
   category: string
   label: string
   description: string
@@ -18,6 +19,34 @@ export type AutomationTemplate = {
 }
 
 export const getAutomationTemplates = createLocalizedCatalog((): AutomationTemplate[] => [
+  {
+    id: 'weekly-report',
+    kind: 'weekly_report',
+    category: translate(
+      'auto.components.automations.automation.templates.weeklyReport.category',
+      'Weekly report'
+    ),
+    label: translate(
+      'auto.components.automations.automation.templates.weeklyReport.label',
+      'Weekly change report'
+    ),
+    description: translate(
+      'auto.components.automations.automation.templates.weeklyReport.description',
+      'Summarize product progress across every project changed this week, focusing on a1 MR merge and release status.'
+    ),
+    name: translate(
+      'auto.components.automations.automation.templates.weeklyReport.name',
+      'Weekly change report'
+    ),
+    prompt: translate(
+      'auto.components.automations.automation.templates.weeklyReport.prompt',
+      'Write a concise, product-oriented weekly report from the Orca evidence provided with this run. Group work by product and cover the work, progress, MR merge status, CR or release status, risks, and next actions. Prioritize a1 results. Do not list uncommitted files or invent facts that the evidence does not support.'
+    ),
+    preset: 'weekly',
+    time: '17:00',
+    dayOfWeek: '5',
+    missedRunGraceMinutes: '2880'
+  },
   {
     id: 'repo-health-weekday',
     category: translate(

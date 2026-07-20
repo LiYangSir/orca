@@ -592,7 +592,8 @@
         "59718b120b": "The target workspace is no longer available.",
         "16a21d6413": "SSH reconnect requires interactive credentials.",
         "386db94f3e": "The target project is no longer available.",
-        "3ad7d77f57": "The target workspace is on a different host than this automation run target."
+        "3ad7d77f57": "The target workspace is on a different host than this automation run target.",
+        "weeklyReportFloatingWorkspace": "Floating Workspace"
       },
       "useComposerState": {
         "7eb3f44ff7": "Selected agent is disabled. Choose an enabled agent before creating.",
@@ -12359,6 +12360,10 @@
           "29baf8f4c2": "Source"
         },
         "AutomationEditorDialog": {
+          "weeklyReportScopeLabel": "Report scope",
+          "weeklyReportScope": "All projects changed this week",
+          "weeklyReportEvidence": "Weekly commit summary, a1 MR merge status, and CR release status",
+          "weeklyReportRuntime": "Runs in Floating Workspace",
           "fb1896a5e7": "Cancel",
           "57b722cbba": "Agent",
           "6ff66f9012": "New run",
@@ -12445,6 +12450,8 @@
           "5ad314118e": "Session"
         },
         "AutomationsPage": {
+          "weeklyReportAllProjects": "All changed projects",
+          "weeklyReportFloatingWorkspace": "Floating Workspace",
           "2695883141": "delete",
           "c3a28c9793": "Select an automation to view runs.",
           "295698292f": "Rerun",
@@ -12517,6 +12524,9 @@
           "pendingAutomationMissing": "Automation no longer available.",
           "pendingAutomationRunMissing": "Run history no longer available."
         },
+        "automationRunWorkspaceDisplay": {
+          "floatingWorkspace": "Floating Workspace"
+        },
         "CreateFromPicker": {
           "f061f49e3f": "Search repo branches...",
           "dd3841b442": "Branch from",
@@ -12578,6 +12588,13 @@
         },
         "automation": {
           "templates": {
+            "weeklyReport": {
+              "category": "Weekly report",
+              "label": "Weekly change report",
+              "description": "Summarize product progress across every project changed this week, focusing on a1 MR merge and release status.",
+              "name": "Weekly change report",
+              "prompt": "Write a concise, product-oriented weekly report from the Orca evidence provided with this run. Group work by product and cover the work, progress, MR merge status, CR or release status, risks, and next actions. Prioritize a1 results. Do not list uncommitted files or invent facts that the evidence does not support."
+            },
             "37571fcb16": "Look for stuck work, stale generated files, and failed local validation.",
             "8a0228bea3": "Hourly queue check",
             "3b7281c75f": "Scan recent work and call out correctness, UX, and test coverage risks.",

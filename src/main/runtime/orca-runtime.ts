@@ -2774,6 +2774,7 @@ export class OrcaRuntimeService {
       throw new Error('Session reuse requires an existing workspace target.')
     }
     return this.store.createAutomation({
+      kind: input.kind,
       name: input.name,
       prompt: input.prompt,
       precheck: input.precheck,
@@ -2800,6 +2801,9 @@ export class OrcaRuntimeService {
     }
     const current = this.showAutomation(id)
     const patch: AutomationUpdateInput = {}
+    if (hasRuntimeAutomationUpdateValue(updates, 'kind')) {
+      patch.kind = updates.kind
+    }
     if (hasRuntimeAutomationUpdateValue(updates, 'name')) {
       patch.name = updates.name
     }

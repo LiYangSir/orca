@@ -2,6 +2,7 @@ import type { SetupDecision, TuiAgent } from './types'
 import type { TaskSourceContext, WorkspaceRunContext } from './task-source-context'
 
 export type AutomationWorkspaceMode = 'existing' | 'new_per_run'
+export type AutomationKind = 'agent_task' | 'weekly_report'
 export type AutomationExecutionTargetType = 'local' | 'ssh'
 export type AutomationSchedulerOwner = 'local_host_service' | 'ssh_bridge' | 'remote_host_service'
 export type AutomationMissedRunPolicy = 'run_once_within_grace'
@@ -89,6 +90,8 @@ export type AutomationPrecheckResult = {
 
 export type Automation = {
   id: string
+  /** Missing on automations saved before weekly reports were introduced. */
+  kind?: AutomationKind
   name: string
   prompt: string
   precheck: AutomationPrecheck | null
@@ -158,6 +161,7 @@ export type AutomationRun = {
 }
 
 export type AutomationCreateInput = {
+  kind?: AutomationKind
   name: string
   prompt: string
   precheck?: AutomationPrecheck | null
@@ -182,6 +186,7 @@ export type AutomationCreateInput = {
 export type AutomationUpdateInput = Partial<
   Pick<
     Automation,
+    | 'kind'
     | 'name'
     | 'prompt'
     | 'precheck'

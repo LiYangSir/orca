@@ -16,6 +16,8 @@ import {
 } from '../aone/client'
 import { A1Error } from '../aone/a1-runner'
 import type { A1WorkItem, A1MergeRequest } from '../aone/types'
+import { collectA1WeeklyReportDelivery } from '../aone/weekly-report-delivery'
+import type { WeeklyReportA1DeliveryEvidence } from '../../shared/automation-weekly-report'
 import {
   toFailure,
   type AoneIpcFailure,
@@ -147,6 +149,26 @@ export function registerAoneHandlers(): void {
         const branch = typeof args?.branch === 'string' ? args.branch : ''
         const cwd = typeof args?.repoPath === 'string' ? args.repoPath : undefined
         const data = await getMergeRequestForBranchWithMergedFallback(branch, { cwd })
+        return { ok: true, data }
+      } catch (error) {
+        return toFailure(error)
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'aone:getWeeklyReportDelivery',
+    async (
+      _event,
+      args: { branch: string; repoPath: string }
+    ): Promise<AoneIpcResult<WeeklyReportA1DeliveryEvidence>> => {
+      const branch = typeof args?.branch === 'string' ? args.branch.trim() : ''
+      const repoPath = typeof args?.repoPath === 'string' ? args.repoPath.trim() : ''
+      if (!branch || !repoPath) {
+        return { ok: false, code: 'invalid_output', error: 'branch and repoPath are required' }
+      }
+      try {
+        const data = await collectA1WeeklyReportDelivery(repoPath, branch)
         return { ok: true, data }
       } catch (error) {
         return toFailure(error)

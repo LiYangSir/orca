@@ -1880,6 +1880,7 @@ export type PreloadApi = {
       branch: string
       repoPath?: string | null
     }) => Promise<unknown>
+    getWeeklyReportDelivery: (args: { branch: string; repoPath: string }) => Promise<unknown>
     listMRComments: (args: {
       mr: number
       resolved?: boolean

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Info, Plus } from 'lucide-react'
+import { CalendarRange, Info, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -77,14 +77,46 @@ export function AutomationEditorDialogFooter({
   onOpenChange,
   onSave
 }: AutomationEditorDialogFooterProps): React.JSX.Element {
+  const isWeeklyReport = draft.kind === 'weekly_report'
   return (
     <div className="border-t border-border/50 px-5 py-4">
       <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
+        {isWeeklyReport ? (
+          <Field
+            label={translate(
+              'auto.components.automations.AutomationEditorDialog.weeklyReportScopeLabel',
+              'Report scope'
+            )}
+            className="md:col-span-3 lg:col-span-4"
+          >
+            <div className="flex h-9 min-w-0 items-center gap-2 rounded-md border border-input bg-input/30 px-3 text-sm text-foreground shadow-xs dark:bg-input/30">
+              <CalendarRange className="size-4 shrink-0 text-muted-foreground" />
+              <span className="truncate">
+                {translate(
+                  'auto.components.automations.AutomationEditorDialog.weeklyReportScope',
+                  'All projects changed this week'
+                )}
+              </span>
+              <span className="ml-auto hidden shrink-0 text-xs text-muted-foreground sm:inline">
+                {translate(
+                  'auto.components.automations.AutomationEditorDialog.weeklyReportEvidence',
+                  'Weekly commit summary, a1 MR merge status, and CR release status'
+                )}
+                {' · '}
+                {translate(
+                  'auto.components.automations.AutomationEditorDialog.weeklyReportRuntime',
+                  'Runs in Floating Workspace'
+                )}
+              </span>
+            </div>
+          </Field>
+        ) : null}
         <Field
           label={translate(
             'auto.components.automations.AutomationEditorDialog.02d351877e',
             'Project'
           )}
+          className={isWeeklyReport ? 'hidden' : undefined}
         >
           <AutomationProjectCombobox
             repos={repos}
@@ -127,7 +159,9 @@ export function AutomationEditorDialogFooter({
               </Tooltip>
             </span>
           }
-          className={isHermesTarget ? undefined : 'sm:col-span-2 lg:col-span-3'}
+          className={
+            isWeeklyReport ? 'hidden' : isHermesTarget ? undefined : 'sm:col-span-2 lg:col-span-3'
+          }
         >
           {isHermesTarget ? (
             <WorkspaceCombobox
@@ -195,7 +229,7 @@ export function AutomationEditorDialogFooter({
             </div>
           )}
         </Field>
-        {isHermesTarget ? scheduleField : null}
+        {isHermesTarget && !isWeeklyReport ? scheduleField : null}
       </div>
 
       {/* Why: Hermes uses one compact footer row, while Orca adds agent,
@@ -251,15 +285,17 @@ export function AutomationEditorDialogFooter({
           {/* Why: a full-width row below the columned controls — the setup
               switch is a per-automation preference, not a peer of the compact
               column pickers, so it reads cleaner spanning the dialog. */}
-          <AutomationSetupDecisionField
-            createTarget={isHermesTarget ? 'hermes' : 'orca'}
-            draft={draft}
-            repos={repos}
-            projectHostSetups={projectHostSetups}
-            yamlHooks={automationYamlHooksByRepoKey[getAutomationHooksCacheKey(draft.projectId)]}
-            onDraftChange={onDraftChange}
-            onSetupDecisionTouched={onSetupDecisionTouched}
-          />
+          {isWeeklyReport ? null : (
+            <AutomationSetupDecisionField
+              createTarget={isHermesTarget ? 'hermes' : 'orca'}
+              draft={draft}
+              repos={repos}
+              projectHostSetups={projectHostSetups}
+              yamlHooks={automationYamlHooksByRepoKey[getAutomationHooksCacheKey(draft.projectId)]}
+              onDraftChange={onDraftChange}
+              onSetupDecisionTouched={onSetupDecisionTouched}
+            />
+          )}
         </div>
       </div>
       <div className="mt-4 flex justify-end gap-2">

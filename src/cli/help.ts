@@ -445,6 +445,9 @@ function formatCommandFlagHelp(flag: string, commandPath: string[]): string {
   if (command === 'linear create' && flag === 'parent-current') {
     return '--parent-current      Use the current linked issue as parent'
   }
+  if (command.startsWith('automations ') && flag === 'kind') {
+    return '--kind <type>         agent-task or weekly-report'
+  }
   if (command === 'worktree create' && flag === 'parent-worktree') {
     return '--parent-worktree <selector> Parent selector such as active/current, id:<repo-id>::<path>, branch:<branch>, issue:<number>, path:<path>, folder:<id>, or worktree:<worktreeId>'
   }

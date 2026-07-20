@@ -23,6 +23,11 @@ import {
 } from '@/components/automations/automation-run-output-snapshot'
 import { translate } from '@/i18n/i18n'
 import { createBrowserUuid } from '@/lib/browser-uuid'
+import {
+  buildWeeklyReportPrompt,
+  collectWeeklyReportEvidence
+} from '@/components/automations/automation-weekly-report-context'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../shared/constants'
 
 const AUTOMATIONS_CHANGED_EVENT = 'orca:automations-changed'
 const activeReuseDispatchTabIds = new Set<string>()
@@ -61,6 +66,7 @@ export function useAutomationDispatchEvents(): void {
           activeTabType: state.activeTabType
         }
         const runRepoId = getAutomationRunRepoId(automation)
+        const isWeeklyReport = automation.kind === 'weekly_report'
         const repo = state.repos.find((entry) => entry.id === runRepoId)
         const automationWorktree = automation.workspaceId
           ? state.allWorktrees().find((entry) => entry.id === automation.workspaceId)
@@ -69,6 +75,7 @@ export function useAutomationDispatchEvents(): void {
         let dispatchWorkspaceDisplayName =
           automationWorktree?.displayName ?? run.workspaceDisplayName ?? null
         let precheckResult: AutomationPrecheckResult | null = null
+        let dispatchPrompt = automation.prompt
 
         if (!repo) {
           await markDispatchResult({
@@ -85,7 +92,7 @@ export function useAutomationDispatchEvents(): void {
         }
 
         try {
-          if (repo.connectionId) {
+          if (!isWeeklyReport && repo.connectionId) {
             const needsPrompt = await window.api.ssh.needsPassphrasePrompt({
               targetId: repo.connectionId
             })
@@ -123,6 +130,7 @@ export function useAutomationDispatchEvents(): void {
           }
 
           if (
+            !isWeeklyReport &&
             automation.workspaceMode === 'existing' &&
             automationWorktree &&
             automation.runContext?.repoId &&
@@ -141,7 +149,7 @@ export function useAutomationDispatchEvents(): void {
             return
           }
 
-          if (automation.workspaceMode === 'existing' && !automationWorktree) {
+          if (!isWeeklyReport && automation.workspaceMode === 'existing' && !automationWorktree) {
             await markDispatchResult({
               runId: run.id,
               status: 'skipped_unavailable',
@@ -173,9 +181,23 @@ export function useAutomationDispatchEvents(): void {
             }
           }
 
+          if (isWeeklyReport) {
+            await state.fetchAllWorktrees()
+            const reportState = useAppStore.getState()
+            const evidence = await collectWeeklyReportEvidence({
+              scheduledFor: run.scheduledFor,
+              timezone: automation.timezone,
+              repos: reportState.repos,
+              worktrees: reportState.allWorktrees(),
+              settings: reportState.settings,
+              fetchHostedReviewForBranch: reportState.fetchHostedReviewForBranch
+            })
+            dispatchPrompt = buildWeeklyReportPrompt(automation.prompt, evidence)
+          }
+
           const automationWorkspaceCreateRequestId = createBrowserUuid()
           const createResult =
-            automation.workspaceMode === 'new_per_run'
+            !isWeeklyReport && automation.workspaceMode === 'new_per_run'
               ? await useAppStore
                   .getState()
                   .createWorktree(
@@ -216,9 +238,17 @@ export function useAutomationDispatchEvents(): void {
               : null
           const worktree = createResult
             ? createResult.worktree
-            : automation.workspaceId
-              ? automationWorktree
-              : null
+            : isWeeklyReport
+              ? {
+                  id: FLOATING_TERMINAL_WORKTREE_ID,
+                  displayName: translate(
+                    'auto.hooks.useAutomationDispatchEvents.weeklyReportFloatingWorkspace',
+                    'Floating Workspace'
+                  )
+                }
+              : automation.workspaceId
+                ? automationWorktree
+                : null
 
           if (!worktree) {
             await markDispatchResult({
@@ -356,7 +386,7 @@ export function useAutomationDispatchEvents(): void {
                   const submitted = await submitPromptToAgentPty({
                     tabId: reusableSession.tabId,
                     ptyId: reusableSession.ptyId,
-                    content: automation.prompt
+                    content: dispatchPrompt
                   })
                   if (!submitted) {
                     cleanupRunObservers()
@@ -427,7 +457,7 @@ export function useAutomationDispatchEvents(): void {
           const result = await launchAgentBackgroundSession({
             agent: automation.agentId,
             worktreeId: worktree.id,
-            prompt: automation.prompt,
+            prompt: dispatchPrompt,
             launchSource: 'unknown',
             title: run.title,
             onData: (chunk) => {

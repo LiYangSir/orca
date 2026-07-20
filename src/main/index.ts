@@ -159,6 +159,7 @@ import { setUnreadDockBadgeCount } from './dock/unread-badge'
 import { AutomationService } from './automations/service'
 import { createHeadlessAutomationOutputSnapshotBuffer } from './automations/headless-dispatch'
 import { buildHeadlessAutomationWorktreeCreateArgs } from './automations/headless-workspace-create'
+import { buildHeadlessWeeklyReportPrompt } from './automations/weekly-report-context'
 import { AgentAwakeService } from './agent-awake-service'
 import { registerSystemResumeBroadcast } from './system-resume-broadcast'
 import {
@@ -1850,6 +1851,14 @@ app.whenReady().then(async () => {
           let terminalPtyId: string | null = null
           let workspaceId: string
           let workspaceDisplayName: string | null = null
+          const dispatchPrompt =
+            automation.kind === 'weekly_report'
+              ? await buildHeadlessWeeklyReportPrompt({
+                  runtime: runtimeService,
+                  automation,
+                  scheduledFor: run.scheduledFor
+                })
+              : automation.prompt
 
           if (automation.workspaceMode === 'new_per_run') {
             const created = await runtimeService.createManagedWorktree({
@@ -1857,7 +1866,8 @@ app.whenReady().then(async () => {
                 automation,
                 run,
                 repo: target.repo
-              })
+              }),
+              startupPrompt: dispatchPrompt
             })
             terminalHandle = created.startupTerminal?.handle ?? ''
             terminalSessionId = created.startupTerminal?.tabId ?? null
@@ -1879,7 +1889,7 @@ app.whenReady().then(async () => {
               `id:${automation.workspaceId}`,
               {
                 agent: automation.agentId,
-                prompt: automation.prompt,
+                prompt: dispatchPrompt,
                 title: run.title
               }
             )

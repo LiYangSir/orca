@@ -127,8 +127,10 @@ export function AutomationDetail({
         : 'No runs'
   const agentLabel =
     getAgentCatalog().find((agent) => agent.id === automation.agentId)?.label ?? automation.agentId
-  const runLocationLabel =
-    automation.workspaceMode === 'new_per_run'
+  const isWeeklyReport = automation.kind === 'weekly_report'
+  const runLocationLabel = isWeeklyReport
+    ? workspaceName
+    : automation.workspaceMode === 'new_per_run'
       ? (automation.baseBranch ?? projectDefaultBaseRef ?? 'Project default')
       : workspaceName
   const sourceDisplay = getAutomationSourceDisplay(automation.sourceContext, hostLabelById)
@@ -209,7 +211,7 @@ export function AutomationDetail({
         </div>
       </div>
 
-      {automation.executionTargetType === 'ssh' ? (
+      {!isWeeklyReport && automation.executionTargetType === 'ssh' ? (
         <div className="rounded-md border border-border/50 bg-muted/50 p-3 text-sm text-muted-foreground shadow-sm">
           {translate(
             'auto.components.automations.AutomationDetail.dbef8dc110',
@@ -239,7 +241,7 @@ export function AutomationDetail({
         />
         <DetailMetric
           label={
-            automation.workspaceMode === 'new_per_run'
+            !isWeeklyReport && automation.workspaceMode === 'new_per_run'
               ? translate('auto.components.automations.AutomationDetail.2f8baf5360', 'Create from')
               : translate('auto.components.automations.AutomationDetail.5405a09b1f', 'Run location')
           }

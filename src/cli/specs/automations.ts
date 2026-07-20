@@ -41,12 +41,13 @@ export const AUTOMATION_COMMAND_SPECS: CommandSpec[] = [
     path: ['automations', 'create'],
     summary: 'Create a scheduled Orca automation',
     usage:
-      'orca automations create --name <name> --trigger <preset|cron|rrule> --prompt <text> --provider <agent> [--precheck <command>] [--repo <selector>|--workspace <selector>|--project <id> [--host <id>]|--project-host-setup <id>] [--json]',
+      'orca automations create --name <name> --trigger <preset|cron|rrule> --prompt <text> --provider <agent> [--kind <agent-task|weekly-report>] [--precheck <command>] [--repo <selector>|--workspace <selector>|--project <id> [--host <id>]|--project-host-setup <id>] [--json]',
     allowedFlags: [
       ...GLOBAL_FLAGS,
       'name',
       'prompt',
       'provider',
+      'kind',
       ...AUTOMATION_PRECHECK_FLAGS,
       ...AUTOMATION_TARGET_FLAGS,
       ...AUTOMATION_SCHEDULE_FLAGS,
@@ -54,6 +55,7 @@ export const AUTOMATION_COMMAND_SPECS: CommandSpec[] = [
     ],
     notes: [
       'Trigger accepts hourly, daily, weekdays, weekly, a 5-field cron expression, or an RRULE string.',
+      "Use --kind weekly-report to summarize this week's changed projects with linked MR merge and CR release status from a1. The report runs in Orca's global Floating Workspace.",
       'When --repo is omitted, the CLI uses the enclosing Orca worktree when one can be resolved from cwd.',
       'Use --project with --host, or --project-host-setup, to run on a specific project host setup.',
       'Use --source-context with a JSON TaskSourceContext when task/provider data should come from a specific host/account; pass null on edit to clear it.',
@@ -62,6 +64,7 @@ export const AUTOMATION_COMMAND_SPECS: CommandSpec[] = [
       'Use --reuse-session only with existing-workspace automations to submit later runs to the previous live automation session when it is still available. Use --fresh-session to disable reuse.'
     ],
     examples: [
+      'orca automations create --kind weekly-report --name "Weekly change report" --trigger weekly --day 5 --time 17:00 --prompt "Summarize this week\'s changes" --provider codex',
       'orca automations create --name "Daily review" --trigger daily --prompt "Review open changes" --provider codex',
       'orca automations create --name "Weekday triage" --trigger "0 9 * * 1-5" --prompt "Triage issues" --provider claude --repo my-repo',
       'orca automations create --name "PR review" --trigger hourly --precheck "gh pr list --json number -q .[0].number" --prompt "Review requested PRs" --provider codex'
@@ -70,13 +73,15 @@ export const AUTOMATION_COMMAND_SPECS: CommandSpec[] = [
   {
     path: ['automations', 'edit'],
     summary: 'Edit an Orca automation',
-    usage: 'orca automations edit <id> [--name <name>] [--trigger <preset|cron|rrule>] [--json]',
+    usage:
+      'orca automations edit <id> [--kind <agent-task|weekly-report>] [--name <name>] [--trigger <preset|cron|rrule>] [--json]',
     allowedFlags: [
       ...GLOBAL_FLAGS,
       'id',
       'name',
       'prompt',
       'provider',
+      'kind',
       ...AUTOMATION_PRECHECK_FLAGS,
       ...AUTOMATION_TARGET_FLAGS,
       ...AUTOMATION_SCHEDULE_FLAGS,

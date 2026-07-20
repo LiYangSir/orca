@@ -14,6 +14,7 @@ import {
 import { isValidAutomationCronSchedule } from '../../../../shared/automation-schedules'
 
 const BASE_DRAFT: AutomationDraft = {
+  kind: 'agent_task',
   name: '',
   prompt: '',
   agentId: 'codex',

@@ -2,6 +2,7 @@
 import type {
   Automation,
   AutomationCreateInput,
+  AutomationKind,
   AutomationPrecheck,
   AutomationRun,
   AutomationSchedulePreset,
@@ -340,6 +341,22 @@ function getWorkspaceModeFlag(
   )
 }
 
+function getOptionalAutomationKindFlag(
+  flags: Map<string, string | boolean>
+): AutomationKind | undefined {
+  const value = getOptionalStringFlag(flags, 'kind')
+  if (value === undefined) {
+    return undefined
+  }
+  if (value === 'agent-task' || value === 'agent_task') {
+    return 'agent_task'
+  }
+  if (value === 'weekly-report' || value === 'weekly_report') {
+    return 'weekly_report'
+  }
+  throw new RuntimeClientError('invalid_argument', '--kind must be agent-task or weekly-report')
+}
+
 async function resolveDefaultTarget(
   flags: Map<string, string | boolean>,
   cwd: string,
@@ -437,6 +454,7 @@ export const AUTOMATION_HANDLERS: Record<string, CommandHandler> = {
     if (!schedule) {
       throw new RuntimeClientError('invalid_argument', 'Missing required --trigger')
     }
+    const kind = getOptionalAutomationKindFlag(flags)
     const target = await resolveDefaultTarget(flags, cwd, client)
     const sourceContext = getSourceContextFlag(flags)
     const workspaceMode =
@@ -444,6 +462,7 @@ export const AUTOMATION_HANDLERS: Record<string, CommandHandler> = {
     const result = await client.call<{ automation: Automation }>('automation.create', {
       name: getRequiredStringFlag(flags, 'name'),
       prompt: getRequiredStringFlag(flags, 'prompt'),
+      ...(kind ? { kind } : {}),
       precheck: getPrecheckFlag(flags),
       agentId: getProviderFlag(flags),
       ...(target.runContext ? { runContext: target.runContext } : {}),
@@ -461,6 +480,7 @@ export const AUTOMATION_HANDLERS: Record<string, CommandHandler> = {
     printResult(result, json, formatAutomationShow)
   },
   'automations edit': async ({ flags, client, cwd, json }) => {
+    const kind = getOptionalAutomationKindFlag(flags)
     const target = await getExplicitTarget(flags, cwd, client)
     const schedule = getScheduleFlag(flags, false)
     const sourceContext = getSourceContextFlag(flags)
@@ -469,6 +489,7 @@ export const AUTOMATION_HANDLERS: Record<string, CommandHandler> = {
       updates: {
         name: getOptionalStringFlag(flags, 'name'),
         prompt: getOptionalStringFlag(flags, 'prompt'),
+        ...(kind ? { kind } : {}),
         precheck: getPrecheckFlag(flags),
         agentId: getOptionalProviderFlag(flags),
         ...(target.runContext ? { runContext: target.runContext } : {}),

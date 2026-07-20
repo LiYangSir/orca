@@ -1598,6 +1598,8 @@ const api = {
       branch: string
       repoPath?: string | null
     }): Promise<unknown> => ipcRenderer.invoke('aone:getMergeRequestForBranch', args),
+    getWeeklyReportDelivery: (args: { branch: string; repoPath: string }): Promise<unknown> =>
+      ipcRenderer.invoke('aone:getWeeklyReportDelivery', args),
     listMRComments: (args: {
       mr: number
       resolved?: boolean
