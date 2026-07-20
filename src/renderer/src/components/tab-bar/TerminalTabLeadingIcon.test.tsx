@@ -9,6 +9,7 @@ function renderStatus(status: TerminalTabActivityStatus): string {
     <TerminalTabLeadingIcon
       agent="codex"
       activityStatus={status}
+      activityPhaseKey="terminal-tab-1"
       shell={undefined}
       showUnreadActivity={false}
       isActive={false}
@@ -17,13 +18,14 @@ function renderStatus(status: TerminalTabActivityStatus): string {
 }
 
 describe('TerminalTabLeadingIcon', () => {
-  it('shows a working spinner beside the provider icon', () => {
+  it('shows the shared activity orbit beside the provider icon', () => {
     const markup = renderStatus('working')
 
     expect(markup).toContain('data-testid="tab-agent-activity-indicator"')
     expect(markup).toContain('data-agent-activity-status="working"')
     expect(markup).toContain('aria-label="Working"')
-    expect(markup).toContain('[animation:spin_1s_steps(12,end)_infinite]')
+    expect(markup).toContain('working-activity-indicator')
+    expect(markup).not.toContain('[animation:spin_1s_steps(12,end)_infinite]')
     expect(markup).toContain('data-agent-icon="codex"')
   })
 
@@ -56,6 +58,7 @@ describe('TerminalTabLeadingIcon', () => {
       <TerminalTabLeadingIcon
         agent={null}
         activityStatus="inactive"
+        activityPhaseKey="terminal-tab-2"
         shell={undefined}
         showUnreadActivity={false}
         isActive={false}
@@ -71,6 +74,7 @@ describe('TerminalTabLeadingIcon', () => {
       <TerminalTabLeadingIcon
         agent="codex"
         activityStatus="done"
+        activityPhaseKey="terminal-tab-3"
         shell={undefined}
         showUnreadActivity={true}
         isActive={false}

@@ -172,8 +172,17 @@ export function resolveTabAgentFromSignals(args: {
   // Why: Qoder is Gemini-derived; qodercli spawns a gemini-cli node child, so
   // foreground detection reports `gemini`. Re-own it through the launch agent
   // so a Qoder launch keeps its icon instead of showing Gemini CLI.
+  // Why: the foreground process, like the hook and title signals, must also be
+  // re-owned within its title-identity group. OMP wraps Pi as `shell → omp → pi`,
+  // so the foreground reader oscillates between reporting `omp` and `pi` across
+  // command boundaries; taken raw it outranks launchAgent and flips an OMP-owned
+  // tab's icon between the two glyphs. Re-owning collapses the same-group read
+  // onto the durable owner while a genuine cross-group process still stands.
   const processAgent = args.processAgent
-    ? resolveForegroundAgentForLaunch(launchAgent, args.processAgent)
+    ? resolveSignalAgentForLaunchOwner(
+        resolveForegroundAgentForLaunch(launchAgent, args.processAgent),
+        owner
+      )
     : null
   const sleepingSessionAgent = args.sleepingSessionAgent ?? null
   // Identity-first precedence. The live focused hook is ground truth while the
@@ -205,7 +214,8 @@ export function resolveTabAgentFromSignals(args: {
  * 2. Process identity — the recognized foreground process, read at OSC 133
  *    command boundaries (local panes only); covers agents that emit neither
  *    hooks nor titles, and its shell-foreground mark is title-independent exit
- *    evidence.
+ *    evidence. Re-owned within its title-identity group, so OMP's nested `pi`
+ *    child (the `shell → omp → pi` tree) cannot flip the icon back to Pi.
  * 3. Title — only as a reuse override (it names a DIFFERENT-group agent than the
  *    pane's known identity, proving reuse) or as a legacy standalone identity
  *    when the pane has no hook. Within the same title-identity group it carries

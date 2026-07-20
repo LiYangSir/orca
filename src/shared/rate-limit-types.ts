@@ -61,7 +61,7 @@ export type ProviderRateLimits = {
   weekly: RateLimitWindow | null
   /** Claude Fable 7-day weekly window, null if not available. */
   fableWeekly?: RateLimitWindow | null
-  /** 30-day monthly-style window (OpenCode Go monthly or Z.ai web searches), null if not available. */
+  /** 30-day monthly-style window (OpenCode Go monthly, Grok unified billing, or Z.ai web searches), null if not available. */
   monthly?: RateLimitWindow | null
   /** Optional display label for monthly-style windows with provider-specific names. */
   monthlyLabel?: string

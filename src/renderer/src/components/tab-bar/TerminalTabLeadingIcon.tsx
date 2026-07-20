@@ -10,6 +10,7 @@ import { translate } from '@/i18n/i18n'
 type TerminalTabLeadingIconProps = {
   agent: TuiAgent | null
   activityStatus: TerminalTabActivityStatus
+  activityPhaseKey: string
   shell: TerminalTab['shellOverride']
   showUnreadActivity: boolean
   isActive: boolean
@@ -63,6 +64,7 @@ function TerminalTabAgentIdentityIcon({
 export function TerminalTabLeadingIcon({
   agent,
   activityStatus,
+  activityPhaseKey,
   shell,
   showUnreadActivity,
   isActive
@@ -91,7 +93,14 @@ export function TerminalTabLeadingIcon({
         data-agent-activity-status={activityStatus}
         className="mr-1 inline-flex shrink-0 items-center gap-1"
       >
-        <AgentStateDot state={dotState} size="md" />
+        {/* Why: terminal tabs and the sidebar represent the same long-running
+            agent activity, so they share one motion language. */}
+        <AgentStateDot
+          state={dotState}
+          size="md"
+          workingVariant="activity-orbit"
+          phaseKey={activityPhaseKey}
+        />
         {/* Why: status and identity answer different questions. Keep the agent
             logo beside the state glyph so parallel tabs remain scannable. */}
         {agent ? <TerminalTabAgentIdentityIcon agent={agent} isActive={isActive} /> : null}

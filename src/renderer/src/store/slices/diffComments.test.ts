@@ -141,6 +141,7 @@ import { createPullRequestGenerationSlice } from './pull-request-generation'
 import { createCommitMessageGenerationSlice } from './commit-message-generation'
 import { createPinnedTabCloseConfirmSlice } from './pinned-tab-close-confirm'
 import { createSkillsViewSlice } from './skills-view'
+import { createRecentlyClosedTabsSlice } from './recently-closed-tabs'
 import { createOrcaProfilesSlice } from './orca-profiles'
 import { createNewIssueDraftSlice } from './new-issue-draft'
 
@@ -182,6 +183,7 @@ function createTestStore() {
     ...createCommitMessageGenerationSlice(...a),
     ...createPinnedTabCloseConfirmSlice(...a),
     ...createSkillsViewSlice(...a),
+    ...createRecentlyClosedTabsSlice(...a),
     ...createOrcaProfilesSlice(...a),
     ...createNewIssueDraftSlice(...a)
   }))

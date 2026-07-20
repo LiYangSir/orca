@@ -1,4 +1,5 @@
 import type { SkillsShSkill } from '../../shared/skills'
+import { cancelUnreadResponseBody } from '../lib/unread-response-body'
 
 function parseSkillObject(obj: Record<string, unknown>): SkillsShSkill | null {
   const source = typeof obj.source === 'string' ? obj.source : ''
@@ -113,6 +114,8 @@ export async function fetchLeaderboard(
     redirect: 'follow'
   })
   if (!response.ok) {
+    // Why: undici crashes the process on unread response bodies (orca#8695).
+    await cancelUnreadResponseBody(response)
     throw new Error(`skills.sh returned ${response.status}`)
   }
   const html = await response.text()
@@ -133,6 +136,8 @@ export async function searchMarketplace(query: string): Promise<SkillsShSkill[]>
     signal: AbortSignal.timeout(15000)
   })
   if (!response.ok) {
+    // Why: undici crashes the process on unread response bodies (orca#8695).
+    await cancelUnreadResponseBody(response)
     throw new Error(`skills.sh returned ${response.status}`)
   }
 

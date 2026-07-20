@@ -443,7 +443,7 @@ export function registerGitHubHandlers(store: Store, stats: StatsCollector): voi
         repoId?: string
         limit?: number
         query?: string
-        before?: string
+        page?: number
         noCache?: boolean
       }
     ) => {
@@ -452,7 +452,7 @@ export function registerGitHubHandlers(store: Store, stats: StatsCollector): voi
         repo.path,
         args.limit,
         args.query,
-        args.before,
+        args.page,
         repo.issueSourcePreference,
         repoConnectionId(repo),
         args.noCache,

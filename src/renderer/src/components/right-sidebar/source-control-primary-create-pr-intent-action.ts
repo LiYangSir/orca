@@ -4,26 +4,11 @@ import {
   resolveSupportedHostedReviewCopyProvider
 } from '@/i18n/hosted-review-localized-copy'
 import { supportsHostedReviewCreation } from '../../../../shared/hosted-review-creation-providers'
-import type {
-  HostedReviewCreationEligibility,
-  HostedReviewProvider
-} from '../../../../shared/hosted-review'
+import type { HostedReviewCreationEligibility } from '../../../../shared/hosted-review'
 import type { PrimaryAction, PrimaryActionInputs } from './source-control-primary-action-types'
 import { resolveCreatePrIntentEligibility } from './source-control-create-pr-intent-state'
 import { canClickBlockedCreateReviewReason } from './source-control-create-review-blocked-action'
 export { resolveProvisionalHostedReviewProvider } from './source-control-provisional-hosted-review-provider'
-
-export function buildLoadingHostedReviewCreationEligibility(
-  provider: HostedReviewProvider
-): HostedReviewCreationEligibility {
-  return {
-    provider,
-    review: null,
-    canCreate: false,
-    blockedReason: null,
-    nextAction: null
-  }
-}
 
 function shouldOfferCreatePrHeaderChrome(
   hostedReviewCreation: HostedReviewCreationEligibility | null | undefined

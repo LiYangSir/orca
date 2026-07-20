@@ -5,8 +5,8 @@ import { WorkingActivityIndicator } from '@/components/WorkingActivityIndicator'
 
 // Why: shared state-indicator primitive so the dashboard and the sidebar's
 // agent hover share a single state vocabulary. Most states render as a dot;
-// 'working' uses a spinner by default while the sidebar opts into a quieter
-// activity orbit. 'done' intentionally diverges from the
+// 'working' uses a spinner by default while long-running activity surfaces
+// can opt into a quieter activity orbit. 'done' intentionally diverges from the
 // sidebar's StatusIndicator: the dashboard uses a check icon so completion
 // is visually distinct from 'idle' (grey dot) and the sidebar's 'active'
 // (emerald dot), while the sidebar collapses 'done'/'active' to the same
@@ -93,8 +93,8 @@ export const AgentStateDot = React.memo(function AgentStateDot({
       >
         <span
           className={cn(
-            // Why: non-sidebar surfaces keep the established compact spinner;
-            // sidebar rows opt into the quieter activity orbit above.
+            // Why: short-lived/default surfaces keep the established spinner;
+            // sidebar rows and terminal tabs opt into the quieter orbit above.
             'block rounded-full border-2 border-yellow-500 border-t-transparent [animation:spin_1s_steps(12,end)_infinite] motion-reduce:animate-none',
             inner
           )}

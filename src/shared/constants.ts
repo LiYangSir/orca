@@ -266,6 +266,9 @@ export function getDefaultSettings(homedir: string): GlobalSettings {
     terminalFocusFollowsMouse: false,
     windowBackgroundBlur: false,
     minimizeToTrayOnClose: false,
+    // Why: default-on everywhere so the value round-trips across platforms;
+    // only the darwin consumers act on it.
+    showMenuBarIcon: true,
     terminalClipboardOnSelect: false,
     // Why: OSC 52 is a classic data-exfiltration vector (any process piping
     // untrusted output into the terminal can rewrite the clipboard). Keep the
@@ -283,6 +286,7 @@ export function getDefaultSettings(homedir: string): GlobalSettings {
     openLinksInAppPreferencePrompted: false,
     openAgentTabsInChatByDefault: false,
     experimentalNativeChat: false,
+    nativeChatSessionOptions: {},
     openInApplications: [...DEFAULT_OPEN_IN_APPLICATIONS],
     rightSidebarOpenByDefault: true,
     showGitIgnoredFiles: true,
@@ -294,6 +298,7 @@ export function getDefaultSettings(homedir: string): GlobalSettings {
     showAutomationsButton: true,
     showSkillsButton: true,
     showMobileButton: true,
+    showPinnedWorktreesInGroups: false,
     ctrlTabOrderMode: 'mru',
     // Why: switching worktrees and opening command surfaces from a focused
     // terminal is a core Orca workflow; users who prefer TUI ownership opt in.
@@ -367,6 +372,9 @@ export function getDefaultSettings(homedir: string): GlobalSettings {
     // explicit return-to-desktop-size action, no wall-clock guess.
     // See docs/mobile-fit-hold.md.
     mobileAutoRestoreFitMs: null,
+    // Why: Anywhere (Relay + local) is the default remote path. Explicit
+    // `local-only` is only written after the user picks same-network only.
+    mobilePairingConnectionMode: 'automatic',
     // Why: off by default — opt-in cosmetic joke feature. Leaving the default
     // false keeps the overlay unmounted for users who never enable it.
     experimentalPet: false,
@@ -487,6 +495,7 @@ export function getDefaultUIState(): PersistedUIState {
     workspaceHostScope: 'all',
     visibleWorkspaceHostIds: null,
     workspaceHostOrder: [],
+    manualRepoOrder: [],
     showSleepingWorkspaces: DEFAULT_SHOW_SLEEPING_WORKSPACES,
     hideDefaultBranchWorkspace: false,
     hideAutomationGeneratedWorkspaces: false,

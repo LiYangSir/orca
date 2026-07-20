@@ -312,6 +312,7 @@ export default function SortableTab({
       <TerminalTabLeadingIcon
         agent={tabAgent}
         activityStatus={activityStatus}
+        activityPhaseKey={tab.id}
         shell={shellForIcon}
         showUnreadActivity={showUnreadActivity}
         isActive={isActive}

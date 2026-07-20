@@ -23,6 +23,8 @@ import { buildAgentDraftLaunchPlan, buildAgentStartupPlan } from '@/lib/tui-agen
 import { filterEnabledTuiAgents, isTuiAgentEnabled } from '../../../shared/tui-agent-selection'
 import { repoIsRemote } from '../../../shared/agent-launch-remote'
 import { resolveLocalWindowsAgentStartupShell } from '../../../shared/windows-terminal-shell'
+import { resolveNativeChatSessionOptionDefaults } from '../../../shared/native-chat-session-option-defaults'
+import { seedNativeChatAppliedSessionOptions } from '@/components/native-chat/native-chat-session-option-cache'
 import {
   resolveTuiAgentLaunchArgs,
   resolveTuiAgentLaunchEnv
@@ -77,7 +79,11 @@ import {
   resolveQuickCreateLinkedWorkItemPrompt
 } from '@/lib/linked-work-item-context'
 import { getLocalRepoProjectExecutionRuntimeContext } from '@/lib/local-preflight-context'
-import { buildLinearIssueLinkedWorkItem } from '@/lib/linear-linked-work-item'
+import {
+  buildLinearIssueLinkedWorkItem,
+  getLinearLinkedWorkItemBranchName,
+  isLinearLinkedWorkItem
+} from '@/lib/linear-linked-work-item'
 import { buildLocalTaskLinkedWorkItem } from '@/lib/local-task-linked-work-item'
 import { getLinearIssueWorkspaceName } from '../../../shared/workspace-name'
 import {
@@ -391,6 +397,9 @@ export type UseComposerStateResult = {
   submitQuick: (agent: TuiAgent | null) => Promise<void>
   /** Invoked by the Enter handler to re-check whether submission should fire. */
   createDisabled: boolean
+  /** Selects the repo a nested Add Project flow just added, clearing any
+   *  folder-group target so the composer lands on the new project. */
+  selectAddedProjectRepo: (repoId: string) => void
 }
 
 export type InitialWorkspaceRunSeedInput = {
@@ -963,6 +972,7 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
   const [linkedWorkItem, setLinkedWorkItem] = useState<LinkedWorkItemSummary | null>(
     () => linkedWorkItemSeed
   )
+  const initialLinearBranchName = getLinearLinkedWorkItemBranchName(linkedWorkItemSeed)
   const taskSourceContext = useMemo(() => {
     if (
       persistDraft &&
@@ -1085,9 +1095,12 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
   const [compareBaseRef, setCompareBaseRef] = useState<string | undefined>(
     persistDraft ? newWorkspaceDraft?.compareBaseRef : undefined
   )
-  const [branchNameOverride, setBranchNameOverride] = useState<string | undefined>(undefined)
-  const [branchNameOverridePreservesNameEdits, setBranchNameOverridePreservesNameEdits] =
-    useState(false)
+  const [branchNameOverride, setBranchNameOverride] = useState<string | undefined>(
+    initialLinearBranchName
+  )
+  const [branchNameOverridePreservesNameEdits, setBranchNameOverridePreservesNameEdits] = useState(
+    Boolean(initialLinearBranchName)
+  )
   const [smartNameMode, setSmartNameMode] = useState<SmartNameMode>('smart')
   // Why (#5181): when the user picks an existing LOCAL branch, let them reuse it
   // (check it out) instead of creating a new branch from it. `reuseEligibleBranch`
@@ -1562,7 +1575,8 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
     !agentPrompt.trim() &&
     Boolean(linkedWorkItem) &&
     hasLoadedIssueCommand &&
-    linkedWorkItemAllowsRepoAutomation
+    linkedWorkItemProvider !== 'linear' &&
+    linkedWorkItemProvider !== 'local'
   const linkedOnlyTemplatePrompt = useMemo(() => {
     if (!shouldApplyLinkedOnlyTemplate || !linkedWorkItem) {
       return ''
@@ -2088,6 +2102,8 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
       }
       if (!options.preserveBranchNameOverride) {
         setBranchNameOverride(undefined)
+        setBranchNameOverridePreservesNameEdits(false)
+        branchAutoNameRef.current = ''
       }
     },
     [name]
@@ -2325,6 +2341,8 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
         lastAutoNameRef.current = nextName
       }
       setBranchNameOverride(undefined)
+      setBranchNameOverridePreservesNameEdits(false)
+      branchAutoNameRef.current = ''
     },
     [name]
   )
@@ -2352,6 +2370,7 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
 
   const handleRemoveLinkedWorkItem = useCallback((): void => {
     smartGitHubPrStartPointSelectionRef.current = null
+    const removedLinearItem = isLinearLinkedWorkItem(linkedWorkItem)
     setLinkedWorkItem(null)
     setLinkedIssue('')
     setLinkedPR(null)
@@ -2359,7 +2378,14 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
     if (name === lastAutoNameRef.current) {
       lastAutoNameRef.current = ''
     }
-  }, [name])
+    if (removedLinearItem) {
+      // Why: a Linear branch override belongs to its linked issue; unlinking
+      // must not leave provider metadata driving a later worktree create.
+      setBranchNameOverride(undefined)
+      setBranchNameOverridePreservesNameEdits(false)
+      branchAutoNameRef.current = ''
+    }
+  }, [linkedWorkItem, name])
 
   const handleNameValueChange = useCallback(
     (nextName: string): void => {
@@ -2650,6 +2676,11 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
         }
       }
       const preserveLinkedWorkItem = shouldPreserveWorkspaceSourceOnRepoChange(linkedWorkItem)
+      const preserveLinearLinkedWorkItem = isLinearLinkedWorkItem(linkedWorkItem)
+      // Why: Linear sources carry a canonical branch that must survive the repo switch.
+      const preservedLinearBranchName = preserveLinearLinkedWorkItem
+        ? getLinearLinkedWorkItemBranchName(linkedWorkItem)
+        : undefined
       setRepoId(value)
       if (!options.preserveStartFrom) {
         smartGitHubPrStartPointSelectionRef.current = null
@@ -2676,10 +2707,13 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
         setBaseBranch(undefined)
         setCompareBaseRef(undefined)
         setPushTarget(undefined)
-        setBranchNameOverride(undefined)
+        // Why: Linear sources are workspace-scoped, so their canonical branch
+        // survives choosing a different implementation repo with the issue.
+        setBranchNameOverride(preservedLinearBranchName)
+        setBranchNameOverridePreservesNameEdits(Boolean(preservedLinearBranchName))
+        branchAutoNameRef.current = preservedLinearBranchName ?? ''
         // Why (#5181): reuse state is branch-scoped, so a repo switch must clear
-        // it alongside the branch override (matches the other reset paths).
-        setBranchNameOverridePreservesNameEdits(false)
+        // it even when a workspace-scoped Linear override is restored.
         setReuseEligibleBranch(null)
         setReuseSelectedBranch(false)
         setForkPushWarning(null)
@@ -2743,7 +2777,12 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
         setLinkedPR(null)
         setLinkedGitLabIssue(null)
         setLinkedGitLabMR(null)
-        if (!shouldPreserveWorkspaceSourceOnRepoChange(linkedWorkItem)) {
+        const linkedProvider = linkedWorkItem ? getLinkedWorkItemProvider(linkedWorkItem) : null
+        // Why: workspace-scoped sources (Linear/Jira/local tasks) survive a
+        // project switch; repo-scoped links do not.
+        const repoScopedLinkedItem =
+          linkedProvider !== 'linear' && linkedProvider !== 'jira' && linkedProvider !== 'local'
+        if (linkedWorkItem && repoScopedLinkedItem) {
           setLinkedWorkItem(null)
         }
         setSparseEnabled(false)
@@ -2796,6 +2835,19 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
       workspaceHostScope
     ]
   )
+  const selectAddedProjectRepo = useCallback(
+    (nextRepoId: string): void => {
+      // Why: the nested Add Project flow hands back a repo id. Selecting it
+      // must also clear a folder-group target, whose onRepoChange handler
+      // only accepts repos inside the selected group.
+      initialProjectGroupAppliedRef.current = true
+      setSelectedProjectGroupId(null)
+      setProjectError(null)
+      handleRepoChange(nextRepoId)
+    },
+    [handleRepoChange]
+  )
+
   const showProjectRequiredError = useCallback((): void => {
     setProjectError('Choose or add a project before creating a workspace.')
     requestAnimationFrame(() => {
@@ -2931,6 +2983,7 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
       }
       setStartFromResetHint(null)
       setBranchNameOverride(undefined)
+      setBranchNameOverridePreservesNameEdits(false)
       setForkPushWarning(null)
       branchAutoNameRef.current = ''
       smartGitHubPrStartPointSelectionRef.current = null
@@ -3039,6 +3092,7 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
       applyLinkedGitLabWorkItem(item)
       setStartFromResetHint(null)
       setBranchNameOverride(undefined)
+      setBranchNameOverridePreservesNameEdits(false)
       setForkPushWarning(null)
       branchAutoNameRef.current = ''
       // Why: MR metadata can be sourced from one host/account while the
@@ -3210,7 +3264,8 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
       setLinkedPR(null)
       setLinkedGitLabIssue(null)
       setLinkedGitLabMR(null)
-      setLinkedWorkItem(buildLinearIssueLinkedWorkItem(issue))
+      const linkedLinearIssue = buildLinearIssueLinkedWorkItem(issue)
+      setLinkedWorkItem(linkedLinearIssue)
       const suggestedName = getLinearIssueWorkspaceName(issue)
       // Why: same lookup-text rule as applyLinkedWorkItem, plus the typed
       // Linear identifier ("STA-123") that matched this issue.
@@ -3224,9 +3279,11 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
         setName(suggestedName)
         lastAutoNameRef.current = suggestedName
       }
-      setBranchNameOverride(undefined)
+      const linearBranchName = getLinearLinkedWorkItemBranchName(linkedLinearIssue)
+      setBranchNameOverride(linearBranchName)
+      setBranchNameOverridePreservesNameEdits(Boolean(linearBranchName))
       setForkPushWarning(null)
-      branchAutoNameRef.current = ''
+      branchAutoNameRef.current = linearBranchName ?? ''
       // Why: match the GitHub issue/PR flow by drafting linked context for
       // review instead of auto-submitting. Auto-filling the note here would
       // turn a source selection into user-authored instructions.
@@ -3355,6 +3412,9 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
             ? resolveTuiAgentLaunchArgs(agent, settings?.agentDefaultArgs)
             : undefined,
           agentEnv: agent ? resolveTuiAgentLaunchEnv(agent, settings?.agentDefaultEnv) : undefined,
+          sessionOptions: agent
+            ? resolveNativeChatSessionOptionDefaults(settings?.nativeChatSessionOptions, agent)
+            : undefined,
           terminalWindowsShell: settings?.terminalWindowsShell,
           isRemote: folderTargetIsRemote,
           launchSource: telemetrySource === 'onboarding' ? 'onboarding' : 'new_workspace_composer',
@@ -3411,6 +3471,7 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
       settings?.agentDefaultArgs,
       settings?.agentDefaultEnv,
       settings?.autoRenameBranchFromWork,
+      settings?.nativeChatSessionOptions,
       settings?.terminalWindowsShell,
       telemetrySource
     ]
@@ -3550,7 +3611,8 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
           )
       const submitShouldRunIssueAutomation =
         enableIssueAutomation &&
-        submitLinkedWorkItemAllowsRepoAutomation &&
+        submitLinkedWorkItemProvider !== 'linear' &&
+        submitLinkedWorkItemProvider !== 'local' &&
         submitLinkedIssueNumber !== null &&
         issueCommandTemplate.length > 0 &&
         !submitShouldApplyLinkedOnlyTemplate
@@ -3602,6 +3664,10 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
         cmdOverrides: settings?.agentCmdOverrides ?? {},
         agentArgs: resolveTuiAgentLaunchArgs(tuiAgent, settings?.agentDefaultArgs),
         agentEnv: resolveTuiAgentLaunchEnv(tuiAgent, settings?.agentDefaultEnv),
+        sessionOptions: resolveNativeChatSessionOptionDefaults(
+          settings?.nativeChatSessionOptions,
+          tuiAgent
+        ),
         platform: selectedRepoAgentLaunchPlatform,
         shell: selectedRepoStartupShell,
         isRemote: selectedRepoIsRemote
@@ -3725,6 +3791,13 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
             }
           : {})
       })
+      if (startupPlan) {
+        const optionScopeKey =
+          (activation !== false ? activation.primaryTabId : null) ?? result.startupTerminal?.tabId
+        if (optionScopeKey) {
+          seedNativeChatAppliedSessionOptions(optionScopeKey, tuiAgent, startupPlan.sessionOptions)
+        }
+      }
       if (startupPlan && !backendSpawnedStartup) {
         void ensureAgentStartupInTerminal({
           worktreeId: worktree.id,
@@ -3786,6 +3859,7 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
     settings?.agentDefaultArgs,
     settings?.agentDefaultEnv,
     settings?.autoRenameBranchFromWork,
+    settings?.nativeChatSessionOptions,
     smartNameMode,
     setSidebarOpen,
     setupDecision,
@@ -4010,6 +4084,10 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
                 cmdOverrides: settings?.agentCmdOverrides ?? {},
                 agentArgs: resolveTuiAgentLaunchArgs(agent, settings?.agentDefaultArgs),
                 agentEnv: resolveTuiAgentLaunchEnv(agent, settings?.agentDefaultEnv),
+                sessionOptions: resolveNativeChatSessionOptionDefaults(
+                  settings?.nativeChatSessionOptions,
+                  agent
+                ),
                 platform: selectedRepoAgentLaunchPlatform,
                 shell: selectedRepoStartupShell,
                 isRemote: selectedRepoIsRemote
@@ -4023,6 +4101,9 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
             expectedProcess: draftLaunchPlan.expectedProcess,
             followupPrompt: null,
             launchConfig: draftLaunchPlan.launchConfig,
+            ...(draftLaunchPlan.sessionOptions
+              ? { sessionOptions: draftLaunchPlan.sessionOptions }
+              : {}),
             ...(draftLaunchPlan.startupCommandDelivery
               ? { startupCommandDelivery: draftLaunchPlan.startupCommandDelivery }
               : {}),
@@ -4035,6 +4116,10 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
             cmdOverrides: settings?.agentCmdOverrides ?? {},
             agentArgs: resolveTuiAgentLaunchArgs(agent, settings?.agentDefaultArgs),
             agentEnv: resolveTuiAgentLaunchEnv(agent, settings?.agentDefaultEnv),
+            sessionOptions: resolveNativeChatSessionOptionDefaults(
+              settings?.nativeChatSessionOptions,
+              agent
+            ),
             platform: selectedRepoAgentLaunchPlatform,
             shell: selectedRepoStartupShell,
             isRemote: selectedRepoIsRemote,
@@ -4220,6 +4305,7 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
       settings?.agentDefaultArgs,
       settings?.agentDefaultEnv,
       settings?.autoRenameBranchFromWork,
+      settings?.nativeChatSessionOptions,
       smartNameMode,
       disabledTuiAgents,
       setupDecision,
@@ -4387,6 +4473,7 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
     nameInputRef,
     submit,
     submitQuick,
-    createDisabled
+    createDisabled,
+    selectAddedProjectRepo
   }
 }

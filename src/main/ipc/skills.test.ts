@@ -1,15 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { handleMock, discoverSkillsMock, getDefaultWslDistroMock, getWslHomeMock } = vi.hoisted(
-  () => ({
-    handleMock: vi.fn(),
-    discoverSkillsMock: vi.fn(),
-    getDefaultWslDistroMock: vi.fn(),
-    getWslHomeMock: vi.fn()
-  })
-)
+const {
+  handleMock,
+  discoverSkillsMock,
+  discoverSkillsInWslMock,
+  inventorySkillFreshnessMock,
+  getDefaultWslDistroMock,
+  getWslHomeMock,
+  parseWslPathMock
+} = vi.hoisted(() => ({
+  handleMock: vi.fn(),
+  discoverSkillsMock: vi.fn(),
+  discoverSkillsInWslMock: vi.fn(),
+  inventorySkillFreshnessMock: vi.fn(),
+  getDefaultWslDistroMock: vi.fn(),
+  getWslHomeMock: vi.fn(),
+  parseWslPathMock: vi.fn()
+}))
 
 vi.mock('electron', () => ({
+  app: {
+    getVersion: () => '9.9.9-test'
+  },
   ipcMain: {
     handle: handleMock
   }
@@ -19,9 +31,27 @@ vi.mock('../skills/discovery', () => ({
   discoverSkills: discoverSkillsMock
 }))
 
+vi.mock('../skills/skill-discovery-wsl', () => ({
+  discoverSkillsInWsl: discoverSkillsInWslMock
+}))
+
+vi.mock('../skills/skill-freshness-inventory', () => ({
+  inventorySkillFreshness: inventorySkillFreshnessMock
+}))
+
 vi.mock('../wsl', () => ({
   getDefaultWslDistro: getDefaultWslDistroMock,
-  getWslHome: getWslHomeMock
+  getWslHome: getWslHomeMock,
+  parseWslPath: parseWslPathMock,
+  toLinuxPath: (pathValue: string) => {
+    if (pathValue === '\\\\wsl.localhost\\Ubuntu\\home\\alice') {
+      return '/home/alice'
+    }
+    if (pathValue === 'C:\\repo\\worktree') {
+      return '/mnt/c/repo/worktree'
+    }
+    return pathValue
+  }
 }))
 
 import { registerSkillsHandlers } from './skills'
@@ -68,6 +98,7 @@ describe('registerSkillsHandlers', () => {
   beforeEach(() => {
     handleMock.mockReset()
     discoverSkillsMock.mockReset()
+    discoverSkillsInWslMock.mockReset()
     getDefaultWslDistroMock.mockReset()
     getWslHomeMock.mockReset()
     store.getRepos.mockClear()
@@ -77,7 +108,16 @@ describe('registerSkillsHandlers', () => {
     store.listSkillPresets.mockClear()
     store.saveSkillPreset.mockClear()
     store.removeSkillPreset.mockClear()
+    parseWslPathMock.mockReset()
+    parseWslPathMock.mockReturnValue(null)
     discoverSkillsMock.mockResolvedValue({ skills: [], sources: [], scannedAt: 1 })
+    discoverSkillsInWslMock.mockResolvedValue({ skills: [], sources: [], scannedAt: 1 })
+    inventorySkillFreshnessMock.mockResolvedValue({
+      schemaVersion: 1,
+      installations: [],
+      eligibleUpdateNames: [],
+      scannedAt: 1
+    })
     getWslHomeMock.mockReturnValue('\\\\wsl.localhost\\Ubuntu\\home\\alice')
     Object.defineProperty(process, 'platform', {
       configurable: true,
@@ -98,6 +138,17 @@ describe('registerSkillsHandlers', () => {
       throw new Error(`${channel} handler was not registered`)
     }
     return call[1] as (_event: unknown, target?: unknown) => Promise<unknown>
+  }
+
+  function getFreshnessHandler() {
+    registerSkillsHandlers(store as never)
+    const call = handleMock.mock.calls.find(
+      (entry: unknown[]) => entry[0] === 'skills:freshnessInventory'
+    )
+    if (!call) {
+      throw new Error('skills:freshnessInventory handler was not registered')
+    }
+    return call[1] as (_event: unknown) => Promise<unknown>
   }
 
   it('uses host skill discovery when resolved project runtime overrides stale WSL target state', async () => {
@@ -149,10 +200,35 @@ describe('registerSkillsHandlers', () => {
 
     expect(getDefaultWslDistroMock).not.toHaveBeenCalled()
     expect(getWslHomeMock).toHaveBeenCalledWith('Ubuntu')
-    expect(discoverSkillsMock).toHaveBeenCalledWith({
-      repos: [],
-      homeDir: '\\\\wsl.localhost\\Ubuntu\\home\\alice',
-      cwd: '\\\\wsl.localhost\\Ubuntu\\home\\alice'
+    expect(discoverSkillsInWslMock).toHaveBeenCalledWith({
+      distro: 'Ubuntu',
+      homeDir: '/home/alice',
+      cwd: '/home/alice'
+    })
+  })
+
+  it('scans the requested project directory in the selected WSL runtime', async () => {
+    const handler = getHandler('skills:discover')
+
+    await handler(null, {
+      cwd: 'C:\\repo\\worktree',
+      projectRuntime: {
+        status: 'resolved',
+        runtime: {
+          kind: 'wsl',
+          hostPlatform: 'wsl',
+          projectId: 'repo-1',
+          distro: 'Ubuntu',
+          reason: 'project-override',
+          cacheKey: 'repo-1:wsl:Ubuntu'
+        }
+      }
+    })
+
+    expect(discoverSkillsInWslMock).toHaveBeenCalledWith({
+      distro: 'Ubuntu',
+      homeDir: '/home/alice',
+      cwd: '/mnt/c/repo/worktree'
     })
   })
 
@@ -240,5 +316,17 @@ describe('registerSkillsHandlers', () => {
       name: 'Review preset',
       skillIds: ['skill-1']
     })
+  })
+
+  it('keeps freshness inventory local and read-only over known repositories', async () => {
+    const handler = getFreshnessHandler()
+
+    await handler(null)
+
+    expect(inventorySkillFreshnessMock).toHaveBeenCalledWith({
+      currentAppVersion: '9.9.9-test',
+      repos
+    })
+    expect(getWslHomeMock).not.toHaveBeenCalled()
   })
 })
