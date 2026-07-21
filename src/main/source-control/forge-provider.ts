@@ -6,7 +6,6 @@ import type {
 } from '../../shared/hosted-review'
 import {
   getMergeRequest as getAoneMergeRequest,
-  getMergeRequestForBranch as getAoneMergeRequestForBranch,
   isAoneCodeRemoteUrl,
   resolveAoneCodeRepoSlug
 } from '../aone/client'
@@ -46,6 +45,7 @@ import {
   getHostedReviewLocalGitOptions,
   type HostedReviewExecutionOptions
 } from './hosted-review-git-options'
+import { getAoneForgeReviewForBranch } from './aone-forge-review'
 
 export type ForgeProviderId = Exclude<ReviewProvider, 'unsupported'>
 
@@ -291,14 +291,7 @@ const codeForgeProvider = {
     }
     return resolveAoneCodeRepoSlug(context.repoPath)
   },
-  async getReviewForBranch(input) {
-    const linked =
-      input.linkedReviewNumber == null
-        ? null
-        : await getAoneMergeRequest(input.linkedReviewNumber, { cwd: input.repoPath })
-    const mr = linked ?? (await getAoneMergeRequestForBranch(input.branch, { cwd: input.repoPath }))
-    return mr ? mapCodeReview(mr) : null
-  },
+  getReviewForBranch: getAoneForgeReviewForBranch,
   async getReviewByNumber(input) {
     const mr = await getAoneMergeRequest(input.number, { cwd: input.repoPath })
     return mr ? mapCodeReview(mr) : null

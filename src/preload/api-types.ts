@@ -1961,7 +1961,10 @@ export type PreloadApi = {
       branch: string
       repoPath?: string | null
     }) => Promise<unknown>
-    getMergeRequestForRepositoryCurrentBranch: (args: { repoPath: string }) => Promise<unknown>
+    getMergeRequestForRepositoryCurrentBranch: (args: {
+      repoPath: string
+      lookupMergeRequest?: boolean
+    }) => Promise<unknown>
     getWeeklyReportDelivery: (args: { branch: string; repoPath: string }) => Promise<unknown>
     listMRComments: (args: {
       mr: number

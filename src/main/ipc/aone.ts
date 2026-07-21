@@ -161,11 +161,19 @@ export function registerAoneHandlers(): void {
     'aone:getMergeRequestForRepositoryCurrentBranch',
     async (
       _event,
-      args: { repoPath: string }
-    ): Promise<AoneIpcResult<{ branch: string | null; mergeRequest: A1MergeRequest | null }>> => {
+      args: { repoPath: string; lookupMergeRequest?: boolean }
+    ): Promise<
+      AoneIpcResult<{
+        branch: string | null
+        isDefaultBranch: boolean
+        mergeRequest: A1MergeRequest | null
+      }>
+    > => {
       try {
         const repoPath = typeof args?.repoPath === 'string' ? args.repoPath : ''
-        const data = await getMergeRequestForRepositoryCurrentBranch(repoPath)
+        const data = await getMergeRequestForRepositoryCurrentBranch(repoPath, {
+          lookupMergeRequest: args?.lookupMergeRequest !== false
+        })
         return { ok: true, data }
       } catch (error) {
         return toFailure(error)

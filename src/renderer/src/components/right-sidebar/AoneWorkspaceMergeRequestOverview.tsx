@@ -19,6 +19,7 @@ type AoneWorkspaceMergeRequestOverviewProps = {
   parentRepoName: string
   parentReview: AoneWorkspaceParentReview | null
   parentLookupErrorCode: string | null
+  showParent: boolean
   branch: string
   entries: AoneWorkspaceMergeRequestEntry[]
   loading: boolean
@@ -32,6 +33,7 @@ export function AoneWorkspaceMergeRequestOverview({
   parentRepoName,
   parentReview,
   parentLookupErrorCode,
+  showParent,
   branch,
   entries,
   loading,
@@ -40,10 +42,11 @@ export function AoneWorkspaceMergeRequestOverview({
   onSelectParent,
   onSelectChild
 }: AoneWorkspaceMergeRequestOverviewProps): React.JSX.Element {
-  const repoCount = entries.length + 1
-  const reviewCount = (parentReview ? 1 : 0) + entries.filter((entry) => entry.review).length
+  const repoCount = entries.length + (showParent ? 1 : 0)
+  const reviewCount =
+    (showParent && parentReview ? 1 : 0) + entries.filter((entry) => entry.review).length
   const openCount =
-    (parentReview?.state === 'open' ? 1 : 0) +
+    (showParent && parentReview?.state === 'open' ? 1 : 0) +
     entries.filter((entry) => entry.review && mapAoneMergeRequestState(entry.review) === 'open')
       .length
   const title = translate(
@@ -98,8 +101,7 @@ export function AoneWorkspaceMergeRequestOverview({
             </Tooltip>
           </div>
         </div>
-        <div className="mt-2 truncate font-mono text-[12px] text-foreground">{branch}</div>
-        <div className="mt-1 text-[11px] text-muted-foreground">
+        <div className="mt-2 text-[11px] text-muted-foreground">
           {translate(
             'auto.components.rightSidebar.AoneWorkspaceMergeRequests.workspaceSummary',
             '{{value0}} repositories · comments are viewed separately',
@@ -119,13 +121,15 @@ export function AoneWorkspaceMergeRequestOverview({
           <span className="tabular-nums">{reviewCount}</span>
         </div>
         <div className="space-y-1">
-          <AoneWorkspaceMergeRequestRow
-            repoName={parentRepoName}
-            branch={branch}
-            review={mapParentReview(parentReview)}
-            lookupErrorCode={parentLookupErrorCode}
-            onSelect={onSelectParent}
-          />
+          {showParent ? (
+            <AoneWorkspaceMergeRequestRow
+              repoName={parentRepoName}
+              branch={branch}
+              review={mapParentReview(parentReview)}
+              lookupErrorCode={parentLookupErrorCode}
+              onSelect={onSelectParent}
+            />
+          ) : null}
           {entries.map((entry) => (
             <AoneWorkspaceMergeRequestRow
               key={entry.repo.path}

@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { beforeEach, vi } from 'vitest'
 
-const { a1ExecJsonMock, gitExecFileAsyncMock } = vi.hoisted(() => ({
-  a1ExecJsonMock: vi.fn(),
-  gitExecFileAsyncMock: vi.fn()
-}))
+const { a1ExecJsonMock, gitExecFileAsyncMock, resolveDefaultBaseRefWithLocalGitMock } = vi.hoisted(
+  () => ({
+    a1ExecJsonMock: vi.fn(),
+    gitExecFileAsyncMock: vi.fn(),
+    resolveDefaultBaseRefWithLocalGitMock: vi.fn()
+  })
+)
 
 vi.mock('./a1-runner', () => ({
   A1Error: class A1Error extends Error {
@@ -23,6 +26,10 @@ vi.mock('./a1-runner', () => ({
 
 vi.mock('../git/runner', () => ({
   gitExecFileAsync: gitExecFileAsyncMock
+}))
+
+vi.mock('../git/repo', () => ({
+  resolveDefaultBaseRefWithLocalGit: resolveDefaultBaseRefWithLocalGitMock
 }))
 
 import {
@@ -54,6 +61,7 @@ describe('Aone client merge request lookup', () => {
   beforeEach(() => {
     a1ExecJsonMock.mockReset()
     gitExecFileAsyncMock.mockReset()
+    resolveDefaultBaseRefWithLocalGitMock.mockReset()
   })
 
   it('unwraps repo mr view payloads', async () => {
@@ -177,11 +185,16 @@ describe('Aone client merge request lookup', () => {
       stdout: 'feature/child-listener\n',
       stderr: ''
     })
+    resolveDefaultBaseRefWithLocalGitMock.mockResolvedValue('origin/main')
     a1ExecJsonMock.mockResolvedValueOnce([]).mockResolvedValueOnce([])
 
     await expect(
       getMergeRequestForRepositoryCurrentBranch('/workspace/repos/mw-cli')
-    ).resolves.toEqual({ branch: 'feature/child-listener', mergeRequest: null })
+    ).resolves.toEqual({
+      branch: 'feature/child-listener',
+      isDefaultBranch: false,
+      mergeRequest: null
+    })
     expect(gitExecFileAsyncMock).toHaveBeenCalledWith(['branch', '--show-current'], {
       cwd: '/workspace/repos/mw-cli'
     })
@@ -202,7 +215,17 @@ describe('Aone client merge request lookup', () => {
 
     await expect(
       getMergeRequestForRepositoryCurrentBranch('/workspace/repos/mw-cli')
-    ).resolves.toEqual({ branch: null, mergeRequest: null })
+    ).resolves.toEqual({ branch: null, isDefaultBranch: false, mergeRequest: null })
+    expect(a1ExecJsonMock).not.toHaveBeenCalled()
+  })
+
+  it('does not query Aone for a repository checked out on its default branch', async () => {
+    gitExecFileAsyncMock.mockResolvedValue({ stdout: 'main\n', stderr: '' })
+    resolveDefaultBaseRefWithLocalGitMock.mockResolvedValue('origin/main')
+
+    await expect(
+      getMergeRequestForRepositoryCurrentBranch('/workspace/repos/mw-cli')
+    ).resolves.toEqual({ branch: 'main', isDefaultBranch: true, mergeRequest: null })
     expect(a1ExecJsonMock).not.toHaveBeenCalled()
   })
 

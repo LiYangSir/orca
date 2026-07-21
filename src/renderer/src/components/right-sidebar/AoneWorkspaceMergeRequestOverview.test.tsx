@@ -11,6 +11,7 @@ describe('AoneWorkspaceMergeRequestOverview', () => {
           parentRepoName="workspace"
           parentReview={null}
           parentLookupErrorCode={null}
+          showParent={true}
           branch="feature/listener_influence"
           entries={[
             {
@@ -37,5 +38,37 @@ describe('AoneWorkspaceMergeRequestOverview', () => {
 
     expect(markup).toContain('3 repositories')
     expect(markup).toContain('<span class="tabular-nums">1</span>')
+  })
+
+  it('omits a default-branch parent and the shared parent branch heading', () => {
+    const markup = renderToStaticMarkup(
+      <TooltipProvider>
+        <AoneWorkspaceMergeRequestOverview
+          parentRepoName="workspace"
+          parentReview={null}
+          parentLookupErrorCode={null}
+          showParent={false}
+          branch="main"
+          entries={[
+            {
+              repo: { path: '/workspace/child', displayName: 'child', depth: 1 },
+              branch: 'feature/child-review',
+              review: null,
+              lookupErrorCode: null
+            }
+          ]}
+          loading={false}
+          scanFailed={false}
+          onRefresh={vi.fn()}
+          onSelectParent={vi.fn()}
+          onSelectChild={vi.fn()}
+        />
+      </TooltipProvider>
+    )
+
+    expect(markup).toContain('1 repositories')
+    expect(markup).toContain('child')
+    expect(markup).not.toContain('workspace</span>')
+    expect(markup).not.toContain('main')
   })
 })

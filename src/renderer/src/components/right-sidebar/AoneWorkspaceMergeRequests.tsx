@@ -20,17 +20,11 @@ export type AoneMergeRequest = {
   workInProgress?: boolean | null
 }
 
-type AoneMergeRequestResponse = {
-  ok: boolean
-  data?: AoneMergeRequest | null
-  code?: string
-  error?: string
-}
-
 type AoneRepositoryMergeRequestResponse = {
   ok: boolean
   data?: {
     branch: string | null
+    isDefaultBranch: boolean
     mergeRequest: AoneMergeRequest | null
   }
   code?: string
@@ -55,53 +49,26 @@ export type AoneWorkspaceParentReview = {
 
 type LoadAoneWorkspaceMergeRequestsArgs = {
   parentWorktreePath: string
-  branch: string
   scanNestedRepos: (args: {
     path: string
     options?: Record<string, unknown>
   }) => Promise<{ repos: NestedRepoCandidate[] }>
-  getMergeRequestForBranch: (args: { branch: string; repoPath?: string | null }) => Promise<unknown>
-  getMergeRequestForRepositoryCurrentBranch: (args: { repoPath: string }) => Promise<unknown>
-}
-
-async function loadAoneMergeRequestForRepository({
-  branch,
-  repoPath,
-  getMergeRequestForBranch
-}: Pick<LoadAoneWorkspaceMergeRequestsArgs, 'branch' | 'getMergeRequestForBranch'> & {
-  repoPath: string
-}): Promise<AoneMergeRequestLookup> {
-  try {
-    const args = { branch, repoPath }
-    let response = (await getMergeRequestForBranch(args)) as AoneMergeRequestResponse
-    if (!response.ok && response.code === 'invalid_output') {
-      // Why: malformed CLI output can be transient; retry once before asking
-      // the user to refresh the whole workspace review.
-      response = (await getMergeRequestForBranch(args)) as AoneMergeRequestResponse
-    }
-    return {
-      review: response.ok ? (response.data ?? null) : null,
-      lookupErrorCode: response.ok ? null : classifyAoneFailure(response.code, response.error)
-    }
-  } catch (error) {
-    return {
-      review: null,
-      lookupErrorCode: classifyAoneFailure(
-        undefined,
-        error instanceof Error ? error.message : String(error)
-      )
-    }
-  }
+  getMergeRequestForRepositoryCurrentBranch: (args: {
+    repoPath: string
+    lookupMergeRequest?: boolean
+  }) => Promise<unknown>
 }
 
 async function loadAoneMergeRequestForRepositoryCurrentBranch({
   repoPath,
+  lookupMergeRequest,
   getMergeRequestForRepositoryCurrentBranch
 }: Pick<LoadAoneWorkspaceMergeRequestsArgs, 'getMergeRequestForRepositoryCurrentBranch'> & {
   repoPath: string
-}): Promise<AoneMergeRequestLookup & { branch: string | null }> {
+  lookupMergeRequest?: boolean
+}): Promise<AoneMergeRequestLookup & { branch: string | null; isDefaultBranch: boolean }> {
   try {
-    const args = { repoPath }
+    const args = { repoPath, ...(lookupMergeRequest === false ? { lookupMergeRequest } : {}) }
     let response = (await getMergeRequestForRepositoryCurrentBranch(
       args
     )) as AoneRepositoryMergeRequestResponse
@@ -112,12 +79,14 @@ async function loadAoneMergeRequestForRepositoryCurrentBranch({
     }
     return {
       branch: response.ok ? (response.data?.branch ?? null) : null,
+      isDefaultBranch: response.ok ? (response.data?.isDefaultBranch ?? false) : false,
       review: response.ok ? (response.data?.mergeRequest ?? null) : null,
       lookupErrorCode: response.ok ? null : classifyAoneFailure(response.code, response.error)
     }
   } catch (error) {
     return {
       branch: null,
+      isDefaultBranch: false,
       review: null,
       lookupErrorCode: classifyAoneFailure(
         undefined,
@@ -137,13 +106,14 @@ export async function loadAoneChildMergeRequests({
     options: { descendIntoGitRepoRoot: true, maxRepos: 50, timeoutMs: 10_000 }
   })
   const childRepos = scan.repos.filter((candidate) => candidate.depth > 0)
-  return mapWithConcurrency(childRepos, 1, async (repo) => {
+  const lookups = await mapWithConcurrency(childRepos, 1, async (repo) => {
     const lookup = await loadAoneMergeRequestForRepositoryCurrentBranch({
       repoPath: repo.path,
       getMergeRequestForRepositoryCurrentBranch
     })
     return { repo, ...lookup }
   })
+  return lookups.flatMap(({ isDefaultBranch, ...entry }) => (isDefaultBranch ? [] : [entry]))
 }
 
 export async function loadAoneWorkspaceMergeRequests(
@@ -152,19 +122,27 @@ export async function loadAoneWorkspaceMergeRequests(
 ): Promise<{
   entries: AoneWorkspaceMergeRequestEntry[]
   parentLookup: AoneMergeRequestLookup | null
+  showParent: boolean
 }> {
   const entries = await loadAoneChildMergeRequests(args)
-  // Why: ordinary single-repo projects retain the existing panel and avoid an
-  // extra Aone request; workspace mode fills a missing merged parent explicitly.
-  const parentLookup =
-    entries.length > 0 && lookupParent
-      ? await loadAoneMergeRequestForRepository({
-          branch: args.branch,
-          repoPath: args.parentWorktreePath,
-          getMergeRequestForBranch: args.getMergeRequestForBranch
-        })
-      : null
-  return { entries, parentLookup }
+  // Why: single-repo projects avoid another Aone request; inspect the parent
+  // only after a non-default child makes the workspace overview necessary.
+  if (entries.length === 0) {
+    return { entries, parentLookup: null, showParent: true }
+  }
+  const parentContext = await loadAoneMergeRequestForRepositoryCurrentBranch({
+    repoPath: args.parentWorktreePath,
+    lookupMergeRequest: lookupParent,
+    getMergeRequestForRepositoryCurrentBranch: args.getMergeRequestForRepositoryCurrentBranch
+  })
+  return {
+    entries,
+    parentLookup: {
+      review: parentContext.review,
+      lookupErrorCode: parentContext.lookupErrorCode
+    },
+    showParent: !parentContext.isDefaultBranch
+  }
 }
 
 type AoneWorkspaceMergeRequestsProps = {
@@ -194,6 +172,7 @@ export function AoneWorkspaceMergeRequests({
     contextKey: string
     entries: AoneWorkspaceMergeRequestEntry[]
     parentLookup: AoneMergeRequestLookup | null
+    showParent: boolean
     error: boolean
   } | null>(null)
   const [showLoading, setShowLoading] = useState(false)
@@ -208,17 +187,15 @@ export function AoneWorkspaceMergeRequests({
     void loadAoneWorkspaceMergeRequests(
       {
         parentWorktreePath,
-        branch,
         scanNestedRepos: window.api.projectGroups.scanNested,
-        getMergeRequestForBranch: window.api.aone.getMergeRequestForBranch,
         getMergeRequestForRepositoryCurrentBranch:
           window.api.aone.getMergeRequestForRepositoryCurrentBranch
       },
       lookupParent
     )
-      .then(({ entries, parentLookup }) => {
+      .then(({ entries, parentLookup, showParent }) => {
         if (!cancelled) {
-          setLoaded({ requestKey, contextKey, entries, parentLookup, error: false })
+          setLoaded({ requestKey, contextKey, entries, parentLookup, showParent, error: false })
         }
       })
       .catch((error: unknown) => {
@@ -229,6 +206,7 @@ export function AoneWorkspaceMergeRequests({
             contextKey,
             entries: previous?.contextKey === contextKey ? previous.entries : [],
             parentLookup: previous?.contextKey === contextKey ? previous.parentLookup : null,
+            showParent: previous?.contextKey === contextKey ? previous.showParent : true,
             error: true
           }))
         }
@@ -302,6 +280,7 @@ export function AoneWorkspaceMergeRequests({
       parentLookupErrorCode={
         resolvedParentReview ? null : (displayed?.parentLookup?.lookupErrorCode ?? null)
       }
+      showParent={displayed?.showParent ?? true}
       branch={branch}
       entries={displayed?.entries ?? []}
       loading={!current}

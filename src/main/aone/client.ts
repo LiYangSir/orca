@@ -12,6 +12,7 @@ import {
 } from './a1-runner'
 import { gitExecFileAsync } from '../git/runner'
 import type { A1LinkStatus, A1MergeRequest, A1MergeRequestViewPayload, A1WorkItem } from './types'
+import { isRepositoryDefaultBranch } from './repository-default-branch'
 
 export type AoneWorkItemListFilter = {
   scope?: 'personal' | 'project' | 'team' | 'all' | 'collect' | 'associate' | 'child'
@@ -227,16 +228,26 @@ export async function getMergeRequestForBranchWithMergedFallback(
 }
 
 export async function getMergeRequestForRepositoryCurrentBranch(
-  repoPath: string
-): Promise<{ branch: string | null; mergeRequest: A1MergeRequest | null }> {
+  repoPath: string,
+  options: { lookupMergeRequest?: boolean } = {}
+): Promise<{
+  branch: string | null
+  isDefaultBranch: boolean
+  mergeRequest: A1MergeRequest | null
+}> {
   const { stdout } = await gitExecFileAsync(['branch', '--show-current'], { cwd: repoPath })
   const branch = stdout.trim() || null
+  if (!branch) {
+    return { branch: null, isDefaultBranch: false, mergeRequest: null }
+  }
+  const isDefaultBranch = await isRepositoryDefaultBranch(repoPath, branch)
   // Why: nested repositories can be linked to a different branch than their
-  // parent workspace, so the MR lookup must use each repository's own HEAD.
-  const mergeRequest = branch
-    ? await getMergeRequestForBranchWithMergedFallback(branch, { cwd: repoPath })
-    : null
-  return { branch, mergeRequest }
+  // parent workspace; default branches never own Aone change requests.
+  const mergeRequest =
+    !isDefaultBranch && options.lookupMergeRequest !== false
+      ? await getMergeRequestForBranchWithMergedFallback(branch, { cwd: repoPath })
+      : null
+  return { branch, isDefaultBranch, mergeRequest }
 }
 
 // `code` review host detection: Alibaba-hosted code remotes can sit behind

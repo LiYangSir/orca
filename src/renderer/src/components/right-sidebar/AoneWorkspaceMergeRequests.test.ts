@@ -13,7 +13,6 @@ describe('loadAoneChildMergeRequests', () => {
         { path: '/workspace/repos/mw-cli', displayName: 'mw-cli', depth: 2 }
       ]
     }))
-    const getMergeRequestForBranch = vi.fn()
     const getMergeRequestForRepositoryCurrentBranch = vi.fn(
       async ({ repoPath }: { repoPath: string }) =>
         repoPath.endsWith('diamondops')
@@ -33,9 +32,7 @@ describe('loadAoneChildMergeRequests', () => {
 
     const result = await loadAoneChildMergeRequests({
       parentWorktreePath: '/workspace',
-      branch: 'feature/listener_influence',
       scanNestedRepos,
-      getMergeRequestForBranch,
       getMergeRequestForRepositoryCurrentBranch
     })
 
@@ -47,7 +44,6 @@ describe('loadAoneChildMergeRequests', () => {
       { repoPath: '/workspace/repos/diamondops' },
       { repoPath: '/workspace/repos/mw-cli' }
     ])
-    expect(getMergeRequestForBranch).not.toHaveBeenCalled()
     expect(result).toEqual([
       {
         repo: { path: '/workspace/repos/diamondops', displayName: 'diamondops', depth: 2 },
@@ -64,6 +60,42 @@ describe('loadAoneChildMergeRequests', () => {
         branch: null,
         review: null,
         lookupErrorCode: 'not_linked'
+      }
+    ])
+  })
+
+  it('filters child repositories checked out on their default branches', async () => {
+    const getMergeRequestForRepositoryCurrentBranch = vi.fn(
+      async ({ repoPath }: { repoPath: string }) => ({
+        ok: true,
+        data: repoPath.endsWith('default-repo')
+          ? { branch: 'main', isDefaultBranch: true, mergeRequest: null }
+          : {
+              branch: 'feature/child-review',
+              isDefaultBranch: false,
+              mergeRequest: { id: 28613303, title: 'Child review', state: 'opened' }
+            }
+      })
+    )
+
+    await expect(
+      loadAoneChildMergeRequests({
+        parentWorktreePath: '/workspace',
+        scanNestedRepos: vi.fn(async () => ({
+          repos: [
+            { path: '/workspace', displayName: 'workspace', depth: 0 },
+            { path: '/workspace/default-repo', displayName: 'default-repo', depth: 1 },
+            { path: '/workspace/feature-repo', displayName: 'feature-repo', depth: 1 }
+          ]
+        })),
+        getMergeRequestForRepositoryCurrentBranch
+      })
+    ).resolves.toEqual([
+      {
+        repo: { path: '/workspace/feature-repo', displayName: 'feature-repo', depth: 1 },
+        branch: 'feature/child-review',
+        review: { id: 28613303, title: 'Child review', state: 'opened' },
+        lookupErrorCode: null
       }
     ])
   })
@@ -89,9 +121,7 @@ describe('loadAoneChildMergeRequests', () => {
     await expect(
       loadAoneChildMergeRequests({
         parentWorktreePath: '/workspace',
-        branch: 'feature/listener_influence',
         scanNestedRepos,
-        getMergeRequestForBranch: vi.fn(),
         getMergeRequestForRepositoryCurrentBranch
       })
     ).resolves.toEqual([
@@ -131,9 +161,7 @@ describe('loadAoneChildMergeRequests', () => {
     await expect(
       loadAoneChildMergeRequests({
         parentWorktreePath: '/workspace',
-        branch: 'feature/listener_influence',
         scanNestedRepos,
-        getMergeRequestForBranch: vi.fn(),
         getMergeRequestForRepositoryCurrentBranch
       })
     ).resolves.toEqual([
@@ -153,47 +181,85 @@ describe('loadAoneChildMergeRequests', () => {
   })
 
   it('fills a missing merged parent review only after finding child repositories', async () => {
-    const getMergeRequestForBranch = vi.fn(async ({ repoPath }: { repoPath?: string | null }) => ({
-      ok: true,
-      data:
-        repoPath === '/workspace'
-          ? { id: 28570763, title: 'Workspace review', state: 'merged' }
-          : null
-    }))
-    const getMergeRequestForRepositoryCurrentBranch = vi.fn().mockResolvedValue({
-      ok: true,
-      data: {
-        branch: 'feature/mw-listener',
-        mergeRequest: { id: 28613303, title: 'CLI review', state: 'opened' }
-      }
-    })
+    const getMergeRequestForRepositoryCurrentBranch = vi.fn(
+      async ({ repoPath }: { repoPath: string }) => ({
+        ok: true,
+        data:
+          repoPath === '/workspace'
+            ? {
+                branch: 'feature/listener_influence',
+                isDefaultBranch: false,
+                mergeRequest: { id: 28570763, title: 'Workspace review', state: 'merged' }
+              }
+            : {
+                branch: 'feature/mw-listener',
+                isDefaultBranch: false,
+                mergeRequest: { id: 28613303, title: 'CLI review', state: 'opened' }
+              }
+      })
+    )
 
     await expect(
       loadAoneWorkspaceMergeRequests(
         {
           parentWorktreePath: '/workspace',
-          branch: 'feature/listener_influence',
           scanNestedRepos: vi.fn(async () => ({
             repos: [
               { path: '/workspace', displayName: 'workspace', depth: 0 },
               { path: '/workspace/repos/mw-cli', displayName: 'mw-cli', depth: 2 }
             ]
           })),
-          getMergeRequestForBranch,
           getMergeRequestForRepositoryCurrentBranch
         },
         true
       )
     ).resolves.toMatchObject({
       entries: [{ review: { id: 28613303 } }],
-      parentLookup: { review: { id: 28570763, state: 'merged' }, lookupErrorCode: null }
+      parentLookup: { review: { id: 28570763, state: 'merged' }, lookupErrorCode: null },
+      showParent: true
     })
     expect(getMergeRequestForRepositoryCurrentBranch).toHaveBeenCalledWith({
       repoPath: '/workspace/repos/mw-cli'
     })
-    expect(getMergeRequestForBranch.mock.calls.map(([args]) => args.repoPath)).toEqual([
-      '/workspace'
-    ])
+    expect(getMergeRequestForRepositoryCurrentBranch).toHaveBeenCalledWith({
+      repoPath: '/workspace'
+    })
+  })
+
+  it('hides a parent repository checked out on its default branch', async () => {
+    const getMergeRequestForRepositoryCurrentBranch = vi.fn(
+      async ({ repoPath }: { repoPath: string }) => ({
+        ok: true,
+        data:
+          repoPath === '/workspace'
+            ? { branch: 'main', isDefaultBranch: true, mergeRequest: null }
+            : {
+                branch: 'feature/child-review',
+                isDefaultBranch: false,
+                mergeRequest: { id: 28613303, title: 'Child review', state: 'opened' }
+              }
+      })
+    )
+
+    await expect(
+      loadAoneWorkspaceMergeRequests(
+        {
+          parentWorktreePath: '/workspace',
+          scanNestedRepos: vi.fn(async () => ({
+            repos: [
+              { path: '/workspace', displayName: 'workspace', depth: 0 },
+              { path: '/workspace/child', displayName: 'child', depth: 1 }
+            ]
+          })),
+          getMergeRequestForRepositoryCurrentBranch
+        },
+        true
+      )
+    ).resolves.toMatchObject({
+      entries: [{ repo: { displayName: 'child' } }],
+      parentLookup: { review: null, lookupErrorCode: null },
+      showParent: false
+    })
   })
 
   it('does not retry an authentication failure', async () => {
@@ -204,14 +270,12 @@ describe('loadAoneChildMergeRequests', () => {
 
     await loadAoneChildMergeRequests({
       parentWorktreePath: '/workspace',
-      branch: 'feature/listener_influence',
       scanNestedRepos: vi.fn(async () => ({
         repos: [
           { path: '/workspace', displayName: 'workspace', depth: 0 },
           { path: '/workspace/repos/mw-cli', displayName: 'mw-cli', depth: 2 }
         ]
       })),
-      getMergeRequestForBranch: vi.fn(),
       getMergeRequestForRepositoryCurrentBranch
     })
 
@@ -228,14 +292,12 @@ describe('loadAoneChildMergeRequests', () => {
     await expect(
       loadAoneChildMergeRequests({
         parentWorktreePath: '/workspace',
-        branch: 'feature/listener_influence',
         scanNestedRepos: vi.fn(async () => ({
           repos: [
             { path: '/workspace', displayName: 'workspace', depth: 0 },
             { path: '/workspace/repos/mw-cli', displayName: 'mw-cli', depth: 2 }
           ]
         })),
-        getMergeRequestForBranch: vi.fn(),
         getMergeRequestForRepositoryCurrentBranch
       })
     ).resolves.toEqual([

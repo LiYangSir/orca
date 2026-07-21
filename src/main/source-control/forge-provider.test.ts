@@ -13,6 +13,7 @@ const {
   getBitbucketRepoSlugMock,
   getGiteaRepoSlugMock,
   getRemoteUrlMock,
+  resolveDefaultBaseRefWithLocalGitMock,
   resolveAoneCodeRepoSlugMock,
   getMergeRequestForBranchMock,
   getProjectSlugMock,
@@ -31,6 +32,7 @@ const {
   getBitbucketRepoSlugMock: vi.fn(),
   getGiteaRepoSlugMock: vi.fn(),
   getRemoteUrlMock: vi.fn(),
+  resolveDefaultBaseRefWithLocalGitMock: vi.fn(),
   resolveAoneCodeRepoSlugMock: vi.fn(),
   getMergeRequestForBranchMock: vi.fn(),
   getProjectSlugMock: vi.fn(),
@@ -100,7 +102,8 @@ vi.mock('../aone/merge-request-creation', () => ({
 }))
 
 vi.mock('../git/repo', () => ({
-  getRemoteUrl: getRemoteUrlMock
+  getRemoteUrl: getRemoteUrlMock,
+  resolveDefaultBaseRefWithLocalGit: resolveDefaultBaseRefWithLocalGitMock
 }))
 
 import {
@@ -124,6 +127,8 @@ describe('forge provider interface', () => {
     getGiteaRepoSlugMock.mockReset()
     getRemoteUrlMock.mockReset()
     getRemoteUrlMock.mockReturnValue('git@github.com:team/orca.git')
+    resolveDefaultBaseRefWithLocalGitMock.mockReset()
+    resolveDefaultBaseRefWithLocalGitMock.mockResolvedValue('origin/main')
     resolveAoneCodeRepoSlugMock.mockReset()
     resolveAoneCodeRepoSlugMock.mockResolvedValue(null)
     getMergeRequestForBranchMock.mockReset()
@@ -312,6 +317,19 @@ describe('forge provider interface', () => {
       cwd: '/repo'
     })
     expect(getAoneMergeRequestMock).not.toHaveBeenCalled()
+  })
+
+  it('does not query Aone reviews for the repository default branch', async () => {
+    await expect(
+      getForgeProviderById('code').getReviewForBranch({
+        repoPath: '/repo',
+        branch: 'main',
+        linkedReviewNumber: 28612989
+      })
+    ).resolves.toBeNull()
+    expect(resolveDefaultBaseRefWithLocalGitMock).toHaveBeenCalledWith({ cwd: '/repo' })
+    expect(getAoneMergeRequestMock).not.toHaveBeenCalled()
+    expect(getAoneMergeRequestForBranchMock).not.toHaveBeenCalled()
   })
 
   it('falls back to branch discovery when a linked Aone review is stale', async () => {
