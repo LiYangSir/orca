@@ -23,6 +23,7 @@ import {
   type LucideIcon
 } from 'lucide-react'
 import type { RepoIcon } from '../../../../shared/repo-icon'
+import { DEFAULT_REPO_BADGE_COLOR, REPO_COLORS } from '../../../../shared/constants'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import { createLocalizedCatalog } from '@/i18n/localized-catalog'
@@ -136,16 +137,35 @@ export function getRepoLucideIcon(name: string | null | undefined): LucideIcon {
   return getRepoLucideIconOptions().find((option) => option.name === name)?.icon ?? Folder
 }
 
+// Skip index 0 (neutral gray) so default avatars are always distinguishable from muted text.
+const AVATAR_COLORS = REPO_COLORS.slice(1)
+
+function getAvatarColor(label: string): string {
+  let hash = 0
+  for (let i = 0; i < label.length; i++) {
+    hash = (hash * 31 + label.charCodeAt(i)) | 0
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
+}
+
+function getAvatarInitial(label: string): string {
+  const match = label.match(/[\p{L}\p{N}]/u)
+  return (match?.[0] ?? label.trim().charAt(0) ?? '?').toUpperCase()
+}
+
 export function RepoIconGlyph({
   repoIcon,
   className,
   iconClassName,
-  color
+  color,
+  fallbackLabel
 }: {
   repoIcon: RepoIcon | null | undefined
   className?: string
   iconClassName?: string
   color?: string
+  /** When set and no icon is chosen, render an initial-letter tile instead of the Folder fallback. */
+  fallbackLabel?: string
 }): React.JSX.Element {
   if (repoIcon?.type === 'image') {
     return (
@@ -167,6 +187,35 @@ export function RepoIconGlyph({
         aria-hidden="true"
       >
         <span className={cn('text-[0.9em]', iconClassName)}>{repoIcon.emoji}</span>
+      </span>
+    )
+  }
+
+  if (!repoIcon && fallbackLabel) {
+    // Prefer the user's explicit badge color; neutral means "unset", so fall back to the hash.
+    const tileColor =
+      color && color !== DEFAULT_REPO_BADGE_COLOR ? color : getAvatarColor(fallbackLabel)
+    return (
+      <span
+        className={cn(
+          'inline-flex select-none items-center justify-center rounded-[4px] border font-normal',
+          className
+        )}
+        style={{
+          borderColor: tileColor,
+          color: tileColor,
+          background: `color-mix(in srgb, ${tileColor} 15%, transparent)`
+        }}
+        aria-hidden="true"
+      >
+        <span
+          className={cn(
+            'inline-flex items-center justify-center text-[10px] leading-none',
+            iconClassName
+          )}
+        >
+          {getAvatarInitial(fallbackLabel)}
+        </span>
       </span>
     )
   }

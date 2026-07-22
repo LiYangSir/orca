@@ -175,8 +175,9 @@ export function RepositoryIconPicker({
         <RepoIconGlyph
           repoIcon={repo.repoIcon}
           color={selectedBadgeColor}
+          fallbackLabel={repo.displayName}
           className="size-10 shrink-0 rounded-md border border-border/70 bg-muted/30"
-          iconClassName="size-5"
+          iconClassName={repo.repoIcon ? 'size-5' : 'text-xl'}
         />
         <div className="min-w-0 flex-1">
           <Label className="text-sm font-semibold">

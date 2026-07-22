@@ -309,6 +309,7 @@ export function SettingsSidebar({
                       <RepoIconGlyph
                         repoIcon={section.repoIcon}
                         color={section.badgeColor}
+                        fallbackLabel={section.title}
                         className="size-4 shrink-0 text-muted-foreground"
                         iconClassName="size-3.5"
                       />

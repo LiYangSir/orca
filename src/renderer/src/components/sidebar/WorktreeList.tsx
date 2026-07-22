@@ -4395,7 +4395,8 @@ const VirtualizedWorktreeViewport = React.memo(function VirtualizedWorktreeViewp
                           isDraggableProjectGroupHeader ? '' : undefined
                         }
                         className={cn(
-                          'flex size-4 shrink-0 items-center justify-center rounded-[4px]',
+                          'flex shrink-0 items-center justify-center rounded-[4px]',
+                          row.repo && !row.repo.repoIcon ? 'size-[18px]' : 'size-4',
                           repoHeaderColor ? 'text-muted-foreground' : row.tone,
                           (isDraggableRepoHeader || isDraggableProjectGroupHeader) &&
                             'hover:cursor-grab active:cursor-grabbing'
@@ -4405,7 +4406,8 @@ const VirtualizedWorktreeViewport = React.memo(function VirtualizedWorktreeViewp
                           <RepoIconGlyph
                             repoIcon={row.repo.repoIcon}
                             color={repoHeaderColor}
-                            className="size-4"
+                            fallbackLabel={row.label}
+                            className={row.repo.repoIcon ? 'size-4' : 'size-[18px]'}
                             iconClassName="size-3.5"
                           />
                         ) : (

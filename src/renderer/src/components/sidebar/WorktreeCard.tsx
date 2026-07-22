@@ -1445,8 +1445,9 @@ const WorktreeCard = React.memo(function WorktreeCard({
                 <RepoIconGlyph
                   repoIcon={repo.repoIcon}
                   color={resolveRepoHeaderColor(repo.badgeColor)}
+                  fallbackLabel={repo.displayName}
                   className="size-full"
-                  iconClassName="size-3"
+                  iconClassName={repo.repoIcon ? 'size-3' : 'text-[8px]'}
                 />
               </RepoIdentityChip>
             )}
@@ -1507,8 +1508,9 @@ const WorktreeCard = React.memo(function WorktreeCard({
                 <RepoIconGlyph
                   repoIcon={repo.repoIcon}
                   color={resolveRepoHeaderColor(repo.badgeColor)}
+                  fallbackLabel={repo.displayName}
                   className="size-full"
-                  iconClassName="size-3"
+                  iconClassName={repo.repoIcon ? 'size-3' : 'text-[8px]'}
                 />
               </RepoIdentityChip>
             )}
