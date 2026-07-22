@@ -7,6 +7,7 @@ import AgentCombobox from '@/components/agent/AgentCombobox'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import type { AutomationWorkspaceMode } from '../../../../shared/automations-types'
+import { isGlobalScopedAutomation } from '../../../../shared/automation-scope'
 import type {
   GlobalSettings,
   OrcaHooks,
@@ -77,31 +78,49 @@ export function AutomationEditorDialogFooter({
   onOpenChange,
   onSave
 }: AutomationEditorDialogFooterProps): React.JSX.Element {
+  const isGlobalScoped = isGlobalScopedAutomation(draft)
   const isWeeklyReport = draft.kind === 'weekly_report'
   return (
     <div className="border-t border-border/50 px-5 py-4">
       <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
-        {isWeeklyReport ? (
+        {isGlobalScoped ? (
           <Field
-            label={translate(
-              'auto.components.automations.AutomationEditorDialog.weeklyReportScopeLabel',
-              'Report scope'
-            )}
+            label={
+              isWeeklyReport
+                ? translate(
+                    'auto.components.automations.AutomationEditorDialog.weeklyReportScopeLabel',
+                    'Report scope'
+                  )
+                : translate(
+                    'auto.components.automations.AutomationEditorDialog.globalTaskScopeLabel',
+                    'Scope'
+                  )
+            }
             className="md:col-span-3 lg:col-span-4"
           >
             <div className="flex h-9 min-w-0 items-center gap-2 rounded-md border border-input bg-input/30 px-3 text-sm text-foreground shadow-xs dark:bg-input/30">
               <CalendarRange className="size-4 shrink-0 text-muted-foreground" />
               <span className="truncate">
-                {translate(
-                  'auto.components.automations.AutomationEditorDialog.weeklyReportScope',
-                  'All projects changed this week'
-                )}
+                {isWeeklyReport
+                  ? translate(
+                      'auto.components.automations.AutomationEditorDialog.weeklyReportScope',
+                      'All projects changed this week'
+                    )
+                  : translate(
+                      'auto.components.automations.AutomationEditorDialog.globalTaskScope',
+                      'All projects'
+                    )}
               </span>
               <span className="ml-auto hidden shrink-0 text-xs text-muted-foreground sm:inline">
-                {translate(
-                  'auto.components.automations.AutomationEditorDialog.weeklyReportEvidence',
-                  'Weekly commit summary, a1 MR merge status, and CR release status'
-                )}
+                {isWeeklyReport
+                  ? translate(
+                      'auto.components.automations.AutomationEditorDialog.weeklyReportEvidence',
+                      'Weekly commit summary, a1 MR merge status, and CR release status'
+                    )
+                  : translate(
+                      'auto.components.automations.AutomationEditorDialog.globalTaskEvidence',
+                      'Runs against every repo, not a single project'
+                    )}
                 {' · '}
                 {translate(
                   'auto.components.automations.AutomationEditorDialog.weeklyReportRuntime',
@@ -116,7 +135,7 @@ export function AutomationEditorDialogFooter({
             'auto.components.automations.AutomationEditorDialog.02d351877e',
             'Project'
           )}
-          className={isWeeklyReport ? 'hidden' : undefined}
+          className={isGlobalScoped ? 'hidden' : undefined}
         >
           <AutomationProjectCombobox
             repos={repos}
@@ -160,7 +179,7 @@ export function AutomationEditorDialogFooter({
             </span>
           }
           className={
-            isWeeklyReport ? 'hidden' : isHermesTarget ? undefined : 'sm:col-span-2 lg:col-span-3'
+            isGlobalScoped ? 'hidden' : isHermesTarget ? undefined : 'sm:col-span-2 lg:col-span-3'
           }
         >
           {isHermesTarget ? (
@@ -229,7 +248,7 @@ export function AutomationEditorDialogFooter({
             </div>
           )}
         </Field>
-        {isHermesTarget && !isWeeklyReport ? scheduleField : null}
+        {isHermesTarget && !isGlobalScoped ? scheduleField : null}
       </div>
 
       {/* Why: Hermes uses one compact footer row, while Orca adds agent,
@@ -285,7 +304,7 @@ export function AutomationEditorDialogFooter({
           {/* Why: a full-width row below the columned controls — the setup
               switch is a per-automation preference, not a peer of the compact
               column pickers, so it reads cleaner spanning the dialog. */}
-          {isWeeklyReport ? null : (
+          {isGlobalScoped ? null : (
             <AutomationSetupDecisionField
               createTarget={isHermesTarget ? 'hermes' : 'orca'}
               draft={draft}

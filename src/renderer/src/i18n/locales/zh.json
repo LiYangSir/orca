@@ -12659,6 +12659,9 @@
           "weeklyReportScope": "本周所有发生变更的项目",
           "weeklyReportEvidence": "本周提交摘要、a1 MR 合并状态与 CR 发布状态",
           "weeklyReportRuntime": "在全局浮动工作区运行",
+          "globalTaskScopeLabel": "范围",
+          "globalTaskScope": "所有项目",
+          "globalTaskEvidence": "面向全部仓库运行，不限定单个项目",
           "fb1896a5e7": "取消",
           "57b722cbba": "智能体",
           "6ff66f9012": "新运行",
@@ -12747,6 +12750,7 @@
         "AutomationsPage": {
           "weeklyReportAllProjects": "所有变更项目",
           "weeklyReportFloatingWorkspace": "浮动工作区",
+          "globalTaskAllProjects": "所有项目",
           "2695883141": "删除",
           "c3a28c9793": "选择一个自动化来查看运行。",
           "295698292f": "重新运行",
@@ -12889,6 +12893,13 @@
               "description": "汇总本周所有变更项目的产品进展，重点关联 a1 MR 合并与发布状态。",
               "name": "本周产品研发周报",
               "prompt": "基于本次运行提供的 Orca 证据，生成一份简洁、面向产品的中文周报。按产品分组，只保留工作、进展、MR 合并状态、CR/发布状态、风险和下一步。优先采用 a1 查询结果，不要罗列未提交文件或逐条复述 Git 提交；证据不支持的事实不要编造。"
+            },
+            "reviewInbox": {
+              "category": "全局",
+              "label": "每日评审清单",
+              "description": "跨仓库拉取所有等待你评审的合并请求（经 a1），按优先级分类汇总，不限定单个项目。",
+              "name": "每日评审清单",
+              "prompt": "你是代码评审分诊助手。本次任务不限定某个仓库，而是覆盖所有等待我评审的合并请求。步骤：① 执行 `a1 repo mr list --mine review --state opened --format json` 获取待评审 MR；② 按需用 `a1 repo mr status --source <分支>`、`a1 repo mr view <id> --work-items --cr` 补充 CI/审批/冲突/关联信息；③ 分类：阻塞中（CI 失败、冲突、未解决 BLOCKER）、等我回复（@我 或 QUESTION）、可合并（审批通过且 CI 绿）、停滞（多日无更新）；④ 用中文输出简洁清单：仓库、标题、MR 链接、当前状态、建议下一步。不要改动代码或 MR 状态。若返回认证错误，提示执行 `a1 auth login --buc`。"
             },
             "37571fcb16": "查找卡住的工作、陈旧的生成文件以及失败的本地验证。",
             "8a0228bea3": "每小时排队检查",

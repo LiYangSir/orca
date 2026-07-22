@@ -58,6 +58,7 @@ import type {
   AutomationUpdateInput
 } from '../../../../shared/automations-types'
 import { getAutomationRunRepoId } from '../../../../shared/automation-run-identity'
+import { isGlobalScopedAutomation, isGlobalScopedKind } from '../../../../shared/automation-scope'
 import {
   getLocalExecutionHostLabel,
   getRepoExecutionHostId,
@@ -1188,7 +1189,7 @@ export default function AutomationsPage(): React.JSX.Element {
   }, [draft.projectId, getDefaultTarget])
 
   useEffect(() => {
-    if (!draft.projectId || draft.kind === 'weekly_report') {
+    if (!draft.projectId || isGlobalScopedKind(draft.kind)) {
       return
     }
     const available = worktreesByRepo[draft.projectId] ?? []
@@ -1202,7 +1203,7 @@ export default function AutomationsPage(): React.JSX.Element {
     if (
       !createOpen ||
       createTarget !== 'orca' ||
-      draft.kind === 'weekly_report' ||
+      isGlobalScopedKind(draft.kind) ||
       draft.workspaceMode !== 'new_per_run' ||
       !draft.projectId
     ) {
@@ -1246,8 +1247,8 @@ export default function AutomationsPage(): React.JSX.Element {
 
   const applyTemplateToDraft = useCallback(
     (template: AutomationTemplate): void => {
-      const isWeeklyReport = template.kind === 'weekly_report'
-      if (isWeeklyReport) {
+      const isGlobalScoped = isGlobalScopedAutomation(template)
+      if (isGlobalScoped) {
         setCreateTarget('orca')
       }
       const localProjectId = repos.find((repo) => getRepoExecutionHostId(repo) === 'local')?.id
@@ -1263,7 +1264,7 @@ export default function AutomationsPage(): React.JSX.Element {
         agentId: template.agentId ?? current.agentId,
         missedRunGraceMinutes: template.missedRunGraceMinutes ?? current.missedRunGraceMinutes,
         scheduleWarning: null,
-        ...(isWeeklyReport
+        ...(isGlobalScoped
           ? {
               projectId: localProjectId ?? current.projectId,
               workspaceMode: 'new_per_run' as const,
@@ -1295,8 +1296,8 @@ export default function AutomationsPage(): React.JSX.Element {
   const openCreateDialog = (template?: AutomationTemplate): void => {
     editRequestRef.current += 1
     const target = getDefaultTarget()
-    const isWeeklyReport = template?.kind === 'weekly_report'
-    const weeklyReportProjectId =
+    const isGlobalScoped = isGlobalScopedAutomation(template ?? {})
+    const globalScopedProjectId =
       repos.find((repo) => getRepoExecutionHostId(repo) === 'local')?.id ?? target.projectId
     setEditingAutomationId(null)
     setEditingExternalTarget(null)
@@ -1306,11 +1307,11 @@ export default function AutomationsPage(): React.JSX.Element {
       name: '',
       prompt: '',
       agentId: defaultAgent,
-      projectId: isWeeklyReport ? weeklyReportProjectId : target.projectId,
-      workspaceMode: isWeeklyReport ? 'new_per_run' : 'existing',
-      workspaceId: isWeeklyReport ? '' : target.workspaceId,
+      projectId: isGlobalScoped ? globalScopedProjectId : target.projectId,
+      workspaceMode: isGlobalScoped ? 'new_per_run' : 'existing',
+      workspaceId: isGlobalScoped ? '' : target.workspaceId,
       baseBranch: '',
-      setupDecision: isWeeklyReport ? 'skip' : undefined,
+      setupDecision: isGlobalScoped ? 'skip' : undefined,
       reuseSession: false,
       precheckCommand: '',
       precheckTimeoutSeconds: '60',
@@ -1625,21 +1626,20 @@ export default function AutomationsPage(): React.JSX.Element {
         repos,
         projectHostSetups
       })
-      let setupDecision =
-        draft.kind === 'weekly_report'
-          ? 'skip'
-          : resolveAutomationSetupDecisionForSave({
-              createTarget,
-              workspaceMode: draft.workspaceMode,
-              repoId: draft.projectId,
-              repos,
-              projectHostSetups,
-              yamlHooks:
-                createTarget === 'orca' && draft.workspaceMode === 'new_per_run'
-                  ? await loadAutomationYamlHooksForRepo(draft.projectId)
-                  : null,
-              draftSetupDecision: draft.setupDecision
-            })
+      let setupDecision = isGlobalScopedAutomation(draft)
+        ? 'skip'
+        : resolveAutomationSetupDecisionForSave({
+            createTarget,
+            workspaceMode: draft.workspaceMode,
+            repoId: draft.projectId,
+            repos,
+            projectHostSetups,
+            yamlHooks:
+              createTarget === 'orca' && draft.workspaceMode === 'new_per_run'
+                ? await loadAutomationYamlHooksForRepo(draft.projectId)
+                : null,
+            draftSetupDecision: draft.setupDecision
+          })
       if (setupDecision === 'run') {
         const trustDecision = await ensureHooksConfirmed(
           useAppStore.getState(),
@@ -2445,6 +2445,7 @@ export default function AutomationsPage(): React.JSX.Element {
               </div>
             ) : null}
             {automations.map((automation) => {
+              const isGlobalScoped = isGlobalScopedAutomation(automation)
               const isWeeklyReport = automation.kind === 'weekly_report'
               const automationRepo = repoMap.get(getAutomationRunRepoId(automation))
               const automationWorktree = automation.workspaceId
@@ -2460,7 +2461,7 @@ export default function AutomationsPage(): React.JSX.Element {
                 automationHostTarget,
                 sourceHostAvailability: automationSourceHostAvailabilityById.get(automation.id)
               })
-              const workspaceLabel = isWeeklyReport
+              const workspaceLabel = isGlobalScoped
                 ? translate(
                     'auto.components.automations.AutomationsPage.weeklyReportFloatingWorkspace',
                     'Floating Workspace'
@@ -2513,12 +2514,17 @@ export default function AutomationsPage(): React.JSX.Element {
                           {scheduleLabel}
                         </span>
                         <span className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                          {isWeeklyReport ? (
+                          {isGlobalScoped ? (
                             <span>
-                              {translate(
-                                'auto.components.automations.AutomationsPage.weeklyReportAllProjects',
-                                'All changed projects'
-                              )}
+                              {isWeeklyReport
+                                ? translate(
+                                    'auto.components.automations.AutomationsPage.weeklyReportAllProjects',
+                                    'All changed projects'
+                                  )
+                                : translate(
+                                    'auto.components.automations.AutomationsPage.globalTaskAllProjects',
+                                    'All projects'
+                                  )}
                             </span>
                           ) : automationRepo ? (
                             <RepoBadgeLabel
@@ -2948,16 +2954,21 @@ export default function AutomationsPage(): React.JSX.Element {
                   automation={selected}
                   runs={selectedRuns}
                   projectName={
-                    selected?.kind === 'weekly_report'
-                      ? translate(
-                          'auto.components.automations.AutomationsPage.weeklyReportAllProjects',
-                          'All changed projects'
-                        )
+                    selected && isGlobalScopedAutomation(selected)
+                      ? selected.kind === 'weekly_report'
+                        ? translate(
+                            'auto.components.automations.AutomationsPage.weeklyReportAllProjects',
+                            'All changed projects'
+                          )
+                        : translate(
+                            'auto.components.automations.AutomationsPage.globalTaskAllProjects',
+                            'All projects'
+                          )
                       : (selectedRepo?.displayName ?? 'Unknown project')
                   }
                   projectDefaultBaseRef={selectedRepo?.worktreeBaseRef ?? null}
                   workspaceName={
-                    selected?.kind === 'weekly_report'
+                    selected && isGlobalScopedAutomation(selected)
                       ? translate(
                           'auto.components.automations.AutomationsPage.weeklyReportFloatingWorkspace',
                           'Floating Workspace'

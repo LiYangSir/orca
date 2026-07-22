@@ -48,6 +48,33 @@ export const getAutomationTemplates = createLocalizedCatalog((): AutomationTempl
     missedRunGraceMinutes: '2880'
   },
   {
+    id: 'review-inbox-daily',
+    kind: 'global_task',
+    category: translate(
+      'auto.components.automations.automation.templates.reviewInbox.category',
+      'Global'
+    ),
+    label: translate(
+      'auto.components.automations.automation.templates.reviewInbox.label',
+      'Daily review inbox'
+    ),
+    description: translate(
+      'auto.components.automations.automation.templates.reviewInbox.description',
+      'Pull every merge request awaiting your review across repos (via a1) and triage by priority. Not tied to a single project.'
+    ),
+    name: translate(
+      'auto.components.automations.automation.templates.reviewInbox.name',
+      'Daily review inbox'
+    ),
+    prompt: translate(
+      'auto.components.automations.automation.templates.reviewInbox.prompt',
+      'You are a code-review triage assistant. This task is not scoped to one repo — it covers every merge request awaiting my review. Steps: (1) run `a1 repo mr list --mine review --state opened --format json` to fetch MRs awaiting my review; (2) enrich as needed with `a1 repo mr status --source <branch>` and `a1 repo mr view <id> --work-items --cr` for CI / approvals / conflicts / linked items; (3) bucket them: Blocking (CI failing, conflicts, unresolved BLOCKER comments), Awaiting my reply (@me or QUESTION), Ready to merge (approved, CI green, no conflicts), Stale (no update for days); (4) emit a concise checklist in Chinese (中文) — repo, title, MR link, current status, suggested next action. Do not modify code or change MR state. If a command returns an auth error, tell me to run `a1 auth login --buc`.'
+    ),
+    preset: 'daily',
+    time: '10:00',
+    missedRunGraceMinutes: '180'
+  },
+  {
     id: 'repo-health-weekday',
     category: translate(
       'auto.components.automations.automation.templates.repoHealth.category',

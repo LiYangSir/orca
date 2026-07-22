@@ -13,6 +13,7 @@ import type {
   AutomationPrecheckResult
 } from '../../../shared/automations-types'
 import { getAutomationRunRepoId } from '../../../shared/automation-run-identity'
+import { isGlobalScopedAutomation } from '../../../shared/automation-scope'
 import {
   didAutomationPrecheckPass,
   formatAutomationPrecheckFailure
@@ -66,6 +67,9 @@ export function useAutomationDispatchEvents(): void {
           activeTabType: state.activeTabType
         }
         const runRepoId = getAutomationRunRepoId(automation)
+        // Why: global scope (weekly_report + global_task) shares the floating-
+        // workspace plumbing; only weekly_report additionally rebuilds its prompt.
+        const isGlobalScoped = isGlobalScopedAutomation(automation)
         const isWeeklyReport = automation.kind === 'weekly_report'
         const repo = state.repos.find((entry) => entry.id === runRepoId)
         const automationWorktree = automation.workspaceId
@@ -92,7 +96,7 @@ export function useAutomationDispatchEvents(): void {
         }
 
         try {
-          if (!isWeeklyReport && repo.connectionId) {
+          if (!isGlobalScoped && repo.connectionId) {
             const needsPrompt = await window.api.ssh.needsPassphrasePrompt({
               targetId: repo.connectionId
             })
@@ -130,7 +134,7 @@ export function useAutomationDispatchEvents(): void {
           }
 
           if (
-            !isWeeklyReport &&
+            !isGlobalScoped &&
             automation.workspaceMode === 'existing' &&
             automationWorktree &&
             automation.runContext?.repoId &&
@@ -149,7 +153,7 @@ export function useAutomationDispatchEvents(): void {
             return
           }
 
-          if (!isWeeklyReport && automation.workspaceMode === 'existing' && !automationWorktree) {
+          if (!isGlobalScoped && automation.workspaceMode === 'existing' && !automationWorktree) {
             await markDispatchResult({
               runId: run.id,
               status: 'skipped_unavailable',
@@ -197,7 +201,7 @@ export function useAutomationDispatchEvents(): void {
 
           const automationWorkspaceCreateRequestId = createBrowserUuid()
           const createResult =
-            !isWeeklyReport && automation.workspaceMode === 'new_per_run'
+            !isGlobalScoped && automation.workspaceMode === 'new_per_run'
               ? await useAppStore
                   .getState()
                   .createWorktree(
@@ -238,7 +242,7 @@ export function useAutomationDispatchEvents(): void {
               : null
           const worktree = createResult
             ? createResult.worktree
-            : isWeeklyReport
+            : isGlobalScoped
               ? {
                   id: FLOATING_TERMINAL_WORKTREE_ID,
                   displayName: translate(

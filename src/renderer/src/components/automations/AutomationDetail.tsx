@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { getAgentCatalog, AgentIcon } from '@/lib/agent-catalog'
 import type { Automation, AutomationRun } from '../../../../shared/automations-types'
+import { isGlobalScopedAutomation } from '../../../../shared/automation-scope'
 import { formatAutomationSchedule } from '../../../../shared/automation-schedules'
 import { formatAutomationPrecheckTimeout } from '../../../../shared/automation-precheck'
 import { formatAutomationDateTimeWithRelative } from './automation-page-parts'
@@ -127,8 +128,8 @@ export function AutomationDetail({
         : 'No runs'
   const agentLabel =
     getAgentCatalog().find((agent) => agent.id === automation.agentId)?.label ?? automation.agentId
-  const isWeeklyReport = automation.kind === 'weekly_report'
-  const runLocationLabel = isWeeklyReport
+  const isGlobalScoped = isGlobalScopedAutomation(automation)
+  const runLocationLabel = isGlobalScoped
     ? workspaceName
     : automation.workspaceMode === 'new_per_run'
       ? (automation.baseBranch ?? projectDefaultBaseRef ?? 'Project default')
@@ -211,7 +212,7 @@ export function AutomationDetail({
         </div>
       </div>
 
-      {!isWeeklyReport && automation.executionTargetType === 'ssh' ? (
+      {!isGlobalScoped && automation.executionTargetType === 'ssh' ? (
         <div className="rounded-md border border-border/50 bg-muted/50 p-3 text-sm text-muted-foreground shadow-sm">
           {translate(
             'auto.components.automations.AutomationDetail.dbef8dc110',
@@ -241,7 +242,7 @@ export function AutomationDetail({
         />
         <DetailMetric
           label={
-            !isWeeklyReport && automation.workspaceMode === 'new_per_run'
+            !isGlobalScoped && automation.workspaceMode === 'new_per_run'
               ? translate('auto.components.automations.AutomationDetail.2f8baf5360', 'Create from')
               : translate('auto.components.automations.AutomationDetail.5405a09b1f', 'Run location')
           }
