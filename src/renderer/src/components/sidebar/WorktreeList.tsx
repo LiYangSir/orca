@@ -5146,7 +5146,7 @@ const VirtualizedWorktreeViewport = React.memo(function VirtualizedWorktreeViewp
                 prCache,
                 settings
               })
-              const showFolderPrList = folderPrList.length >= 2
+              const showFolderPrList = folderPrList.length >= 1
               const isFolderBackedWorkspaceChild =
                 groupBy === 'repo' && folderWorkspaceRow.projectGroup.createdFrom === 'folder-scan'
               const { surfaceInset, cardContentIndent } = getFolderWorkspaceRowGeometry({

@@ -227,19 +227,31 @@ export async function getMergeRequestForBranchWithMergedFallback(
   return (await getMergeRequest(listed.id, options)) ?? listed
 }
 
-export async function getMergeRequestForRepositoryCurrentBranch(
-  repoPath: string,
-  options: { lookupMergeRequest?: boolean } = {}
-): Promise<{
+type RepoBranchMrResult = {
   branch: string | null
   isDefaultBranch: boolean
   mergeRequest: A1MergeRequest | null
-}> {
+}
+
+const REPO_BRANCH_MR_CACHE_TTL_MS = 60_000
+const repoBranchMrCache = new Map<string, { fetchedAt: number; result: RepoBranchMrResult }>()
+
+export async function getMergeRequestForRepositoryCurrentBranch(
+  repoPath: string,
+  options: { lookupMergeRequest?: boolean } = {}
+): Promise<RepoBranchMrResult> {
   const { stdout } = await gitExecFileAsync(['branch', '--show-current'], { cwd: repoPath })
   const branch = stdout.trim() || null
   if (!branch) {
     return { branch: null, isDefaultBranch: false, mergeRequest: null }
   }
+
+  const cacheKey = `${repoPath}\0${branch}`
+  const cached = repoBranchMrCache.get(cacheKey)
+  if (cached && Date.now() - cached.fetchedAt < REPO_BRANCH_MR_CACHE_TTL_MS) {
+    return cached.result
+  }
+
   const isDefaultBranch = await isRepositoryDefaultBranch(repoPath, branch)
   // Why: nested repositories can be linked to a different branch than their
   // parent workspace; default branches never own Aone change requests.
@@ -247,7 +259,9 @@ export async function getMergeRequestForRepositoryCurrentBranch(
     !isDefaultBranch && options.lookupMergeRequest !== false
       ? await getMergeRequestForBranchWithMergedFallback(branch, { cwd: repoPath })
       : null
-  return { branch, isDefaultBranch, mergeRequest }
+  const result: RepoBranchMrResult = { branch, isDefaultBranch, mergeRequest }
+  repoBranchMrCache.set(cacheKey, { fetchedAt: Date.now(), result })
+  return result
 }
 
 // `code` review host detection: Alibaba-hosted code remotes can sit behind

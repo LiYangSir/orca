@@ -96,17 +96,27 @@ async function loadAoneMergeRequestForRepositoryCurrentBranch({
   }
 }
 
+const SCAN_CACHE_TTL_MS = 10_000
+const nestedRepoScanCache = new Map<string, { fetchedAt: number; repos: NestedRepoCandidate[] }>()
+
 export async function loadAoneChildMergeRequests({
   parentWorktreePath,
   scanNestedRepos,
   getMergeRequestForRepositoryCurrentBranch
 }: LoadAoneWorkspaceMergeRequestsArgs): Promise<AoneWorkspaceMergeRequestEntry[]> {
-  const scan = await scanNestedRepos({
-    path: parentWorktreePath,
-    options: { descendIntoGitRepoRoot: true, maxRepos: 50, timeoutMs: 10_000 }
-  })
-  const childRepos = scan.repos.filter((candidate) => candidate.depth > 0)
-  const lookups = await mapWithConcurrency(childRepos, 1, async (repo) => {
+  let childRepos: NestedRepoCandidate[]
+  const cached = nestedRepoScanCache.get(parentWorktreePath)
+  if (cached && Date.now() - cached.fetchedAt < SCAN_CACHE_TTL_MS) {
+    childRepos = cached.repos
+  } else {
+    const scan = await scanNestedRepos({
+      path: parentWorktreePath,
+      options: { descendIntoGitRepoRoot: true, maxRepos: 50, timeoutMs: 10_000 }
+    })
+    childRepos = scan.repos.filter((candidate) => candidate.depth > 0)
+    nestedRepoScanCache.set(parentWorktreePath, { fetchedAt: Date.now(), repos: childRepos })
+  }
+  const lookups = await mapWithConcurrency(childRepos, 3, async (repo) => {
     const lookup = await loadAoneMergeRequestForRepositoryCurrentBranch({
       repoPath: repo.path,
       getMergeRequestForRepositoryCurrentBranch
